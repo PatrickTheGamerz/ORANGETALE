@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pacifist Sans - Test of Skill</title>
+  <title>Sans - A Test of Skill</title>
   <style>
     body {
       margin: 0;
@@ -25,7 +25,6 @@
       overflow: hidden;
     }
 
-    /* Enemy area (Sans) */
     #enemy-area {
       position: absolute;
       top: 20px;
@@ -41,6 +40,7 @@
     #enemy-name {
       font-size: 24px;
       margin-bottom: 8px;
+      text-transform: lowercase;
     }
 
     #enemy-sprite {
@@ -75,7 +75,6 @@
       font-size: 14px;
     }
 
-    /* Dialogue box */
     #dialogue-box {
       position: absolute;
       bottom: 150px;
@@ -89,7 +88,6 @@
       white-space: pre-line;
     }
 
-    /* Soul box */
     #soul-box {
       position: absolute;
       bottom: 150px;
@@ -122,7 +120,21 @@
       background: white;
     }
 
-    /* Bottom UI */
+    .blaster {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 2px solid white;
+      border-radius: 50%;
+      box-sizing: border-box;
+    }
+
+    .blast-beam {
+      position: absolute;
+      background: cyan;
+      opacity: 0.7;
+    }
+
     #ui-bar {
       position: absolute;
       bottom: 0;
@@ -198,7 +210,6 @@
       border-color: yellow;
     }
 
-    /* Fight bar */
     #fight-bar-container {
       position: absolute;
       bottom: 230px;
@@ -254,8 +265,9 @@
       align-items: center;
       flex-direction: column;
       font-size: 24px;
+      text-align: center;
+      white-space: pre-line;
     }
-
   </style>
 </head>
 <body>
@@ -271,17 +283,12 @@
     <div id="enemy-hp-text">HP: 1 / 1</div>
   </div>
 
-  <!-- Dialogue -->
-  <div id="dialogue-box">
-    * heya, kid.\n* how 'bout a little test of skill?
-  </div>
+  <div id="dialogue-box"></div>
 
-  <!-- Soul box -->
   <div id="soul-box">
     <div id="soul"></div>
   </div>
 
-  <!-- Fight bar -->
   <div id="fight-bar-container">
     <div id="fight-bar">
       <div id="fight-zone"></div>
@@ -290,10 +297,8 @@
     <div id="damage-text"></div>
   </div>
 
-  <!-- Sub-menu (ACT/ITEM/MERCY options) -->
   <div id="sub-menu"></div>
 
-  <!-- Bottom UI -->
   <div id="ui-bar">
     <div id="ui-menu">
       <span class="menu-item selected" data-action="FIGHT">FIGHT</span>
@@ -317,21 +322,27 @@
 </div>
 
 <script>
-  // --- Base state ---
+  // --- Core state ---
   let playerHP = 20;
   const playerMaxHP = 20;
-  let enemyHP = 1;        // Sans dodges, so HP won't drop yet, but we keep it for later.
+  let enemyHP = 1;
   const enemyMaxHP = 1;
 
-  let menuIndex = 0;
   const menuItems = ["FIGHT", "ACT", "ITEM", "MERCY"];
+  let menuIndex = 0;
   const menuElements = Array.from(document.querySelectorAll(".menu-item"));
 
   let inSoulMode = false;
   let canMoveSoul = false;
-  let phase = "PLAYER_TURN";  // PLAYER_TURN, ENEMY_ATTACK, FIGHT_BAR, MENU_SUB
+  let phase = "INTRO"; // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_BAR, MENU_SUB, END
+
   let turnCount = 0;
   let actCount = 0;
+  let pureAttackTurns = 0; // number of turns where player only used FIGHT
+  let sansCanBeHit = false;
+
+  // genocide memory (50% per page load)
+  const isGenocideRoute = Math.random() < 0.5;
 
   const dialogueBox = document.getElementById("dialogue-box");
   const soulBox = document.getElementById("soul-box");
@@ -350,33 +361,46 @@
   const endText = document.getElementById("end-text");
   const game = document.getElementById("game");
 
-  // Soul movement
   let soulX = 0;
   let soulY = 0;
-  const soulSpeed = 3.5;
+  let baseSoulSpeed = 3.5;
+  let soulSpeed = baseSoulSpeed;
 
-  // Input
   const keys = {};
 
-  // Sub menu data
   let currentSubType = null;
   let currentSubOptions = [];
   let subIndex = 0;
 
-  // Fight bar movement
   let fightPointerPos = 0;
-  let fightPointerDir = 1; // 1 => right, -1 => left
+  let fightPointerDir = 1;
   let fightBarActive = false;
 
-  // Mercy state
   let canSpare = false;
+
+  let difficultyLevel = 1; // increases when player keeps attacking
+  let isHugTrapUsed = false; // genocide special "hug" trap
+
+  let items = [
+    { id: "PIE", name: "Butterscotch Pie", heal: 20 },
+    { id: "CREAM", name: "Nice Cream", heal: 12 },
+    { id: "BANDAGE", name: "Bandage", heal: 7 }
+  ];
+
+  function showDialogue(text) {
+    dialogueBox.style.display = "block";
+    dialogueBox.textContent = text;
+  }
+
+  function hideDialogue() {
+    dialogueBox.style.display = "none";
+  }
 
   function updatePlayerHP() {
     if (playerHP < 0) playerHP = 0;
     const ratio = playerHP / playerMaxHP;
     hpFill.style.width = (ratio * 100) + "%";
     hpText.textContent = playerHP + " / " + playerMaxHP;
-
     if (playerHP <= 0) {
       endBattle(false);
     }
@@ -388,7 +412,7 @@
     enemyHPBar.style.width = (ratio * 100) + "%";
     enemyHPText.textContent = "HP: " + enemyHP + " / " + enemyMaxHP;
     if (enemyHP <= 0) {
-      endBattle(true);
+      endBattle(true, false, true);
     }
   }
 
@@ -399,15 +423,6 @@
     });
   }
 
-  function showDialogue(text) {
-    dialogueBox.style.display = "block";
-    dialogueBox.textContent = text;
-  }
-
-  function hideDialogue() {
-    dialogueBox.style.display = "none";
-  }
-
   function enterSoulMode() {
     inSoulMode = true;
     canMoveSoul = true;
@@ -415,7 +430,6 @@
     hideDialogue();
 
     const boxRect = soulBox.getBoundingClientRect();
-    const gameRect = game.getBoundingClientRect();
     soulX = (boxRect.width / 2) - 8;
     soulY = (boxRect.height / 2) - 8;
     soul.style.left = soulX + "px";
@@ -430,7 +444,7 @@
   }
 
   function clearBullets() {
-    const bullets = soulBox.querySelectorAll(".bullet, .bone");
+    const bullets = soulBox.querySelectorAll(".bullet, .bone, .blaster, .blast-beam");
     bullets.forEach(b => b.remove());
   }
 
@@ -465,93 +479,139 @@
     requestAnimationFrame(soulMovementLoop);
   }
 
-  // --- Enemy attack patterns (pacifist Sans, bones only, gentle) ---
-
-  function startSansAttack() {
-    phase = "ENEMY_ATTACK";
-    enterSoulMode();
-
-    turnCount++;
-
-    // After some turns or ACTs, make him spare-able
-    if (turnCount >= 5 || actCount >= 3) {
-      canSpare = true;
-    }
-
-    const attacks = [
-      gentleBoneSweep,
-      softBoneRain,
-      boneHopPattern,
-      boneTunnel,
-      boneCircle
-    ];
-
-    const attack = attacks[Math.floor(Math.random() * attacks.length)];
-    attack(() => {
-      // attack finished
-      exitSoulMode();
-      phase = "PLAYER_TURN";
-      showDialogue("* heh.\n* not bad, kid.");
-    });
-  }
-
   function damagePlayer(amount) {
     playerHP -= amount;
     updatePlayerHP();
   }
 
-  // Attack A: gentle bone sweep (horizontal)
+  // --- Difficulty scaling ---
+  function updateDifficulty() {
+    difficultyLevel = 1 + Math.floor(pureAttackTurns / 2);
+    if (difficultyLevel > 4) difficultyLevel = 4;
+    soulSpeed = baseSoulSpeed + (difficultyLevel - 1) * 0.5;
+  }
+
+  // --- Attack dispatcher ---
+  function startSansAttack() {
+    phase = "ENEMY_ATTACK";
+    turnCount++;
+
+    if (!isGenocideRoute && (turnCount >= 7 || actCount >= 4)) {
+      canSpare = true;
+    }
+
+    updateDifficulty();
+    enterSoulMode();
+
+    if (isGenocideRoute) {
+      if (!isHugTrapUsed && turnCount === 3) {
+        hugTrapAttack(() => {
+          exitSoulMode();
+          if (playerHP > 0) {
+            showDialogue("* \"here, kid. how 'bout a hug?\"\n* something feels very wrong.");
+            phase = "PLAYER_TURN";
+          }
+        });
+        isHugTrapUsed = true;
+        return;
+      }
+
+      const attacks = [
+        blasterSweepAttack,
+        strongBoneRain,
+        fastBoneTunnel,
+        boneCircleFast,
+        mixedBonesAndBlaster
+      ];
+      const attack = attacks[Math.floor(Math.random() * attacks.length)];
+      attack(() => {
+        exitSoulMode();
+        if (playerHP > 0) {
+          showDialogue("* still standing, huh?");
+          phase = "PLAYER_TURN";
+        }
+      });
+    } else {
+      const attacks = [
+        gentleBoneSweep,
+        softBoneRain,
+        boneHopPattern,
+        boneTunnel,
+        boneCircle
+      ];
+      const attack = attacks[Math.floor(Math.random() * attacks.length)];
+      attack(() => {
+        exitSoulMode();
+        if (playerHP > 0) {
+          showDialogue("* heh.\n* not bad, kid.");
+          phase = "PLAYER_TURN";
+        }
+      });
+    }
+  }
+
+  // --- Pacifist attacks ---
+
   function gentleBoneSweep(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const height = boxRect.height;
 
-    const bone = document.createElement("div");
-    bone.classList.add("bone");
-    bone.style.width = "40px";
-    bone.style.height = "10px";
-    const y = Math.random() * (height - 10);
-    bone.style.top = y + "px";
-    bone.style.left = "-40px";
-    soulBox.appendChild(bone);
+    const speed = 2 + (difficultyLevel - 1) * 0.5;
+    const duration = 5000;
 
-    let x = -40;
-    const speed = 2;
-    const duration = 4000;
+    const waves = 1 + difficultyLevel;
+    const bones = [];
+
+    for (let i = 0; i < waves; i++) {
+      const bone = document.createElement("div");
+      bone.classList.add("bone");
+      bone.style.width = "40px";
+      bone.style.height = "10px";
+      const y = (height / (waves + 1)) * (i + 1);
+      bone.style.top = y + "px";
+      bone.style.left = "-40px";
+      soulBox.appendChild(bone);
+      bones.push({ el: bone, x: -40 });
+    }
+
     const startTime = performance.now();
 
     function loop(t) {
       if (!inSoulMode) {
-        bone.remove();
+        bones.forEach(b => b.el.remove());
         onEnd();
         return;
       }
       const elapsed = t - startTime;
       if (elapsed > duration) {
-        bone.remove();
+        bones.forEach(b => b.el.remove());
         onEnd();
         return;
       }
-      x += speed;
-      bone.style.left = x + "px";
 
-      const boneRect = bone.getBoundingClientRect();
       const soulRect = soul.getBoundingClientRect();
-      if (rectsOverlap(boneRect, soulRect)) {
-        damagePlayer(1);
-      }
+      bones.forEach(b => {
+        b.x += speed;
+        b.el.style.left = b.x + "px";
+        const boneRect = b.el.getBoundingClientRect();
+        if (rectsOverlap(boneRect, soulRect)) {
+          damagePlayer(1);
+        }
+      });
+
       requestAnimationFrame(loop);
     }
+
     requestAnimationFrame(loop);
   }
 
-  // Attack B: soft bone rain
   function softBoneRain(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
+
+    const count = 6 + difficultyLevel * 2;
     const bones = [];
-    const count = 6;
-    const duration = 4500;
-    const startTime = performance.now();
+    const duration = 5500;
 
     for (let i = 0; i < count; i++) {
       const bone = document.createElement("div");
@@ -562,8 +622,10 @@
       bone.style.left = x + "px";
       bone.style.top = "-30px";
       soulBox.appendChild(bone);
-      bones.push({ el: bone, y: -30, speed: 1.5 + Math.random() * 1 });
+      bones.push({ el: bone, y: -30, speed: 1.5 + Math.random() * 1 + (difficultyLevel - 1) * 0.5 });
     }
+
+    const startTime = performance.now();
 
     function loop(t) {
       if (!inSoulMode) {
@@ -579,29 +641,28 @@
       }
 
       const soulRect = soul.getBoundingClientRect();
-
       bones.forEach(b => {
         b.y += b.speed;
         b.el.style.top = b.y + "px";
-        const boneRect = b.el.getBoundingClientRect();
-        if (rectsOverlap(boneRect, soulRect)) {
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
           damagePlayer(1);
         }
       });
 
       requestAnimationFrame(loop);
     }
+
     requestAnimationFrame(loop);
   }
 
-  // Attack C: bone hop pattern
   function boneHopPattern(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
     const height = boxRect.height;
 
     const bones = [];
-    const columns = 4;
+    const columns = 4 + difficultyLevel;
     for (let i = 0; i < columns; i++) {
       const bone = document.createElement("div");
       bone.classList.add("bone");
@@ -615,7 +676,7 @@
       bones.push({ el: bone, x, y: height, phase: Math.random() * Math.PI * 2 });
     }
 
-    const duration = 5000;
+    const duration = 6000;
     const startTime = performance.now();
 
     function loop(t) {
@@ -632,24 +693,23 @@
       }
 
       const soulRect = soul.getBoundingClientRect();
-
       bones.forEach(b => {
-        b.phase += 0.04;
-        const offset = Math.sin(b.phase) * 40; // hop height
-        b.y = (soulBox.getBoundingClientRect().height - 40) - Math.abs(offset);
+        b.phase += 0.05 + (difficultyLevel - 1) * 0.01;
+        const offset = Math.sin(b.phase) * (30 + difficultyLevel * 10);
+        b.y = (height - 40) - Math.abs(offset);
         b.el.style.top = b.y + "px";
-        const boneRect = b.el.getBoundingClientRect();
-        if (rectsOverlap(boneRect, soulRect)) {
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
           damagePlayer(1);
         }
       });
 
       requestAnimationFrame(loop);
     }
+
     requestAnimationFrame(loop);
   }
 
-  // Attack D: bone tunnel
   function boneTunnel(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -676,7 +736,242 @@
     soulBox.appendChild(bottomBone);
 
     let x = width;
-    const speed = 2;
+    const speed = 2 + (difficultyLevel - 1) * 0.7;
+    const duration = 5500;
+    const startTime = performance.now();
+
+    function loop(t) {
+      if (!inSoulMode) {
+        topBone.remove();
+        bottomBone.remove();
+        onEnd();
+        return;
+      }
+      const elapsed = t - startTime;
+      if (elapsed > duration) {
+        topBone.remove();
+        bottomBone.remove();
+        onEnd();
+        return;
+      }
+
+      x -= speed;
+      topBone.style.left = x + "px";
+      bottomBone.style.left = x + "px";
+
+      const soulRect = soul.getBoundingClientRect();
+      const topRect = topBone.getBoundingClientRect();
+      const bottomRect = bottomBone.getBoundingClientRect();
+      if (rectsOverlap(soulRect, topRect) || rectsOverlap(soulRect, bottomRect)) {
+        damagePlayer(1);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  function boneCircle(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const cx = boxRect.width / 2;
+    const cy = boxRect.height / 2;
+    const radius = 40 + difficultyLevel * 5;
+    const bones = [];
+    const count = 8 + difficultyLevel * 2;
+
+    for (let i = 0; i < count; i++) {
+      const bone = document.createElement("div");
+      bone.classList.add("bone");
+      bone.style.width = "14px";
+      bone.style.height = "14px";
+      soulBox.appendChild(bone);
+      bones.push({ el: bone, angle: (Math.PI * 2 / count) * i });
+    }
+
+    const duration = 6000;
+    const startTime = performance.now();
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const elapsed = t - startTime;
+      if (elapsed > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+
+      bones.forEach(b => {
+        b.angle += 0.02 + (difficultyLevel - 1) * 0.01;
+        const x = cx + Math.cos(b.angle) * radius - 7;
+        const y = cy + Math.sin(b.angle) * radius - 7;
+        b.el.style.left = x + "px";
+        b.el.style.top = y + "px";
+
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
+          damagePlayer(1);
+        }
+      });
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // --- Genocide attacks (blasters etc.) ---
+
+  function spawnBlaster(x, y, angle, delay, beamDuration, damage, speedMult) {
+    const blaster = document.createElement("div");
+    blaster.classList.add("blaster");
+    blaster.style.left = x + "px";
+    blaster.style.top = y + "px";
+    soulBox.appendChild(blaster);
+
+    const beam = document.createElement("div");
+    beam.classList.add("blast-beam");
+
+    setTimeout(() => {
+      soulBox.appendChild(beam);
+      const boxRect = soulBox.getBoundingClientRect();
+      const beamWidth = boxRect.width;
+      const beamHeight = 16;
+
+      beam.style.width = beamWidth + "px";
+      beam.style.height = beamHeight + "px";
+      beam.style.left = "0px";
+      beam.style.top = (y + 12) + "px";
+
+      const startTime = performance.now();
+
+      function loop(t) {
+        if (!inSoulMode) {
+          beam.remove();
+          blaster.remove();
+          return;
+        }
+        const elapsed = t - startTime;
+        if (elapsed > beamDuration) {
+          beam.remove();
+          blaster.remove();
+          return;
+        }
+        const soulRect = soul.getBoundingClientRect();
+        const rect = beam.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
+          damagePlayer(damage);
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }, delay);
+  }
+
+  function blasterSweepAttack(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const height = boxRect.height;
+
+    const beams = 3 + difficultyLevel;
+    const delayStep = 500 - difficultyLevel * 50;
+    const beamDuration = 900;
+    const damage = 2;
+
+    for (let i = 0; i < beams; i++) {
+      const y = (height / (beams + 1)) * (i + 1);
+      spawnBlaster(-20, y - 20, 0, i * delayStep, beamDuration, damage, 1);
+    }
+
+    const totalDuration = beams * delayStep + beamDuration + 500;
+    setTimeout(() => {
+      onEnd();
+    }, totalDuration);
+  }
+
+  function strongBoneRain(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+
+    const count = 10 + difficultyLevel * 4;
+    const bones = [];
+    const duration = 5500;
+
+    for (let i = 0; i < count; i++) {
+      const bone = document.createElement("div");
+      bone.classList.add("bone");
+      bone.style.width = "12px";
+      bone.style.height = "34px";
+      const x = Math.random() * (width - 12);
+      bone.style.left = x + "px";
+      bone.style.top = "-34px";
+      soulBox.appendChild(bone);
+      bones.push({ el: bone, y: -34, speed: 2 + Math.random() * 1.5 + (difficultyLevel - 1) * 0.5 });
+    }
+
+    const startTime = performance.now();
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const elapsed = t - startTime;
+      if (elapsed > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.y += b.speed;
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
+          damagePlayer(2);
+        }
+      });
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  function fastBoneTunnel(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
+
+    const gapHeight = 34;
+    const centerY = height / 2;
+
+    const topBone = document.createElement("div");
+    topBone.classList.add("bone");
+    topBone.style.left = width + "px";
+    topBone.style.top = "0px";
+    topBone.style.width = "50px";
+    topBone.style.height = (centerY - gapHeight / 2) + "px";
+
+    const bottomBone = document.createElement("div");
+    bottomBone.classList.add("bone");
+    bottomBone.style.left = width + "px";
+    bottomBone.style.top = (centerY + gapHeight / 2) + "px";
+    bottomBone.style.width = "50px";
+    bottomBone.style.height = (height - (centerY + gapHeight / 2)) + "px";
+
+    soulBox.appendChild(topBone);
+    soulBox.appendChild(bottomBone);
+
+    let x = width;
+    const speed = 3 + difficultyLevel;
     const duration = 4500;
     const startTime = performance.now();
 
@@ -702,24 +997,23 @@
       const soulRect = soul.getBoundingClientRect();
       const topRect = topBone.getBoundingClientRect();
       const bottomRect = bottomBone.getBoundingClientRect();
-
       if (rectsOverlap(soulRect, topRect) || rectsOverlap(soulRect, bottomRect)) {
-        damagePlayer(1);
+        damagePlayer(2);
       }
 
       requestAnimationFrame(loop);
     }
+
     requestAnimationFrame(loop);
   }
 
-  // Attack E: bone circle
-  function boneCircle(onEnd) {
+  function boneCircleFast(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const cx = boxRect.width / 2;
     const cy = boxRect.height / 2;
-    const radius = 40;
+    const radius = 50 + difficultyLevel * 10;
     const bones = [];
-    const count = 8;
+    const count = 10 + difficultyLevel * 3;
 
     for (let i = 0; i < count; i++) {
       const bone = document.createElement("div");
@@ -730,7 +1024,7 @@
       bones.push({ el: bone, angle: (Math.PI * 2 / count) * i });
     }
 
-    const duration = 5000;
+    const duration = 6000;
     const startTime = performance.now();
 
     function loop(t) {
@@ -749,15 +1043,15 @@
       const soulRect = soul.getBoundingClientRect();
 
       bones.forEach(b => {
-        b.angle += 0.02;
+        b.angle += 0.04 + (difficultyLevel - 1) * 0.02;
         const x = cx + Math.cos(b.angle) * radius - 7;
         const y = cy + Math.sin(b.angle) * radius - 7;
         b.el.style.left = x + "px";
         b.el.style.top = y + "px";
 
-        const boneRect = b.el.getBoundingClientRect();
-        if (rectsOverlap(boneRect, soulRect)) {
-          damagePlayer(1);
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
+          damagePlayer(2);
         }
       });
 
@@ -767,7 +1061,129 @@
     requestAnimationFrame(loop);
   }
 
-  // --- Fight bar logic (Sans dodges) ---
+  function mixedBonesAndBlaster(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
+
+    const bones = [];
+    const count = 6 + difficultyLevel * 2;
+
+    for (let i = 0; i < count; i++) {
+      const bone = document.createElement("div");
+      bone.classList.add("bone");
+      bone.style.width = "10px";
+      bone.style.height = "30px";
+      const x = Math.random() * (width - 10);
+      bone.style.left = x + "px";
+      bone.style.top = "-30px";
+      soulBox.appendChild(bone);
+      bones.push({ el: bone, y: -30, speed: 2 + Math.random() * 1.5 });
+    }
+
+    const centerY = height / 2;
+    spawnBlaster(-20, centerY - 20, 0, 800, 900, 2, 1);
+
+    const duration = 6000;
+    const startTime = performance.now();
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const elapsed = t - startTime;
+      if (elapsed > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.y += b.speed;
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
+          damagePlayer(2);
+        }
+      });
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // Hug trap: "here, give me a hug pal" -> bone zone
+  function hugTrapAttack(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
+
+    const duration = 6500;
+    const startTime = performance.now();
+    const bones = [];
+
+    function spawnRing() {
+      const ringCount = 12;
+      const radius = 20 + Math.random() * 40;
+
+      for (let i = 0; i < ringCount; i++) {
+        const bone = document.createElement("div");
+        bone.classList.add("bone");
+        bone.style.width = "12px";
+        bone.style.height = "12px";
+        const angle = (Math.PI * 2 / ringCount) * i;
+        const x = width / 2 + Math.cos(angle) * radius - 6;
+        const y = height / 2 + Math.sin(angle) * radius - 6;
+        bone.style.left = x + "px";
+        bone.style.top = y + "px";
+        soulBox.appendChild(bone);
+        bones.push({ el: bone, vx: (width / 2 - x) * 0.008, vy: (height / 2 - y) * 0.008 });
+      }
+    }
+
+    spawnRing();
+    setTimeout(spawnRing, 800);
+    setTimeout(spawnRing, 1600);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const elapsed = t - startTime;
+      if (elapsed > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        const rectBefore = b.el.getBoundingClientRect();
+        let x = parseFloat(b.el.style.left) || 0;
+        let y = parseFloat(b.el.style.top) || 0;
+        x += b.vx;
+        y += b.vy;
+        b.el.style.left = x + "px";
+        b.el.style.top = y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) {
+          damagePlayer(2);
+        }
+      });
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // --- Fight bar ---
   function startFightBar() {
     phase = "FIGHT_BAR";
     fightBarContainer.style.display = "flex";
@@ -781,7 +1197,6 @@
     fightBarActive = false;
     fightBarContainer.style.display = "none";
 
-    // Calculate "damage" based on pointer position relative to fight-zone
     const barWidth = fightBar.clientWidth;
     const zoneRect = fightZone.getBoundingClientRect();
     const barRect = fightBar.getBoundingClientRect();
@@ -791,21 +1206,36 @@
     const pointerX = fightPointerPos * barWidth;
 
     let quality = "";
+    let hitStrength = 0;
+
     if (pointerX >= zoneStart && pointerX <= zoneEnd) {
       quality = "GOOD HIT!";
+      const center = (zoneStart + zoneEnd) / 2;
+      const dist = Math.abs(pointerX - center);
+      const maxDist = fightZone.clientWidth / 2;
+      hitStrength = 1 - (dist / maxDist);
     } else {
       quality = "MISS...";
+      hitStrength = 0;
     }
 
-    // BUT: Sans dodges, so no real damage.
-    damageText.textContent = quality + " (sans dodged)";
-    showDialogue("* heh.\n* nice try.");
+    if (!sansCanBeHit) {
+      damageText.textContent = quality + " (sans dodged)";
+      showDialogue("* \"whoops. almost got me there.\"");
+    } else {
+      const damage = Math.max(1, Math.floor(hitStrength * 10));
+      enemyHP -= damage;
+      updateEnemyHP();
+      damageText.textContent = quality + " -" + damage;
+      showDialogue("* you actually hit sans.\n* \"guess i let my guard down.\"");
+    }
 
-    // After short delay, Sans attacks
     setTimeout(() => {
       damageText.textContent = "";
-      startSansAttack();
-    }, 900);
+      if (enemyHP > 0 && playerHP > 0) {
+        startSansAttack();
+      }
+    }, 1000);
   }
 
   function fightBarLoop() {
@@ -814,7 +1244,9 @@
       const pointerWidth = fightPointer.clientWidth;
       const max = (barWidth - pointerWidth) / barWidth;
 
-      fightPointerPos += fightPointerDir * 0.01;
+      const speed = 0.013 + (difficultyLevel - 1) * 0.004;
+      fightPointerPos += fightPointerDir * speed;
+
       if (fightPointerPos <= 0) {
         fightPointerPos = 0;
         fightPointerDir = 1;
@@ -830,7 +1262,7 @@
     requestAnimationFrame(fightBarLoop);
   }
 
-  // --- ACT / ITEM / MERCY submenus ---
+  // --- Sub menus ---
   function openSubMenu(type, options) {
     currentSubType = type;
     currentSubOptions = options;
@@ -879,30 +1311,38 @@
   function handleActOption(id) {
     actCount++;
 
-    if (id === "CHECK") {
-      showDialogue("* sans - atk 1 def 1.\n* this feels more like a test than a fight.");
-    } else if (id === "JOKE") {
-      showDialogue("* you tell a joke.\n* sans snorts.\n* \"heh. not bad.\"");
-    } else if (id === "FLIRT") {
-      showDialogue("* you try to flirt.\n* sans just grins at you.\n* \"wow, kid. bold move.\"");
-    } else if (id === "APOLOGIZE") {
-      showDialogue("* you apologize for something.\n* sans shrugs.\n* \"nah. we’re good.\"");
-    } else if (id === "ENCOURAGE") {
-      showDialogue("* you say you’ll do your best.\n* sans nods.\n* \"that’s all anyone can ask.\"");
+    if (!isGenocideRoute) {
+      if (id === "CHECK") {
+        showDialogue("* sans - atk 1 def 1.\n* this feels more like a test than a fight.");
+      } else if (id === "JOKE") {
+        showDialogue("* you tell a joke.\n* sans snorts.\n* \"heh. not bad.\"");
+      } else if (id === "FLIRT") {
+        showDialogue("* you try to flirt.\n* sans just grins.\n* \"wow, kid. bold move.\"");
+      } else if (id === "APOLOGIZE") {
+        showDialogue("* you apologize for something.\n* sans shrugs.\n* \"nah. we’re good.\"");
+      } else if (id === "ENCOURAGE") {
+        showDialogue("* you say you’ll do your best.\n* sans nods.\n* \"that’s all anyone can ask.\"");
+      }
+    } else {
+      if (id === "CHECK") {
+        showDialogue("* sans - atk 1 def 1.\n* he looks tired.\n* and disappointed.");
+      } else if (id === "JOKE") {
+        showDialogue("* you tell a joke.\n* sans doesn’t laugh this time.\n* \"...yeah.\"");
+      } else if (id === "FLIRT") {
+        showDialogue("* you try to flirt.\n* sans stares at you.\n* \"really? after all that?\"");
+      } else if (id === "APOLOGIZE") {
+        showDialogue("* you apologize.\n* sans is quiet.\n* \"sorry’s not a reset button, kid.\"");
+      } else if (id === "ENCOURAGE") {
+        showDialogue("* you say you’ll do better.\n* sans sighs.\n* \"hope you mean it.\"");
+      }
     }
 
     closeSubMenu();
 
     setTimeout(() => {
-      startSansAttack();
+      if (playerHP > 0) startSansAttack();
     }, 1000);
   }
-
-  let items = [
-    { id: "PIE", name: "Butterscotch Pie", heal: 20 },
-    { id: "CREAM", name: "Nice Cream", heal: 12 },
-    { id: "BANDAGE", name: "Bandage", heal: 7 }
-  ];
 
   function handleItemOption(id) {
     const item = items.find(i => i.id === id);
@@ -918,58 +1358,81 @@
     closeSubMenu();
 
     setTimeout(() => {
-      startSansAttack();
+      if (playerHP > 0) startSansAttack();
     }, 1000);
   }
 
   function handleMercyOption(id) {
     if (id === "SPARE") {
+      if (isGenocideRoute) {
+        showDialogue("* you try to spare sans.\n* he doesn’t move.\n* \"nah, kid. we’re past that.\"");
+        closeSubMenu();
+        setTimeout(() => {
+          if (playerHP > 0) startSansAttack();
+        }, 1200);
+        return;
+      }
+
       if (canSpare) {
         showDialogue("* you tell sans you’re done.\n* sans grins.\n* \"heh. you passed.\"\n* \"nice dodging, kid.\"");
         closeSubMenu();
         setTimeout(() => {
-          endBattle(true, true); // true spare
+          endBattle(true, true, false);
         }, 2000);
       } else {
         showDialogue("* you try to spare sans.\n* he shakes his head.\n* \"not yet, kid.\"");
         closeSubMenu();
         setTimeout(() => {
-          startSansAttack();
+          if (playerHP > 0) startSansAttack();
         }, 1000);
       }
     } else if (id === "FLEE") {
-      showDialogue("* you consider running away...\n* but this feels more like practice than danger.");
+      showDialogue("* you consider running away...\n* but something keeps you here.");
       closeSubMenu();
       setTimeout(() => {
-        startSansAttack();
+        if (playerHP > 0) startSansAttack();
       }, 1000);
     }
   }
 
-  function endBattle(playerWon, spared = false) {
+  function endBattle(playerWon, spared = false, killedSans = false) {
     endScreen.style.display = "flex";
-    let gold = spared ? 20 : 10;
-    let exp = spared ? 0 : 1;
 
     if (!playerWon) {
-      endText.textContent = "YOU DIED.";
+      if (isGenocideRoute) {
+        endText.textContent = "YOU DIED.\n\n* \"guess we’re done for now.\"\n* \"see ya next reset, kid.\"";
+      } else {
+        endText.textContent = "YOU DIED.\n\n* \"whoops. guess that was a bit much.\"\n* \"sorry, kid.\"";
+      }
     } else if (spared) {
-      endText.textContent = "YOU WON!\nGained " + gold + "G.\n(you feel like you learned something.)";
+      const gold = 20;
+      endText.textContent = "YOU WON!\nGained " + gold + "G.\n\n* you feel like you learned something.";
+    } else if (killedSans) {
+      const gold = 10;
+      const exp = 1;
+      endText.textContent = "YOU WON.\nEXP: " + exp + "\nG: " + gold + "\n\n* the silence after the joke hurts more than the fight.";
     } else {
-      endText.textContent = "YOU WON!\nEXP: " + exp + "\nG: " + gold;
+      endText.textContent = "YOU WON!";
     }
 
     phase = "END";
   }
 
-  // --- Main menu confirm ---
   function confirmMenuSelection() {
     if (phase !== "PLAYER_TURN") return;
     const action = menuItems[menuIndex];
 
     if (action === "FIGHT") {
-      showDialogue("* you get ready to attack.");
-      // After a short delay, show fight bar
+      pureAttackTurns++;
+      if (!isGenocideRoute && pureAttackTurns >= 4) {
+        sansCanBeHit = true;
+        showDialogue("* you keep going for the hit.\n* sans stops moving quite as fast.");
+      } else if (isGenocideRoute && pureAttackTurns >= 2) {
+        sansCanBeHit = true;
+      } else {
+        showDialogue("* you get ready to attack.");
+      }
+
       setTimeout(() => {
         showDialogue("");
         startFightBar();
@@ -986,28 +1449,33 @@
       if (items.length === 0) {
         showDialogue("* (you don’t have any items.)");
         setTimeout(() => {
-          startSansAttack();
+          if (playerHP > 0) startSansAttack();
         }, 1000);
       } else {
         openSubMenu("ITEM", items.map(it => ({ id: it.id, label: it.name })));
       }
     } else if (action === "MERCY") {
+      const spareLabel = (canSpare && !isGenocideRoute) ? "Spare (yellow)" : "Spare";
       openSubMenu("MERCY", [
-        { id: "SPARE", label: canSpare ? "Spare (yellow)" : "Spare" },
+        { id: "SPARE", label: spareLabel },
         { id: "FLEE", label: "Flee" }
       ]);
     }
   }
 
-  // --- Input handling ---
+  // --- Input ---
   document.addEventListener("keydown", (e) => {
     keys[e.key] = true;
 
     if (phase === "END") return;
 
-    // General: Z confirm, X cancel
     if (e.key === "z" || e.key === "Z") {
-      if (phase === "PLAYER_TURN") {
+      if (phase === "INTRO") {
+        phase = "PLAYER_TURN";
+        showDialogue(isGenocideRoute
+          ? "* \"so. here we are again.\"\n* \"this time... let's see what you learned.\""
+          : "* heya, kid.\n* how 'bout a little test of skill?");
+      } else if (phase === "PLAYER_TURN") {
         confirmMenuSelection();
       } else if (phase === "MENU_SUB") {
         confirmSubSelection();
@@ -1023,7 +1491,6 @@
     }
 
     if (phase === "PLAYER_TURN") {
-      // Menu navigation with WASD
       if (e.key === "a" || e.key === "A") {
         setMenuIndex(menuIndex - 1);
       } else if (e.key === "d" || e.key === "D") {
@@ -1036,17 +1503,26 @@
         setSubIndex(subIndex + 1);
       }
     }
-
   });
 
   document.addEventListener("keyup", (e) => {
     keys[e.key] = false;
   });
 
-  // Initialize
+  // --- Init ---
+  function initIntro() {
+    if (isGenocideRoute) {
+      showDialogue("* \"heya.\"\n* \"back again, huh?\"\n* \"guess we’re doin’ this the hard way this time.\"");
+    } else {
+      showDialogue("* heya, kid.\n* how 'bout a little test of skill?");
+    }
+    phase = "INTRO";
+  }
+
   updatePlayerHP();
   updateEnemyHP();
   setMenuIndex(0);
+  initIntro();
   requestAnimationFrame(soulMovementLoop);
   requestAnimationFrame(fightBarLoop);
 </script>
