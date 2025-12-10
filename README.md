@@ -3,26 +3,34 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mini Scratch — 50 Blocks (Fixed)</title>
+<title>Mini Scratch — Improved (Load JSON + Responsive)</title>
 <style>
   :root{
-    --bg:#04101a; --panel:#071827; --muted:#9fb0c2; --accent:#06b6d4;
-    --text:#e6eef6;
+    --bg:#04101a; --panel:#071827; --muted:#9fb0c2; --accent:#06b6d4; --text:#e6eef6;
+    --card:#0f1724; --glass: rgba(255,255,255,0.03);
   }
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,#04101a,#071827);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text)}
-  .app{display:grid;grid-template-columns:300px 1fr 360px;gap:16px;padding:16px;height:100vh;box-sizing:border-box}
-  .panel{background:linear-gradient(180deg,#071827,#06121a);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);overflow:hidden}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#04101a,#071827);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text);-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:300px 1fr 360px;gap:14px;padding:14px;height:100vh;box-sizing:border-box}
+  .panel{background:linear-gradient(180deg,var(--card),#06121a);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);overflow:hidden;display:flex;flex-direction:column}
   h3{margin:0 0 10px 0;color:var(--muted);font-size:13px;letter-spacing:.6px}
-  .palette{height:calc(100% - 56px);overflow:auto;padding-right:6px;display:flex;flex-direction:column;gap:8px}
+  /* Left palette */
+  .palette{flex:1;overflow:auto;padding-right:6px;display:flex;flex-direction:column;gap:8px}
+  .palette-search{display:flex;gap:8px;margin-bottom:8px}
+  .palette-search input{flex:1;padding:8px;border-radius:8px;border:1px solid var(--glass);background:#071827;color:var(--muted)}
   .block-tpl{display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:var(--text);cursor:grab;border:1px solid rgba(255,255,255,.02)}
-  .block-tpl .kind{font-weight:700;width:10px;height:10px;border-radius:50%}
+  .block-tpl .kind{width:10px;height:10px;border-radius:50%}
   .kind-move{background:#2b6cb0}.kind-turn{background:#f97316}.kind-look{background:#10b981}.kind-control{background:#ef4444}.kind-sound{background:#7c3aed}.kind-pen{background:#f59e0b}.kind-sense{background:#06b6d4}.kind-operator{background:#06b6d4}.kind-variable{background:#f97316}
-  .center{display:flex;flex-direction:column;gap:12px}
-  .toolbar{display:flex;gap:8px;align-items:center}
-  .btn{background:#071827;border:1px solid rgba(255,255,255,.03);color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer}
+  .block-tpl small{color:var(--muted);margin-left:auto}
+
+  /* Center workspace */
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .toolbar .left{display:flex;gap:8px;align-items:center}
+  .toolbar .right{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .btn{background:#071827;border:1px solid rgba(255,255,255,.03);color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
   .btn.primary{background:linear-gradient(90deg,#06b6d4,#0ea5a4);color:#042027;border:none}
-  .workspace{flex:1;background:linear-gradient(180deg,#06121a,#04101a);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:flex-start}
-  .canvas{flex:1;background:linear-gradient(180deg,#071827,#04101a);border-radius:8px;padding:12px;min-height:560px;position:relative;overflow:auto;border:1px dashed rgba(255,255,255,.03)}
+  .btn.ghost{background:transparent;border:1px solid var(--glass);color:var(--muted)}
+  .workspace{flex:1;background:linear-gradient(180deg,#06121a,#04101a);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:flex-start;min-height:520px}
+  .canvas{flex:1;background:linear-gradient(180deg,#071827,#04101a);border-radius:8px;padding:12px;min-height:520px;position:relative;overflow:auto;border:1px dashed rgba(255,255,255,.03)}
   .drop-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);color:rgba(255,255,255,.04);font-size:12px}
   .script{min-height:40px;padding:8px;border-radius:8px;background:linear-gradient(180deg,#06121a,#04101a);box-shadow:inset 0 1px 0 rgba(255,255,255,.02);display:flex;flex-direction:column;gap:8px}
   .block-instance{display:flex;align-items:center;padding:8px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:#fff;cursor:grab;gap:8px;min-width:220px}
@@ -30,18 +38,19 @@
   .block-instance input[type="text"], .block-instance input[type="number"], .block-instance select{
     background:rgba(255,255,255,.06);border:none;color:var(--text);padding:4px 6px;border-radius:6px;font-size:13px;min-width:40px
   }
-  .block-instance .small{font-size:12px;color:var(--muted)}
-  .right{display:flex;flex-direction:column;gap:12px}
+
+  /* Right stage */
   .stage{height:360px;background:linear-gradient(180deg,#e6f7ff,#dff6ff);border-radius:8px;position:relative;overflow:hidden;border:6px solid #071827}
   #stageCanvas{position:absolute;left:0;top:0;width:100%;height:100%}
   .sprite{position:absolute;width:64px;height:64px;background:#ffcc00;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#071827;box-shadow:0 8px 20px rgba(2,6,23,.4);transform:translate(-50%,-50%);transition:transform .12s linear}
-  .json-area{width:100%;height:120px;background:#071827;border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:12px;border:1px solid rgba(255,255,255,.02)}
-  .footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
+  .json-area{width:100%;height:120px;background:#071827;border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:12px;border:1px solid rgba(255,255,255,.02);resize:vertical}
+  .footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;margin-top:8px}
   .snap-line{position:absolute;height:6px;background:linear-gradient(90deg,transparent,#0ea5a4,transparent);left:0;right:0;border-radius:4px;pointer-events:none;opacity:0;transition:opacity .12s}
-  .palette-search{display:flex;gap:8px;margin-bottom:8px}
-  .palette-search input{flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.03);background:#071827;color:var(--muted)}
-  .block-tpl small{color:var(--muted);margin-left:auto}
-  @media (max-width:1000px){.app{grid-template-columns:1fr;grid-auto-rows:auto;padding:12px}.right{order:3}.left{order:1}.center{order:2}}
+  .controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .vars{background:linear-gradient(180deg,#071827,#06121a);border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:13px;min-height:40px}
+  .small{font-size:12px;color:var(--muted)}
+  /* responsive */
+  @media (max-width:1100px){.app{grid-template-columns:1fr;grid-auto-rows:auto;padding:10px}.right{order:3}.left{order:1}.center{order:2}}
 </style>
 </head>
 <body>
@@ -49,25 +58,32 @@
   <div class="panel left">
     <h3>Blocks (50)</h3>
     <div class="palette-search">
-      <input id="search" placeholder="Search blocks..." />
-      <button class="btn" id="resetSearch">Reset</button>
+      <input id="search" placeholder="Search blocks..." aria-label="search blocks" />
+      <button class="btn ghost" id="resetSearch" title="Reset search">Reset</button>
     </div>
     <div class="palette" id="palette" aria-label="block palette"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn" id="exportBtn">Export</button>
-      <button class="btn" id="importBtn">Import</button>
+      <button class="btn" id="exportBtn" title="Copy project JSON to textarea">Export</button>
+      <button class="btn" id="importBtn" title="Load JSON from textarea">Load JSON</button>
+      <label class="btn" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+        Load file
+        <input id="fileInput" type="file" accept="application/json" style="display:none" />
+      </label>
     </div>
   </div>
 
   <div class="panel center">
-    <div class="toolbar">
-      <button class="btn primary" id="runBtn">Run</button>
-      <button class="btn" id="stopBtn">Stop</button>
-      <button class="btn" id="clearBtn">Clear</button>
-      <div style="flex:1"></div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label class="small" style="color:var(--muted)">Speed</label>
-        <input id="speed" type="range" min="0.2" max="2" step="0.1" value="1" />
+    <div class="toolbar" role="toolbar" aria-label="editor toolbar">
+      <div class="left">
+        <button class="btn primary" id="runBtn" title="Run the script">Run</button>
+        <button class="btn" id="stopBtn" title="Stop execution">Stop</button>
+        <button class="btn" id="clearBtn" title="Clear workspace">Clear</button>
+      </div>
+      <div class="right">
+        <div class="controls-row">
+          <label class="small" style="margin-right:6px">Speed</label>
+          <input id="speed" type="range" min="0.2" max="2" step="0.1" value="1" />
+        </div>
       </div>
     </div>
 
@@ -87,25 +103,32 @@
       <div class="sprite" id="sprite" style="left:50%;top:50%">🙂</div>
     </div>
 
-    <div style="margin-top:12px">
-      <h3>Project JSON</h3>
-      <textarea id="jsonArea" class="json-area" placeholder="Exported project JSON appears here"></textarea>
-    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-direction:column">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="flex:1">
+          <h3 style="margin:0 0 6px 0">Project JSON</h3>
+          <textarea id="jsonArea" class="json-area" placeholder="Exported project JSON appears here"></textarea>
+        </div>
+        <div style="width:140px">
+          <h3 style="margin:0 0 6px 0">Variables</h3>
+          <div class="vars" id="varsUI">score: 0</div>
+        </div>
+      </div>
 
-    <div class="footer" style="margin-top:8px">
-      <div>Mini Scratch — 50 blocks</div>
-      <div style="color:var(--muted)">Editable params; drag & drop</div>
+      <div class="footer">
+        <div>Mini Scratch — Improved</div>
+        <div class="small">Drag blocks • Load JSON • Responsive UI</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-/* Fixed and improved single-file editor
-   - Ensures palette renders after DOM ready
-   - Inline inputs reliably update params
-   - Drag/drop stable, reorder works
-   - Stage canvas resizes correctly
-   - Basic interpreter for many blocks
+/* Improved editor with JSON file load and responsive toolbar
+   - Load JSON from file or textarea
+   - Export copies JSON to textarea and clipboard
+   - Live variables UI
+   - Responsive toolbar (wraps) so buttons don't overflow
 */
 
 document.addEventListener('DOMContentLoaded', ()=> {
@@ -120,10 +143,12 @@ document.addEventListener('DOMContentLoaded', ()=> {
   const speedInput = document.getElementById('speed');
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
+  const fileInput = document.getElementById('fileInput');
   const jsonArea = document.getElementById('jsonArea');
   const snapLine = document.getElementById('snapLine');
   const searchInput = document.getElementById('search');
   const resetSearch = document.getElementById('resetSearch');
+  const varsUI = document.getElementById('varsUI');
   const stageCanvas = document.getElementById('stageCanvas');
   const stage = document.getElementById('stage');
   const stageCtx = stageCanvas.getContext('2d');
@@ -219,7 +244,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     {id:'pen_set_size', title:'set pen size', kind:'pen', inputs:[{name:'size',type:'number',label:'',default:2}]}
   ];
 
-  // Render palette (safe, idempotent)
+  // Render palette
   function renderPalette(filter=''){
     paletteEl.innerHTML = '';
     const list = blocks.filter(b=>{
@@ -287,14 +312,14 @@ document.addEventListener('DOMContentLoaded', ()=> {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = instance.params[inp.name] ?? inp.default ?? '';
-        input.addEventListener('input', ()=> instance.params[inp.name] = input.value);
+        input.addEventListener('input', ()=> { instance.params[inp.name] = input.value; updateVarsUI(); });
         label.appendChild(input);
       } else if(inp.type === 'number'){
         const input = document.createElement('input');
         input.type = 'number';
         input.value = instance.params[inp.name] ?? inp.default ?? 0;
         input.style.width = '80px';
-        input.addEventListener('input', ()=> instance.params[inp.name] = Number(input.value));
+        input.addEventListener('input', ()=> { instance.params[inp.name] = Number(input.value); updateVarsUI(); });
         label.appendChild(input);
       } else if(inp.type === 'select'){
         const sel = document.createElement('select');
@@ -302,7 +327,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
           const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o);
         });
         sel.value = instance.params[inp.name] ?? inp.default;
-        sel.addEventListener('change', ()=> instance.params[inp.name] = sel.value);
+        sel.addEventListener('change', ()=> { instance.params[inp.name] = sel.value; updateVarsUI(); });
         label.appendChild(sel);
       }
     });
@@ -352,6 +377,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
       const el = scriptArea.querySelector(`[data-id="${block.id}"]`);
       if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
     }
+    updateVarsUI();
   }
 
   // Remove block
@@ -361,6 +387,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     workspace.splice(idx,1);
     const el = scriptArea.querySelector(`[data-id="${id}"]`);
     if(el) el.remove();
+    updateVarsUI();
   }
 
   // Initial demo blocks
@@ -438,12 +465,13 @@ document.addEventListener('DOMContentLoaded', ()=> {
       runBtn.textContent = 'Run';
       runBtn.classList.remove('btn');
       runBtn.classList.add('primary');
+      updateVarsUI();
     }
   });
   stopBtn.addEventListener('click', ()=> { runAbort = true; });
-  clearBtn.addEventListener('click', ()=> { workspace=[]; scriptArea.innerHTML=''; });
+  clearBtn.addEventListener('click', ()=> { workspace=[]; scriptArea.innerHTML=''; updateVarsUI(); });
 
-  // Export/Import
+  // Export: copy JSON to textarea and clipboard
   exportBtn.addEventListener('click', ()=>{
     const data = JSON.stringify({workspace,variables}, null, 2);
     jsonArea.value = data;
@@ -452,26 +480,62 @@ document.addEventListener('DOMContentLoaded', ()=> {
     exportBtn.textContent = 'Copied';
     setTimeout(()=> exportBtn.textContent = 'Export', 1200);
   });
-  importBtn.addEventListener('click', ()=>{
+
+  // Import from textarea
+  importBtn.addEventListener('click', ()=> {
     try{
       const data = JSON.parse(jsonArea.value);
-      workspace = data.workspace || [];
-      variables = data.variables || {};
-      scriptArea.innerHTML = '';
-      workspace.forEach(b=>{
-        const def = blocks.find(x=>x.id===b.type);
-        if(!def) return;
-        if(!b.id) b.id = uid();
-        appendBlock(b);
-      });
-      importBtn.textContent = 'Imported';
-      setTimeout(()=> importBtn.textContent = 'Import', 1200);
+      loadProject(data);
+      importBtn.textContent = 'Loaded';
+      setTimeout(()=> importBtn.textContent = 'Load JSON', 1200);
     }catch(e){
-      alert('Invalid JSON');
+      alert('Invalid JSON in textarea');
     }
   });
 
-  // Interpreter
+  // Load from file input
+  fileInput.addEventListener('change', (ev)=>{
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=> {
+      try{
+        const data = JSON.parse(reader.result);
+        loadProject(data);
+      }catch(e){
+        alert('Invalid JSON file');
+      }
+    };
+    reader.readAsText(f);
+    // reset input so same file can be reloaded later
+    fileInput.value = '';
+  });
+
+  // Load project helper
+  function loadProject(data){
+    workspace = data.workspace || [];
+    variables = data.variables || {};
+    scriptArea.innerHTML = '';
+    workspace.forEach(b=>{
+      const def = blocks.find(x=>x.id===b.type);
+      if(!def) return;
+      if(!b.id) b.id = uid();
+      appendBlock(b);
+    });
+    updateVarsUI();
+  }
+
+  // Update variables UI
+  function updateVarsUI(){
+    const keys = Object.keys(variables);
+    if(keys.length === 0){
+      varsUI.textContent = '—';
+      return;
+    }
+    varsUI.innerHTML = keys.map(k=>`${k}: <strong style="color:#fff">${variables[k]}</strong>`).join('<br>');
+  }
+
+  // Interpreter (same core as before, with live variable updates)
   async function runScript(blocksList){
     const speed = Number(speedInput.value);
     function evalExpr(expr){
@@ -566,7 +630,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
             await execList(p.body);
           }
         } else {
-          // naive: repeat next block in workspace if exists
           const idx = workspace.findIndex(x=>x.id===b.id);
           if(idx !== -1 && idx+1 < workspace.length){
             for(let i=0;i<times;i++){
@@ -581,7 +644,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
         }
       } else if(b.type === 'if'){
         if(evalExpr(p.cond)) {
-          // no nested body support here
+          // placeholder
         }
       } else if(b.type === 'if_else'){
         // placeholder
@@ -597,6 +660,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
       } else if(b.type === 'ask'){
         const ans = prompt(p.text||'');
         variables['answer'] = ans;
+        updateVarsUI();
       } else if(b.type === 'answer'){
         return variables['answer'];
       } else if(b.type === 'touching_color'){
@@ -616,8 +680,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
         return String(p.s).length;
       } else if(b.type === 'set_var'){
         variables[p.var] = p.value;
+        updateVarsUI();
       } else if(b.type === 'change_var'){
         variables[p.var] = (Number(variables[p.var]||0) + Number(p.delta||0));
+        updateVarsUI();
       } else if(b.type === 'show_var' || b.type === 'hide_var'){
         // no-op
       } else if(b.type === 'set_list' || b.type === 'add_to_list'){
@@ -732,6 +798,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     setSpritePos(st.width/2, st.height/2);
     sprite.dataset.dir = 0;
     stageCtx.clearRect(0,0,stageCanvas.width,stageCanvas.height);
+    updateVarsUI();
   })();
 
 });
