@@ -800,7 +800,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     stageCtx.clearRect(0,0,stageCanvas.width,stageCanvas.height);
     updateVarsUI();
   })();
-  
+
 });
 </script>
 </body>
