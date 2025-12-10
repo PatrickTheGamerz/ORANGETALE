@@ -3,61 +3,56 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mini Scratch Clone</title>
+<title>Mini Scratch — 50 Blocks</title>
 <style>
   :root{
-    --bg:#0f1724; --panel:#0b1220; --accent:#ffcc00; --muted:#9aa7b2;
-    --block:#1f2937; --block-2:#253244; --snap:#0ea5a4;
-    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --bg:#071022; --panel:#0b1220; --muted:#9fb0c2; --accent:#06b6d4;
+    --block:#1b2b3a; --block-2:#0f1724; --text:#e6eef6;
   }
-  html,body{height:100%;margin:0;font-family:var(--font-sans);background:linear-gradient(180deg,#071021 0%, #071827 100%);color:#e6eef6}
-  .app{display:grid;grid-template-columns:260px 1fr 360px;gap:18px;padding:18px;height:100vh;box-sizing:border-box}
-  .panel{background:linear-gradient(180deg,var(--panel),#071827);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(2,6,23,.6);overflow:hidden}
-  .left{display:flex;flex-direction:column;gap:12px}
-  h2{margin:0 0 8px 0;font-size:14px;color:var(--muted);letter-spacing:.6px}
-  .palette{display:flex;flex-direction:column;gap:10px;overflow:auto;padding-right:6px;height:calc(100% - 60px)}
-  .block{user-select:none;cursor:grab;padding:10px 12px;border-radius:8px;background:linear-gradient(180deg,var(--block),var(--block-2));color:#fff;box-shadow:0 4px 8px rgba(2,6,23,.5);display:inline-block}
-  .block.move{background:linear-gradient(180deg,#2b6cb0,#1e3a8a)}
-  .block.turn{background:linear-gradient(180deg,#f97316,#c2410c)}
-  .block.say{background:linear-gradient(180deg,#10b981,#047857)}
-  .block.wait{background:linear-gradient(180deg,#7c3aed,#5b21b6)}
-  .block.repeat{background:linear-gradient(180deg,#ef4444,#b91c1c)}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#04101a,#071827);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text)}
+  .app{display:grid;grid-template-columns:300px 1fr 360px;gap:16px;padding:16px;height:100vh;box-sizing:border-box}
+  .panel{background:linear-gradient(180deg,#071827,#06121a);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);overflow:hidden}
+  h3{margin:0 0 10px 0;color:var(--muted);font-size:13px;letter-spacing:.6px}
+  .palette{height:calc(100% - 56px);overflow:auto;padding-right:6px;display:flex;flex-direction:column;gap:8px}
+  .block-tpl{display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:var(--text);cursor:grab;border:1px solid rgba(255,255,255,.02)}
+  .block-tpl .kind{font-weight:700;width:10px;height:10px;border-radius:50%}
+  .kind-move{background:#2b6cb0}.kind-turn{background:#f97316}.kind-look{background:#10b981}.kind-control{background:#ef4444}.kind-sound{background:#7c3aed}.kind-pen{background:#f59e0b}.kind-sense{background:#06b6d4}.kind-operator{background:#06b6d4}.kind-variable{background:#f97316}
   .center{display:flex;flex-direction:column;gap:12px}
   .toolbar{display:flex;gap:8px;align-items:center}
-  .btn{background:#0b1220;border:1px solid rgba(255,255,255,.04);color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn{background:#071827;border:1px solid rgba(255,255,255,.03);color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer}
   .btn.primary{background:linear-gradient(90deg,#06b6d4,#0ea5a4);color:#042027;border:none}
-  .workspace{flex:1;background:linear-gradient(180deg,#071827,#04101a);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:flex-start}
-  .canvas{flex:1;background:linear-gradient(180deg,#071827,#04101a);border-radius:8px;padding:12px;min-height:520px;position:relative;overflow:auto;border:1px dashed rgba(255,255,255,.03)}
-  .drop-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);color:rgba(255,255,255,.06);font-size:12px}
+  .workspace{flex:1;background:linear-gradient(180deg,#06121a,#04101a);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:flex-start}
+  .canvas{flex:1;background:linear-gradient(180deg,#071827,#04101a);border-radius:8px;padding:12px;min-height:560px;position:relative;overflow:auto;border:1px dashed rgba(255,255,255,.03)}
+  .drop-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);color:rgba(255,255,255,.04);font-size:12px}
   .script{min-height:40px;padding:8px;border-radius:8px;background:linear-gradient(180deg,#06121a,#04101a);box-shadow:inset 0 1px 0 rgba(255,255,255,.02);display:flex;flex-direction:column;gap:8px}
-  .block-instance{display:flex;align-items:center;padding:8px;border-radius:8px;background:linear-gradient(180deg,#1b2b3a,#0f1b26);color:#fff;cursor:grab}
-  .block-instance .label{flex:1}
-  .block-instance .handle{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.06);margin-left:8px}
+  .block-instance{display:flex;align-items:center;padding:8px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:#fff;cursor:grab;gap:8px;min-width:220px}
+  .block-instance .label{flex:1;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .block-instance input[type="text"], .block-instance input[type="number"], .block-instance select{
+    background:rgba(255,255,255,.06);border:none;color:var(--text);padding:4px 6px;border-radius:6px;font-size:13px;min-width:40px
+  }
+  .block-instance .small{font-size:12px;color:var(--muted)}
   .right{display:flex;flex-direction:column;gap:12px}
-  .stage{height:360px;background:linear-gradient(180deg,#e6f7ff,#dff6ff);border-radius:8px;position:relative;overflow:hidden;border:6px solid #0b1220}
+  .stage{height:360px;background:linear-gradient(180deg,#e6f7ff,#dff6ff);border-radius:8px;position:relative;overflow:hidden;border:6px solid #071827}
+  #stageCanvas{position:absolute;left:0;top:0;width:100%;height:100%}
   .sprite{position:absolute;width:64px;height:64px;background:#ffcc00;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#071827;box-shadow:0 8px 20px rgba(2,6,23,.4);transform:translate(-50%,-50%);transition:transform .12s linear}
-  .controls{display:flex;gap:8px;align-items:center}
-  .small{font-size:12px;padding:6px 8px}
-  .io{display:flex;gap:8px;align-items:center}
   .json-area{width:100%;height:120px;background:#071827;border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:12px;border:1px solid rgba(255,255,255,.02)}
   .footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
-  /* Snap indicator */
   .snap-line{position:absolute;height:6px;background:linear-gradient(90deg,transparent,#0ea5a4,transparent);left:0;right:0;border-radius:4px;pointer-events:none;opacity:0;transition:opacity .12s}
-  /* responsive */
+  .palette-search{display:flex;gap:8px;margin-bottom:8px}
+  .palette-search input{flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.03);background:#071827;color:var(--muted)}
+  .block-tpl small{color:var(--muted);margin-left:auto}
   @media (max-width:1000px){.app{grid-template-columns:1fr;grid-auto-rows:auto;padding:12px}.right{order:3}.left{order:1}.center{order:2}}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="panel left">
-    <h2>Blocks</h2>
-    <div class="palette" id="palette">
-      <div class="block move" draggable="true" data-type="move">move 10 steps</div>
-      <div class="block turn" draggable="true" data-type="turn">turn 15 degrees</div>
-      <div class="block say" draggable="true" data-type="say">say Hello! for 2s</div>
-      <div class="block wait" draggable="true" data-type="wait">wait 1 second</div>
-      <div class="block repeat" draggable="true" data-type="repeat">repeat 5 times</div>
+    <h3>Blocks (50)</h3>
+    <div class="palette-search">
+      <input id="search" placeholder="Search blocks..." />
+      <button class="btn" id="resetSearch">Reset</button>
     </div>
+    <div class="palette" id="palette"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn" id="exportBtn">Export</button>
       <button class="btn" id="importBtn">Import</button>
@@ -68,11 +63,11 @@
     <div class="toolbar">
       <button class="btn primary" id="runBtn">Run</button>
       <button class="btn" id="stopBtn">Stop</button>
+      <button class="btn" id="clearBtn">Clear</button>
       <div style="flex:1"></div>
-      <div class="controls">
-        <div class="io"><strong style="color:var(--muted);margin-right:8px">Speed</strong>
-          <input id="speed" type="range" min="0.2" max="2" step="0.1" value="1" />
-        </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label class="small" style="color:var(--muted)">Speed</label>
+        <input id="speed" type="range" min="0.2" max="2" step="0.1" value="1" />
       </div>
     </div>
 
@@ -86,73 +81,232 @@
   </div>
 
   <div class="panel right">
-    <h2>Stage</h2>
+    <h3>Stage & Controls</h3>
     <div class="stage" id="stage">
+      <canvas id="stageCanvas"></canvas>
       <div class="sprite" id="sprite" style="left:50%;top:50%">🙂</div>
     </div>
 
     <div style="margin-top:12px">
-      <h2>Project JSON</h2>
+      <h3>Project JSON</h3>
       <textarea id="jsonArea" class="json-area" placeholder="Exported project JSON appears here"></textarea>
     </div>
 
     <div class="footer" style="margin-top:8px">
-      <div>Mini Scratch Clone</div>
-      <div style="color:var(--muted)">Built with HTML/CSS/JS</div>
+      <div>Mini Scratch — 50 blocks</div>
+      <div style="color:var(--muted)">Editable params; drag & drop</div>
     </div>
   </div>
 </div>
 
 <script>
-/* Simple block-based editor runtime
-   - Blocks are represented as objects with type and params
-   - Workspace holds an ordered list of blocks
-   - Interpreter runs blocks sequentially, supports repeat
+/* Mini Scratch — 50 blocks with editable parameters
+   - Palette is generated from a blocks[] definition (50 items)
+   - Blocks support inline inputs (text, number, select)
+   - Drag from palette to workspace; reorder by drag
+   - Double-click to edit inline; right-click to delete
+   - Interpreter supports many block types (core behaviors implemented)
 */
 
-const palette = document.getElementById('palette');
+const paletteEl = document.getElementById('palette');
 const scriptArea = document.getElementById('scriptArea');
 const canvas = document.getElementById('canvas');
 const sprite = document.getElementById('sprite');
 const runBtn = document.getElementById('runBtn');
 const stopBtn = document.getElementById('stopBtn');
+const clearBtn = document.getElementById('clearBtn');
 const speedInput = document.getElementById('speed');
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
 const jsonArea = document.getElementById('jsonArea');
 const snapLine = document.getElementById('snapLine');
+const searchInput = document.getElementById('search');
+const resetSearch = document.getElementById('resetSearch');
 
-let workspace = []; // array of block instances
+let workspace = [];
 let running = false;
 let runAbort = false;
 let dragData = null;
 let idCounter = 1;
+let variables = {}; // simple variable store
+let broadcasts = {};
+let stageCanvas = document.getElementById('stageCanvas');
+let stageCtx = stageCanvas.getContext('2d');
+let penState = {down:false,color:'#000000',size:2};
+let timerStart = performance.now();
 
-// Utility
+// responsive canvas
+function resizeStageCanvas(){
+  const st = document.getElementById('stage');
+  stageCanvas.width = st.clientWidth;
+  stageCanvas.height = st.clientHeight;
+}
+window.addEventListener('resize', resizeStageCanvas);
+resizeStageCanvas();
+
+// helper
 function uid(){ return 'b'+(idCounter++); }
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function ease(t){ return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; }
 
-// Create a visual block instance
-function createBlockInstance(type, params = {}) {
+// block definitions (50)
+const blocks = [
+  // Movement (10)
+  {id:'move', title:'move', kind:'move', inputs:[{name:'steps',type:'number',label:'steps',default:10}]},
+  {id:'move_by', title:'move by', kind:'move', inputs:[{name:'dx',type:'number',label:'dx',default:10},{name:'dy',type:'number',label:'dy',default:0}]},
+  {id:'glide', title:'glide to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:100},{name:'y',type:'number',label:'y',default:100},{name:'secs',type:'number',label:'secs',default:1}]},
+  {id:'set_x', title:'set x to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:0}]},
+  {id:'change_x', title:'change x by', kind:'move', inputs:[{name:'dx',type:'number',label:'dx',default:10}]},
+  {id:'set_y', title:'set y to', kind:'move', inputs:[{name:'y',type:'number',label:'y',default:0}]},
+  {id:'change_y', title:'change y by', kind:'move', inputs:[{name:'dy',type:'number',label:'dy',default:10}]},
+  {id:'go_to', title:'go to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:0},{name:'y',type:'number',label:'y',default:0}]},
+  {id:'point_in_direction', title:'point in direction', kind:'move', inputs:[{name:'dir',type:'number',label:'deg',default:90}]},
+  {id:'bounce_if_on_edge', title:'if on edge, bounce', kind:'move', inputs:[]},
+
+  // Rotation & looks (6)
+  {id:'turn_right', title:'turn right', kind:'turn', inputs:[{name:'deg',type:'number',label:'deg',default:15}]},
+  {id:'turn_left', title:'turn left', kind:'turn', inputs:[{name:'deg',type:'number',label:'deg',default:15}]},
+  {id:'set_rotation_style', title:'set rotation style', kind:'turn', inputs:[{name:'style',type:'select',label:'style',options:['all around','left-right','don't rotate'],default:'all around'}]},
+  {id:'show', title:'show', kind:'look', inputs:[]},
+  {id:'hide', title:'hide', kind:'look', inputs:[]},
+  {id:'switch_costume', title:'next costume', kind:'look', inputs:[]},
+
+  // Looks & text (6)
+  {id:'say', title:'say', kind:'look', inputs:[{name:'text',type:'text',label:'',default:'Hello!'},{name:'secs',type:'number',label:'for',default:2}]},
+  {id:'think', title:'think', kind:'look', inputs:[{name:'text',type:'text',label:'',default:'Hmm...'},{name:'secs',type:'number',label:'for',default:2}]},
+  {id:'set_size', title:'set size to', kind:'look', inputs:[{name:'size',type:'number',label:'%',default:100}]},
+  {id:'change_size', title:'change size by', kind:'look', inputs:[{name:'delta',type:'number',label:'%',default:10}]},
+  {id:'set_color', title:'set color', kind:'look', inputs:[{name:'color',type:'text',label:'',default:'#ffcc00'}]},
+  {id:'change_color', title:'change color by', kind:'look', inputs:[{name:'delta',type:'number',label:'',default:10}]},
+
+  // Sound (4)
+  {id:'play_sound', title:'play sound', kind:'sound', inputs:[{name:'name',type:'text',label:'',default:'pop'}]},
+  {id:'play_sound_wait', title:'play sound and wait', kind:'sound', inputs:[{name:'name',type:'text',label:'',default:'pop'}]},
+  {id:'stop_sounds', title:'stop all sounds', kind:'sound', inputs:[]},
+  {id:'set_volume', title:'set volume to', kind:'sound', inputs:[{name:'vol',type:'number',label:'%',default:100}]},
+
+  // Control (8)
+  {id:'wait', title:'wait', kind:'control', inputs:[{name:'secs',type:'number',label:'seconds',default:1}]},
+  {id:'repeat', title:'repeat', kind:'control', inputs:[{name:'times',type:'number',label:'times',default:5}]},
+  {id:'forever', title:'forever', kind:'control', inputs:[]},
+  {id:'if', title:'if', kind:'control', inputs:[{name:'cond',type:'text',label:'condition',default:'true'}]},
+  {id:'if_else', title:'if else', kind:'control', inputs:[{name:'cond',type:'text',label:'condition',default:'true'}]},
+  {id:'wait_until', title:'wait until', kind:'control', inputs:[{name:'cond',type:'text',label:'condition',default:'false'}]},
+  {id:'stop', title:'stop', kind:'control', inputs:[{name:'what',type:'select',label:'',options:['this script','all','other scripts in sprite'],default:'this script'}]},
+  {id:'broadcast', title:'broadcast', kind:'control', inputs:[{name:'msg',type:'text',label:'',default:'message1'}]},
+
+  // Sensing (6)
+  {id:'ask', title:'ask', kind:'sense', inputs:[{name:'text',type:'text',label:'',default:'What?'}]},
+  {id:'answer', title:'answer', kind:'sense', inputs:[]},
+  {id:'touching_color', title:'touching color', kind:'sense', inputs:[{name:'color',type:'text',label:'',default:'#000000'}]},
+  {id:'touching_sprite', title:'touching sprite', kind:'sense', inputs:[{name:'name',type:'text',label:'',default:'sprite2'}]},
+  {id:'distance_to', title:'distance to', kind:'sense', inputs:[{name:'name',type:'text',label:'',default:'mouse'}]},
+  {id:'timer_reset', title:'reset timer', kind:'sense', inputs:[]},
+
+  // Operators (4)
+  {id:'math', title:'math', kind:'operator', inputs:[{name:'expr',type:'text',label:'',default:'1+1'}]},
+  {id:'random', title:'pick random', kind:'operator', inputs:[{name:'min',type:'number',label:'min',default:1},{name:'max',type:'number',label:'max',default:10}]},
+  {id:'join', title:'join', kind:'operator', inputs:[{name:'a',type:'text',label:'',default:'hello'},{name:'b',type:'text',label:'',default:'world'}]},
+  {id:'length', title:'length of', kind:'operator', inputs:[{name:'s',type:'text',label:'',default:'hello'}]},
+
+  // Variables (6)
+  {id:'set_var', title:'set', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'},{name:'value',type:'text',label:'to',default:'0'}]},
+  {id:'change_var', title:'change', kind:'variable', inputs:[{name:'var',type:'text',label:'by',default:'myVar'},{name:'delta',type:'number',label:'by',default:1}]},
+  {id:'show_var', title:'show variable', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'}]},
+  {id:'hide_var', title:'hide variable', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'}]},
+  {id:'set_list', title:'set list', kind:'variable', inputs:[{name:'list',type:'text',label:'',default:'myList'},{name:'value',type:'text',label:'to',default:''}]},
+  {id:'add_to_list', title:'add to list', kind:'variable', inputs:[{name:'list',type:'text',label:'',default:'myList'},{name:'value',type:'text',label:'',default:''}]},
+
+  // Pen (4)
+  {id:'pen_down', title:'pen down', kind:'pen', inputs:[]},
+  {id:'pen_up', title:'pen up', kind:'pen', inputs:[]},
+  {id:'pen_set_color', title:'set pen color', kind:'pen', inputs:[{name:'color',type:'text',label:'',default:'#000000'}]},
+  {id:'pen_set_size', title:'set pen size', kind:'pen', inputs:[{name:'size',type:'number',label:'',default:2}]}
+];
+
+// render palette
+function renderPalette(filter=''){
+  paletteEl.innerHTML = '';
+  blocks.filter(b=> b.title.toLowerCase().includes(filter.toLowerCase()) || (b.inputs||[]).some(i=>String(i.name).toLowerCase().includes(filter.toLowerCase())))
+    .forEach(b=>{
+      const el = document.createElement('div');
+      el.className = 'block-tpl';
+      el.draggable = true;
+      el.dataset.type = b.id;
+      el.innerHTML = `<div class="kind kind-${b.kind}"></div><div style="flex:1">${b.title}</div><small>${b.inputs.length? b.inputs.map(i=>i.label||i.name).join(' '):''}</small>`;
+      paletteEl.appendChild(el);
+
+      el.addEventListener('dragstart', (e)=>{
+        dragData = {type:'palette', blockType: b.id};
+        e.dataTransfer.setData('text/plain','palette');
+        setTimeout(()=> el.style.opacity = '0.5', 0);
+      });
+      el.addEventListener('dragend', ()=> { dragData = null; el.style.opacity = '1'; });
+      el.addEventListener('click', ()=> {
+        const block = { id: uid(), type: b.id, params: cloneDefaults(b) };
+        appendBlock(block, null, true);
+      });
+    });
+}
+renderPalette();
+
+// search
+searchInput.addEventListener('input', ()=> renderPalette(searchInput.value));
+resetSearch.addEventListener('click', ()=> { searchInput.value=''; renderPalette(); });
+
+// clone defaults
+function cloneDefaults(def){
+  const p = {};
+  (def.inputs||[]).forEach(i=> p[i.name] = i.default);
+  return p;
+}
+
+// create block instance element with inline inputs
+function createBlockInstance(def, instance){
   const el = document.createElement('div');
   el.className = 'block-instance';
-  el.dataset.type = type;
-  el.dataset.id = uid();
+  el.dataset.type = def.id;
+  el.dataset.id = instance.id;
   el.style.margin = '6px 0';
   const label = document.createElement('div');
   label.className = 'label';
-  label.textContent = renderLabel(type, params);
+  // build inline inputs
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'small';
+  titleSpan.textContent = def.title;
+  label.appendChild(titleSpan);
+  (def.inputs||[]).forEach(inp=>{
+    if(inp.type === 'text'){
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = instance.params[inp.name] ?? inp.default ?? '';
+      input.addEventListener('change', ()=> instance.params[inp.name] = input.value);
+      label.appendChild(input);
+    } else if(inp.type === 'number'){
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.value = instance.params[inp.name] ?? inp.default ?? 0;
+      input.style.width = '80px';
+      input.addEventListener('change', ()=> instance.params[inp.name] = Number(input.value));
+      label.appendChild(input);
+    } else if(inp.type === 'select'){
+      const sel = document.createElement('select');
+      (inp.options||[]).forEach(opt=> {
+        const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o);
+      });
+      sel.value = instance.params[inp.name] ?? inp.default;
+      sel.addEventListener('change', ()=> instance.params[inp.name] = sel.value);
+      label.appendChild(sel);
+    }
+  });
   el.appendChild(label);
   const handle = document.createElement('div');
   handle.className = 'handle';
+  handle.style.width='10px'; handle.style.height='10px'; handle.style.borderRadius='50%'; handle.style.background='rgba(255,255,255,.06)';
   el.appendChild(handle);
 
-  // editable params for some blocks
-  if(type === 'move' || type === 'turn' || type === 'say' || type === 'wait' || type === 'repeat'){
-    el.addEventListener('dblclick', ()=> editBlockParams(el));
-  }
-
-  // drag reorder
+  // interactions
   el.draggable = true;
   el.addEventListener('dragstart', (e)=>{
     dragData = {type:'instance', id:el.dataset.id};
@@ -161,64 +315,57 @@ function createBlockInstance(type, params = {}) {
   });
   el.addEventListener('dragend', ()=> { dragData = null; el.style.opacity = '1'; snapLine.style.opacity = 0; });
 
-  // right-click remove
   el.addEventListener('contextmenu', (e)=>{
     e.preventDefault();
     removeBlockById(el.dataset.id);
   });
 
+  el.addEventListener('dblclick', ()=>{
+    // focus first input if exists
+    const first = el.querySelector('input,select');
+    if(first) first.focus();
+  });
+
   return el;
 }
 
-function renderLabel(type, params){
-  if(type==='move') return `move ${params.steps ?? 10} steps`;
-  if(type==='turn') return `turn ${params.deg ?? 15} degrees`;
-  if(type==='say') return `say ${params.text ?? 'Hello!'} for ${params.time ?? 2}s`;
-  if(type==='wait') return `wait ${params.time ?? 1} second`;
-  if(type==='repeat') return `repeat ${params.times ?? 5} times`;
-  return type;
-}
-
-function editBlockParams(el){
-  const type = el.dataset.type;
-  const id = el.dataset.id;
-  const current = workspace.find(b=>b.id===id);
-  if(!current) return;
-  if(type==='move'){
-    const v = prompt('Steps to move', current.params.steps ?? 10);
-    if(v!==null) { current.params.steps = Number(v); el.querySelector('.label').textContent = renderLabel(type,current.params); }
-  } else if(type==='turn'){
-    const v = prompt('Degrees to turn', current.params.deg ?? 15);
-    if(v!==null) { current.params.deg = Number(v); el.querySelector('.label').textContent = renderLabel(type,current.params); }
-  } else if(type==='say'){
-    const t = prompt('Text to say', current.params.text ?? 'Hello!');
-    if(t!==null){
-      const s = prompt('Seconds to say', current.params.time ?? 2);
-      if(s!==null){ current.params.text = t; current.params.time = Number(s); el.querySelector('.label').textContent = renderLabel(type,current.params); }
-    }
-  } else if(type==='wait'){
-    const s = prompt('Seconds to wait', current.params.time ?? 1);
-    if(s!==null){ current.params.time = Number(s); el.querySelector('.label').textContent = renderLabel(type,current.params); }
-  } else if(type==='repeat'){
-    const t = prompt('Times to repeat', current.params.times ?? 5);
-    if(t!==null){ current.params.times = Number(t); el.querySelector('.label').textContent = renderLabel(type,current.params); }
+// append block to workspace
+function appendBlock(block, index=null, scrollIntoView=false){
+  const def = blocks.find(b=>b.id===block.type);
+  if(!def) return;
+  if(index === null || index >= workspace.length){
+    workspace.push(block);
+    const el = createBlockInstance(def, block);
+    scriptArea.appendChild(el);
+  } else {
+    workspace.splice(index,0,block);
+    const el = createBlockInstance(def, block);
+    scriptArea.insertBefore(el, scriptArea.children[index]);
+  }
+  if(scrollIntoView){
+    const el = scriptArea.querySelector(`[data-id="${block.id}"]`);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
   }
 }
 
-// palette drag
-palette.querySelectorAll('.block').forEach(b=>{
-  b.addEventListener('dragstart', (e)=>{
-    dragData = {type:'palette', blockType: b.dataset.type};
-    e.dataTransfer.setData('text/plain','palette');
-    setTimeout(()=> b.style.opacity = '0.5', 0);
-  });
-  b.addEventListener('dragend', ()=> { dragData = null; b.style.opacity = '1'; });
-});
+// remove
+function removeBlockById(id){
+  const idx = workspace.findIndex(b=>b.id===id);
+  if(idx===-1) return;
+  workspace.splice(idx,1);
+  const el = scriptArea.querySelector(`[data-id="${id}"]`);
+  if(el) el.remove();
+}
 
-// canvas drop handling
+// initial demo: add a few blocks
+appendBlock({id:uid(), type:'move', params:{steps:40}});
+appendBlock({id:uid(), type:'turn_right', params:{deg:45}});
+appendBlock({id:uid(), type:'say', params:{text:'Hello!', secs:2}});
+appendBlock({id:uid(), type:'wait', params:{secs:0.6}});
+
+// drag & drop into canvas
 canvas.addEventListener('dragover', (e)=>{
   e.preventDefault();
-  // show snap line where it would be inserted
   const y = e.clientY - canvas.getBoundingClientRect().top + canvas.scrollTop;
   const children = Array.from(scriptArea.children);
   let insertIndex = children.length;
@@ -227,7 +374,6 @@ canvas.addEventListener('dragover', (e)=>{
     const top = r.top - canvas.getBoundingClientRect().top + canvas.scrollTop;
     if(y < top + r.height/2){ insertIndex = i; break; }
   }
-  // position snap line
   if(insertIndex === children.length){
     snapLine.style.top = (scriptArea.getBoundingClientRect().bottom - canvas.getBoundingClientRect().top + canvas.scrollTop - 8) + 'px';
   } else {
@@ -236,7 +382,6 @@ canvas.addEventListener('dragover', (e)=>{
   }
   snapLine.style.opacity = 1;
 });
-
 canvas.addEventListener('dragleave', ()=> snapLine.style.opacity = 0);
 
 canvas.addEventListener('drop', (e)=>{
@@ -244,14 +389,14 @@ canvas.addEventListener('drop', (e)=>{
   snapLine.style.opacity = 0;
   if(!dragData) return;
   if(dragData.type === 'palette'){
-    const block = { id: uid(), type: dragData.blockType, params: defaultParams(dragData.blockType) };
+    const def = blocks.find(b=>b.id===dragData.blockType);
+    if(!def) return;
+    const block = { id: uid(), type: def.id, params: cloneDefaults(def) };
     appendBlock(block, null, true);
   } else if(dragData.type === 'instance'){
-    // reorder existing
     const id = dragData.id;
     const el = scriptArea.querySelector(`[data-id="${id}"]`);
     if(!el) return;
-    // compute insert index
     const y = e.clientY - canvas.getBoundingClientRect().top + canvas.scrollTop;
     const children = Array.from(scriptArea.children).filter(c=>c.dataset.id !== id);
     let insertIndex = children.length;
@@ -260,7 +405,6 @@ canvas.addEventListener('drop', (e)=>{
       const top = r.top - canvas.getBoundingClientRect().top + canvas.scrollTop;
       if(y < top + r.height/2){ insertIndex = i; break; }
     }
-    // remove and reinsert in workspace array and DOM
     const idx = workspace.findIndex(b=>b.id===id);
     if(idx === -1) return;
     const [block] = workspace.splice(idx,1);
@@ -272,46 +416,7 @@ canvas.addEventListener('drop', (e)=>{
   dragData = null;
 });
 
-// default params
-function defaultParams(type){
-  if(type==='move') return {steps:10};
-  if(type==='turn') return {deg:15};
-  if(type==='say') return {text:'Hello!', time:2};
-  if(type==='wait') return {time:1};
-  if(type==='repeat') return {times:5, body:[]};
-  return {};
-}
-
-// append block to workspace and DOM
-function appendBlock(block, index=null, scrollIntoView=false){
-  const el = createBlockInstance(block.type, block.params);
-  el.dataset.id = block.id;
-  if(index === null || index >= workspace.length){
-    workspace.push(block);
-    scriptArea.appendChild(el);
-  } else {
-    workspace.splice(index,0,block);
-    scriptArea.insertBefore(el, scriptArea.children[index]);
-  }
-  if(scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'center'});
-}
-
-// remove block
-function removeBlockById(id){
-  const idx = workspace.findIndex(b=>b.id===id);
-  if(idx===-1) return;
-  workspace.splice(idx,1);
-  const el = scriptArea.querySelector(`[data-id="${id}"]`);
-  if(el) el.remove();
-}
-
-// initial demo blocks
-appendBlock({id:uid(), type:'move', params:{steps:60}});
-appendBlock({id:uid(), type:'turn', params:{deg:45}});
-appendBlock({id:uid(), type:'say', params:{text:'Hi!', time:1}});
-appendBlock({id:uid(), type:'wait', params:{time:0.6}});
-
-// run/stop logic
+// run/stop
 runBtn.addEventListener('click', async ()=>{
   if(running) return;
   running = true; runAbort = false;
@@ -329,13 +434,55 @@ runBtn.addEventListener('click', async ()=>{
     runBtn.classList.add('primary');
   }
 });
-
 stopBtn.addEventListener('click', ()=> { runAbort = true; });
+clearBtn.addEventListener('click', ()=> { workspace=[]; scriptArea.innerHTML=''; });
 
-// interpreter
-async function runScript(blocks){
+// export/import
+exportBtn.addEventListener('click', ()=>{
+  const data = JSON.stringify({workspace,variables}, null, 2);
+  jsonArea.value = data;
+  jsonArea.select();
+  document.execCommand('copy');
+  exportBtn.textContent = 'Copied';
+  setTimeout(()=> exportBtn.textContent = 'Export', 1200);
+});
+importBtn.addEventListener('click', ()=>{
+  try{
+    const data = JSON.parse(jsonArea.value);
+    workspace = data.workspace || [];
+    variables = data.variables || {};
+    scriptArea.innerHTML = '';
+    workspace.forEach(b=>{
+      const def = blocks.find(x=>x.id===b.type);
+      if(!def) return;
+      if(!b.id) b.id = uid();
+      appendBlock(b);
+    });
+    importBtn.textContent = 'Imported';
+    setTimeout(()=> importBtn.textContent = 'Import', 1200);
+  }catch(e){
+    alert('Invalid JSON');
+  }
+});
+
+// interpreter core
+async function runScript(blocksList){
   const speed = Number(speedInput.value);
-  // simple sequential interpreter with support for repeat
+  // helper to evaluate simple expressions and variables
+  function evalExpr(expr){
+    // replace variables by their numeric/string values
+    try{
+      const safe = expr.replace(/\b([A-Za-z_]\w*)\b/g, (m)=>{
+        if(Object.prototype.hasOwnProperty.call(variables,m)) return JSON.stringify(variables[m]);
+        return m;
+      });
+      // eslint-disable-next-line no-eval
+      return eval(safe);
+    }catch(e){
+      return false;
+    }
+  }
+
   async function execList(list){
     for(let i=0;i<list.length;i++){
       if(runAbort) throw new Error('aborted');
@@ -343,34 +490,160 @@ async function runScript(blocks){
       await execBlock(b);
     }
   }
+
   async function execBlock(b){
-    const t = b.type;
-    if(t==='move'){
-      await animateMove(b.params.steps, speed);
-    } else if(t==='turn'){
-      await animateTurn(b.params.deg, speed);
-    } else if(t==='say'){
-      await animateSay(b.params.text, b.params.time, speed);
-    } else if(t==='wait'){
-      await sleep(b.params.time * 1000 / speed);
-    } else if(t==='repeat'){
-      const times = Math.max(0, Math.floor(b.params.times || 0));
-      for(let i=0;i<times;i++){
-        if(runAbort) throw new Error('aborted');
-        // if repeat has nested body, run it; otherwise run next blocks as body until end or next repeat (simple)
-        // For simplicity, treat repeat as repeating the next immediate block if present
-        // Here we support nested body stored in params.body
-        if(Array.isArray(b.params.body) && b.params.body.length) await execList(b.params.body);
-        else {
-          // no nested body: do nothing
+    const def = blocks.find(x=>x.id===b.type);
+    if(!def) return;
+    const p = b.params || {};
+    // core behaviors
+    if(b.type === 'move'){
+      await animateMove(p.steps || 10, speed);
+    } else if(b.type === 'move_by'){
+      const cur = getSpritePos();
+      setSpritePos(cur.x + (p.dx||0), cur.y + (p.dy||0));
+      await sleep(20);
+    } else if(b.type === 'glide'){
+      await animateGlide(p.x||0, p.y||0, Math.max(0.01,p.secs||0.5), speed);
+    } else if(b.type === 'set_x'){
+      const pos = getSpritePos(); setSpritePos(p.x||0, pos.y);
+    } else if(b.type === 'change_x'){
+      const pos = getSpritePos(); setSpritePos(pos.x + (p.dx||0), pos.y);
+    } else if(b.type === 'set_y'){
+      const pos = getSpritePos(); setSpritePos(pos.x, p.y||0);
+    } else if(b.type === 'change_y'){
+      const pos = getSpritePos(); setSpritePos(pos.x, pos.y + (p.dy||0));
+    } else if(b.type === 'go_to'){
+      setSpritePos(p.x||0, p.y||0);
+    } else if(b.type === 'point_in_direction'){
+      sprite.dataset.dir = (p.dir||0);
+    } else if(b.type === 'bounce_if_on_edge'){
+      // simple bounce: if near edge, invert direction
+      const pos = getSpritePos();
+      const st = document.getElementById('stage').getBoundingClientRect();
+      if(pos.x < 20 || pos.x > st.width-20) sprite.dataset.dir = (Number(sprite.dataset.dir||0) + 180) % 360;
+      if(pos.y < 20 || pos.y > st.height-20) sprite.dataset.dir = (Number(sprite.dataset.dir||0) + 180) % 360;
+    } else if(b.type === 'turn_right'){
+      sprite.dataset.dir = (Number(sprite.dataset.dir||0) + (p.deg||15)) % 360;
+      sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir}deg)`;
+    } else if(b.type === 'turn_left'){
+      sprite.dataset.dir = (Number(sprite.dataset.dir||0) - (p.deg||15)) % 360;
+      sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir}deg)`;
+    } else if(b.type === 'set_rotation_style'){
+      // placeholder
+    } else if(b.type === 'show'){
+      sprite.style.display = 'flex';
+    } else if(b.type === 'hide'){
+      sprite.style.display = 'none';
+    } else if(b.type === 'switch_costume'){
+      // placeholder
+    } else if(b.type === 'say' || b.type === 'think'){
+      await animateSay(p.text||'', p.secs||2, speed, b.type==='think');
+    } else if(b.type === 'set_size'){
+      sprite.style.width = (64 * ((p.size||100)/100)) + 'px';
+      sprite.style.height = (64 * ((p.size||100)/100)) + 'px';
+    } else if(b.type === 'change_size'){
+      const curW = parseFloat(getComputedStyle(sprite).width);
+      sprite.style.width = (curW + (p.delta||10)) + 'px';
+      sprite.style.height = sprite.style.width;
+    } else if(b.type === 'set_color'){
+      sprite.style.background = p.color || '#ffcc00';
+    } else if(b.type === 'change_color'){
+      // simple hue rotate
+      const cur = sprite.style.filter || '';
+      sprite.style.filter = `hue-rotate(${(Number(p.delta)||0)}deg)`;
+    } else if(b.type === 'play_sound' || b.type === 'play_sound_wait'){
+      // placeholder: no audio file; simulate duration
+      await sleep(300);
+    } else if(b.type === 'stop_sounds'){
+      // placeholder
+    } else if(b.type === 'set_volume'){
+      // placeholder
+    } else if(b.type === 'wait'){
+      await sleep((p.secs||1)*1000 / speed);
+    } else if(b.type === 'repeat'){
+      const times = Math.max(0, Math.floor(p.times||0));
+      // repeat next block(s) if nested body stored in params.body; otherwise repeat nothing
+      if(Array.isArray(p.body) && p.body.length){
+        for(let i=0;i<times;i++){
+          if(runAbort) throw new Error('aborted');
+          await execList(p.body);
         }
+      } else {
+        // naive: repeat next single block in workspace (not implemented here)
       }
+    } else if(b.type === 'forever'){
+      // naive forever: run until stop called
+      while(!runAbort){
+        await sleep(200);
+      }
+    } else if(b.type === 'if'){
+      if(evalExpr(p.cond)) {
+        // no nested body support here
+      }
+    } else if(b.type === 'if_else'){
+      if(evalExpr(p.cond)) {
+        // placeholder
+      } else {
+        // placeholder
+      }
+    } else if(b.type === 'wait_until'){
+      while(!evalExpr(p.cond)){
+        if(runAbort) throw new Error('aborted');
+        await sleep(100);
+      }
+    } else if(b.type === 'stop'){
+      if(p.what === 'all') runAbort = true;
+    } else if(b.type === 'broadcast'){
+      broadcasts[p.msg] = (broadcasts[p.msg]||0) + 1;
+    } else if(b.type === 'ask'){
+      const ans = prompt(p.text||'');
+      variables['answer'] = ans;
+    } else if(b.type === 'answer'){
+      // returns last answer
+    } else if(b.type === 'touching_color'){
+      // simple check: compare sprite background to color
+      return (sprite.style.background === p.color);
+    } else if(b.type === 'distance_to'){
+      const pos = getSpritePos();
+      if(p.name === 'mouse') {
+        // not tracking mouse; return 0
+        return 0;
+      }
+      return 0;
+    } else if(b.type === 'timer_reset'){
+      timerStart = performance.now();
+    } else if(b.type === 'math'){
+      return evalExpr(p.expr);
+    } else if(b.type === 'random'){
+      const a = Number(p.min||0), b2 = Number(p.max||1);
+      return Math.floor(Math.random()*(b2-a+1))+a;
+    } else if(b.type === 'join'){
+      return String(p.a) + String(p.b);
+    } else if(b.type === 'length'){
+      return String(p.s).length;
+    } else if(b.type === 'set_var'){
+      variables[p.var] = p.value;
+    } else if(b.type === 'change_var'){
+      variables[p.var] = (Number(variables[p.var]||0) + Number(p.delta||0));
+    } else if(b.type === 'show_var' || b.type === 'hide_var'){
+      // placeholder: no UI for variables
+    } else if(b.type === 'set_list' || b.type === 'add_to_list'){
+      // placeholder
+    } else if(b.type === 'pen_down'){
+      penState.down = true;
+    } else if(b.type === 'pen_up'){
+      penState.down = false;
+    } else if(b.type === 'pen_set_color'){
+      penState.color = p.color || '#000';
+    } else if(b.type === 'pen_set_size'){
+      penState.size = Number(p.size||2);
     }
   }
-  await execList(blocks);
+
+  await execList(blocksList);
 }
 
-// animations
+// sprite helpers
 function getSpritePos(){
   const rect = sprite.getBoundingClientRect();
   const stageRect = document.getElementById('stage').getBoundingClientRect();
@@ -384,57 +657,52 @@ function setSpritePos(x,y){
   const cy = clamp(y, 16, stage.height-16);
   sprite.style.left = (cx) + 'px';
   sprite.style.top = (cy) + 'px';
-  sprite.style.transform = 'translate(-50%,-50%)';
+  sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir||0}deg)`;
+  // pen drawing
+  if(penState.down){
+    stageCtx.fillStyle = penState.color;
+    stageCtx.beginPath();
+    stageCtx.arc(cx, cy, penState.size, 0, Math.PI*2);
+    stageCtx.fill();
+  }
 }
 
+// animations
 async function animateMove(steps, speed){
-  const stageRect = document.getElementById('stage').getBoundingClientRect();
-  // convert steps to pixels (approx)
-  const px = steps * 2;
-  // move to the right by px with easing
+  const px = (steps||10) * 2;
   const start = getSpritePos();
-  const targetX = clamp(start.x + px, 16, stageRect.width-16);
-  const duration = clamp(Math.abs(px)/200 * 600 / speed, 80, 2000);
+  const targetX = clamp(start.x + px, 16, stageCanvas.width-16);
+  const duration = clamp(Math.abs(px)/200 * 600 / speed, 80, 1200);
   await tween(start.x, targetX, duration, (v)=> setSpritePos(v, start.y));
 }
-
-async function animateTurn(deg, speed){
-  // rotate sprite visually
-  const el = sprite;
-  const start = getComputedStyle(el).transform;
-  el.style.transition = `transform ${200/speed}ms linear`;
-  el.style.transform += ` rotate(${deg}deg)`;
-  await sleep(200 / speed);
-  // remove rotation transition to keep transform consistent
-  el.style.transition = '';
+async function animateGlide(x,y,secs,speed){
+  const start = getSpritePos();
+  const duration = Math.max(20, secs*1000 / speed);
+  await tweenMulti(start.x, start.y, x, y, duration, (nx,ny)=> setSpritePos(nx,ny));
 }
-
-async function animateSay(text, seconds, speed){
+async function animateSay(text, secs, speed, think=false){
   const bubble = document.createElement('div');
   bubble.style.position = 'absolute';
   bubble.style.left = sprite.style.left;
   bubble.style.top = (parseFloat(sprite.style.top) - 60) + 'px';
   bubble.style.transform = 'translate(-50%,-50%)';
   bubble.style.padding = '8px 10px';
-  bubble.style.background = '#fff';
+  bubble.style.background = think ? '#f3f4f6' : '#fff';
   bubble.style.color = '#071827';
   bubble.style.borderRadius = '8px';
   bubble.style.boxShadow = '0 6px 18px rgba(2,6,23,.2)';
   bubble.style.fontSize = '14px';
   bubble.textContent = text;
   document.getElementById('stage').appendChild(bubble);
-  await sleep((seconds*1000) / speed);
+  await sleep((secs*1000) / speed);
   bubble.remove();
 }
-
-function sleep(ms){ return new Promise(res=> setTimeout(res, ms)); }
-
-function tween(a,b,duration, onUpdate){
+function tween(a,b,duration,onUpdate){
   return new Promise(res=>{
     const start = performance.now();
     function frame(now){
       const t = clamp((now-start)/duration,0,1);
-      const v = a + (b-a) * easeInOutCubic(t);
+      const v = a + (b-a) * ease(t);
       onUpdate(v);
       if(t < 1) requestAnimationFrame(frame);
       else res();
@@ -442,84 +710,35 @@ function tween(a,b,duration, onUpdate){
     requestAnimationFrame(frame);
   });
 }
-function easeInOutCubic(t){ return t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function tweenMulti(x1,y1,x2,y2,duration,onUpdate){
+  return new Promise(res=>{
+    const start = performance.now();
+    function frame(now){
+      const t = clamp((now-start)/duration,0,1);
+      const v = ease(t);
+      const nx = x1 + (x2-x1)*v;
+      const ny = y1 + (y2-y1)*v;
+      onUpdate(nx,ny);
+      if(t < 1) requestAnimationFrame(frame);
+      else res();
+    }
+    requestAnimationFrame(frame);
+  });
+}
 
-// export/import
-exportBtn.addEventListener('click', ()=>{
-  const data = JSON.stringify(workspace, null, 2);
-  jsonArea.value = data;
-  jsonArea.select();
-  document.execCommand('copy');
-  exportBtn.textContent = 'Copied';
-  setTimeout(()=> exportBtn.textContent = 'Export', 1200);
-});
-
-importBtn.addEventListener('click', ()=>{
-  try{
-    const data = JSON.parse(jsonArea.value);
-    // clear
-    workspace = [];
-    scriptArea.innerHTML = '';
-    data.forEach(b=>{
-      // ensure id exists
-      if(!b.id) b.id = uid();
-      appendBlock(b);
-    });
-    importBtn.textContent = 'Imported';
-    setTimeout(()=> importBtn.textContent = 'Import', 1200);
-  }catch(e){
-    alert('Invalid JSON');
-  }
-});
-
-// simple keyboard shortcuts
+// keyboard shortcuts
 document.addEventListener('keydown', (e)=>{
   if(e.key === 'Delete' || e.key === 'Backspace'){
-    // remove selected? not implemented; remove last block
     if(workspace.length) removeBlockById(workspace[workspace.length-1].id);
   }
 });
 
-// allow clicking on script area to add block at end
-scriptArea.addEventListener('click', (e)=>{
-  // nothing for now
-});
-
-// small UX: clicking a palette block clones it into workspace
-palette.querySelectorAll('.block').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const block = { id: uid(), type: b.dataset.type, params: defaultParams(b.dataset.type) };
-    appendBlock(block, null, true);
-  });
-});
-
-// allow nested repeat body by double-clicking repeat to add body
-scriptArea.addEventListener('dblclick', (e)=>{
-  const el = e.target.closest('.block-instance');
-  if(!el) return;
-  const id = el.dataset.id;
-  const b = workspace.find(x=>x.id===id);
-  if(!b) return;
-  if(b.type === 'repeat'){
-    // open a small modal to add a single block into repeat body
-    const choice = prompt('Add a block inside repeat (move/turn/say/wait)', 'move');
-    if(choice){
-      const t = choice.trim();
-      if(['move','turn','say','wait'].includes(t)){
-        const child = { id: uid(), type: t, params: defaultParams(t) };
-        b.params.body = b.params.body || [];
-        b.params.body.push(child);
-        alert('Added block to repeat body. Note: nested body executes when running repeat.');
-      } else alert('Unsupported block type');
-    }
-  }
-});
-
-// small responsive stage init
-(function initStage(){
-  // position sprite center
+// init sprite position
+(function init(){
   const st = document.getElementById('stage').getBoundingClientRect();
   setSpritePos(st.width/2, st.height/2);
+  sprite.dataset.dir = 0;
+  stageCtx.clearRect(0,0,stageCanvas.width,stageCanvas.height);
 })();
 
 </script>
