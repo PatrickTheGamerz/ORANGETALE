@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>A Test of Skill - Sans Fight</title>
+  <title>A Test of Skill - Sans Fight (Base)</title>
   <style>
     body {
       margin: 0;
@@ -51,7 +51,27 @@
       margin-bottom: 8px;
       font-size: 12px;
       box-shadow: 0 0 10px rgba(255,255,255,0.4);
+      position: relative;
     }
+
+    /* Monster bubble (to the right of Sans) */
+    #monster-bubble {
+      position: absolute;
+      top: 10px;
+      left: 110px;
+      max-width: 280px;
+      padding: 8px 10px;
+      border: 2px solid white;
+      background: black;
+      font-size: 16px;
+      white-space: pre-line;
+      display: none;
+    }
+    #monster-bubble.special {
+      color: #ff8000; /* special attack color */
+      border-color: #ff8000;
+    }
+
     #enemy-hp-container {
       width: 300px;
       height: 16px;
@@ -72,7 +92,7 @@
       font-size: 14px;
     }
 
-    /* Dialogue box */
+    /* Dialogue box (player text) */
     #dialogue-box {
       position: absolute;
       bottom: 150px;
@@ -112,6 +132,10 @@
       position: absolute;
       background: white;
       box-shadow: 0 0 4px rgba(255,255,255,0.8);
+    }
+    .bone.blue {
+      background: #0000ff;
+      box-shadow: 0 0 6px rgba(0,128,255,0.9);
     }
     .blaster {
       position: absolute;
@@ -200,6 +224,31 @@
       border-color: yellow;
     }
 
+    /* Target selector (who to FIGHT/ACT) */
+    #target-menu {
+      position: absolute;
+      bottom: 230px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 80px;
+      border: 4px solid white;
+      background: black;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      font-size: 18px;
+    }
+    .target-option {
+      padding: 4px 10px;
+      border: 2px solid white;
+    }
+    .target-option.selected {
+      color: yellow;
+      border-color: yellow;
+    }
+
     /* Fight bar */
     #fight-bar-container {
       position: absolute;
@@ -264,7 +313,10 @@
 <div id="game">
   <div id="enemy-area">
     <div id="enemy-name">sans</div>
-    <div id="enemy-sprite">S A N S</div>
+    <div id="enemy-sprite">
+      S A N S
+      <div id="monster-bubble"></div>
+    </div>
     <div id="enemy-hp-container">
       <div id="enemy-hp-bar"></div>
     </div>
@@ -275,6 +327,10 @@
 
   <div id="soul-box">
     <div id="soul"></div>
+  </div>
+
+  <div id="target-menu">
+    <span class="target-option selected" data-target="sans">sans</span>
   </div>
 
   <div id="fight-bar-container">
@@ -322,30 +378,28 @@
 
   let inSoulMode = false;
   let canMoveSoul = false;
-  let phase = "INTRO"; 
-  // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_BAR, MENU_SUB,
-  // PHASE2A, PHASE2A_ATTACK, PHASE2B_SPECIAL, PHASE2C, PHASE2C_ATTACK, END
+  let phase = "INTRO";
+  // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_TARGET, FIGHT_BAR, MENU_SUB,
+  // PHASE2A, PHASE2A_ATTACK, PHASE2B_SPECIAL, END
 
   let turnCount = 0;
   let actCount = 0;
-  let pureAttackTurns = 0; // counts FIGHT usage
+  let pureAttackTurns = 0;
   let sansCanBeHit = false;
   let canSpare = false;
-  let usedFinalAttackPhase1 = false;
   let usedBlueIntro = false;
+  let usedPhase1PreSpareSpecial = false;
 
-  // Phase 2A: slashed Sans
+  // Phase 2A
   let phase2AActive = false;
   let phase2ATurns = 0;
-  const phase2AStartTargets = 8; // starting # targeting bones
-  const phase2ATurnTarget = 10;  // number of turns to survive
+  const phase2ATurnTarget = 8;
 
-  // Phase 2B: pacifist special after spare
+  // Phase 2B (post-spare special)
   let phase2BQueued = false;
 
-  // Phase 2C: pure fighter punish (bad time-ish)
-  let phase2CActive = false;
-  let last4AttacksMode = false;
+  // Anti-spam: one action per player turn
+  let playerActionUsedThisTurn = false;
 
   const dialogueBox = document.getElementById("dialogue-box");
   const soulBox = document.getElementById("soul-box");
@@ -362,7 +416,9 @@
   const damageText = document.getElementById("damage-text");
   const endScreen = document.getElementById("end-screen");
   const endText = document.getElementById("end-text");
-  const game = document.getElementById("game");
+  const monsterBubble = document.getElementById("monster-bubble");
+  const targetMenu = document.getElementById("target-menu");
+  const targetOptions = Array.from(document.querySelectorAll(".target-option"));
 
   let soulX = 0;
   let soulY = 0;
@@ -370,6 +426,8 @@
   let gravityEnabled = false;
   let gravity = 0.12;
   let yVelocity = 0;
+  let jumpHold = 0;
+  const maxJumpHold = 15; // few frames of "W" before gravity wins
   let baseSoulSpeed = 3.5;
   let soulSpeed = baseSoulSpeed;
 
@@ -381,6 +439,8 @@
   let fightPointerPos = 0;
   let fightPointerDir = 1;
   let fightBarActive = false;
+
+  let targetMenuIndex = 0;
 
   let items = [
     { id: "PIE", name: "Butterscotch Pie", heal: 20 },
@@ -396,6 +456,15 @@
     dialogueBox.style.display = "none";
   }
 
+  function showMonsterBubble(text, isSpecial=false) {
+    monsterBubble.textContent = text;
+    monsterBubble.classList.toggle("special", isSpecial);
+    monsterBubble.style.display = "block";
+  }
+  function hideMonsterBubble() {
+    monsterBubble.style.display = "none";
+  }
+
   function updatePlayerHP() {
     if (playerHP < 0) playerHP = 0;
     const ratio = playerHP / playerMaxHP;
@@ -408,7 +477,7 @@
     if (enemyHP < 0) enemyHP = 0;
     const ratio = enemyHP / enemyMaxHP;
     enemyHPBar.style.width = (ratio * 100) + "%";
-    enemyHPText.textContent = "HP: " + enemyHP + " / " + enemyMaxHP;
+    enemyHPText.textContent = "HP: " + enemyHP.toFixed(7) + " / 1";
   }
 
   function setMenuIndex(index) {
@@ -459,7 +528,10 @@
       ? "0 0 6px rgba(0,128,255,0.9)"
       : "0 0 6px rgba(255,0,0,0.9)";
     gravityEnabled = enableGravity;
-    if (!enableGravity) yVelocity = 0;
+    if (!enableGravity) {
+      yVelocity = 0;
+      jumpHold = 0;
+    }
   }
 
   function soulMovementLoop() {
@@ -468,13 +540,21 @@
       const boxWidth = boxRect.width;
       const boxHeight = boxRect.height;
 
-      if (!gravityEnabled) {
-        if (keys["w"] || keys["W"]) soulY -= soulSpeed;
-        if (keys["s"] || keys["S"]) soulY += soulSpeed;
-      } else {
-        if (keys["w"] || keys["W"]) yVelocity -= 0.3;
+      // Blue mode: W only gives a short impulse
+      if (gravityEnabled) {
+        if (keys["w"] || keys["W"]) {
+          if (jumpHold < maxJumpHold) {
+            yVelocity -= 0.3;
+            jumpHold++;
+          }
+        } else {
+          jumpHold = 0;
+        }
         yVelocity += gravity;
         soulY += yVelocity;
+      } else {
+        if (keys["w"] || keys["W"]) soulY -= soulSpeed;
+        if (keys["s"] || keys["S"]) soulY += soulSpeed;
       }
 
       if (keys["a"] || keys["A"]) soulX -= soulSpeed;
@@ -504,7 +584,7 @@
 
   function updateDifficulty() {
     const pureFactor = Math.floor(pureAttackTurns / 2);
-    soulSpeed = baseSoulSpeed + pureFactor * 0.5;
+    soulSpeed = baseSoulSpeed + pureFactor * 0.3;
   }
 
   // ========= ATTACK DISPATCH =========
@@ -513,26 +593,12 @@
       startSansAttackPhase2A();
       return;
     }
-    if (phase2CActive) {
-      startSansAttackPhase2C();
-      return;
-    }
 
     phase = "ENEMY_ATTACK";
     turnCount++;
     updateDifficulty();
 
-    // If player only fights, after 5-6 fights, trigger phase2C mode
-    if (!phase2CActive && pureAttackTurns >= 6 && !phase2AActive && !phase2BQueued) {
-      phase2CActive = true;
-      showDialogue(
-        "* \"ya haven't tried anything else, huh?\"\n" +
-        "* \"guess i'll have to get a bit more serious.\""
-      );
-      return;
-    }
-
-    // Blue attack joke
+    // Blue intro
     if (!usedBlueIntro && turnCount === 1) {
       exitSoulMode();
       showDialogue(
@@ -540,17 +606,15 @@
         "* \"...then we get to the fun part.\""
       );
       setTimeout(() => {
-        showDialogue(
-          "* \"what's that look for?\"\n" +
-          "* \"oh right, my blue attack.\"\n" +
-          "* \"almost forgot about it, heh heh heh.\""
-        );
+        showMonsterBubble("oh right, my blue attack.\nalmost forgot about it, heh heh heh.");
         setTimeout(() => {
-          showDialogue("* \"are ya ready? 'cause here it comes.\"");
+          showMonsterBubble("are ya ready?\n'cause here it comes.");
           setTimeout(() => {
             blueAttackSequence(() => {
+              hideMonsterBubble();
               showDialogue("* \"what are you looking so blue for?\"");
               phase = "PLAYER_TURN";
+              playerActionUsedThisTurn = false;
             });
           }, 600);
         }, 800);
@@ -559,107 +623,139 @@
       return;
     }
 
-    // Phase 1 special attack that DOES end
-    if (!usedFinalAttackPhase1 && turnCount >= 5 && !phase2BQueued) {
-      usedFinalAttackPhase1 = true;
+    // Phase 1 pre-spare special, then unlock spare + hit
+    if (!usedPhase1PreSpareSpecial && turnCount >= 4 && !phase2BQueued) {
+      usedPhase1PreSpareSpecial = true;
       exitSoulMode();
-      showDialogue(
-        "* \"alright. warm‑up's over.\"\n" +
-        "* \"paps has this 'special attack' thing.\"\n" +
-        "* \"guess i’ll borrow the idea.\""
-      );
+      showMonsterBubble("time for a little\nspecial demonstration.", true);
       setTimeout(() => {
-        specialAttackPhase1(() => {
+        phase1PreSpareSpecial(() => {
+          hideMonsterBubble();
+          showMonsterBubble("...yeah.\ni think you're ready.");
           showDialogue(
             "* \"welp, that sure was fun.\"\n" +
-            "* \"you seem pretty much ready for waterfall.\"\n" +
             "* \"now just spare me and we can both be on our way.\""
           );
           canSpare = true;
           sansCanBeHit = true;
           phase = "PLAYER_TURN";
+          playerActionUsedThisTurn = false;
         });
-      }, 1000);
+      }, 800);
       return;
     }
 
+    // Normal Phase 1 attacks
     enterSoulMode();
 
     const attacks = [
-      pacifistBottomZoneJump,
-      pacifistDoubleSpinBones,
-      pacifistWaveBlueThenSideBones,
-      pacifistTopWavesBlueBottom,
-      pacifistTopBottomAlternating
+      phase1BouncingBlueBones,
+      phase1SpinningBlueBones,
+      phase1MixedWaves
     ];
     const attack = attacks[Math.floor(Math.random() * attacks.length)];
     attack(() => {
       exitSoulMode();
       if (playerHP > 0) {
-        showDialogue("* \"nice moves, kid.\"");
+        // varied dialogue
+        const lines = [
+          "* \"nice dodging.\"",
+          "* \"still standin', huh?\"",
+          "* \"not bad, kid.\""
+        ];
+        showDialogue(lines[Math.floor(Math.random() * lines.length)]);
         phase = "PLAYER_TURN";
+        playerActionUsedThisTurn = false;
       }
     });
   }
 
-  // ========= PHASE 2A ATTACKS (slashed Sans) =========
+  // ========= PHASE 2A ATTACKS =========
   function startSansAttackPhase2A() {
     phase = "PHASE2A_ATTACK";
     phase2ATurns++;
 
     enterSoulMode();
 
+    // Last turn before final special
     if (phase2ATurns >= phase2ATurnTarget) {
-      // spiral gaster special
       exitSoulMode();
-      showDialogue(
-        "* \"heh. still standin', huh?\"\n" +
-        "* \"guess that's enough... for both of us.\""
-      );
+      showMonsterBubble("heh.\nlooks like we're both at our limit.", true);
       setTimeout(() => {
-        spiralGasterFinal(() => {
-          endBattle(true, false, true);
+        spiralGasterFinalPhase2A(() => {
+          // at end: tired, can spare or kill
+          exitSoulMode();
+          canSpare = true;
+          sansCanBeHit = true;
+          showMonsterBubble("...guess that's it.", true);
+          showDialogue("* he looks like he is about to use his special attack.\n* but nothing comes.");
+          phase = "PLAYER_TURN";
+          playerActionUsedThisTurn = false;
         });
       }, 1000);
       return;
     }
 
-    const remainingFactor = Math.max(0, phase2AStartTargets - phase2ATurns);
-    const numTargetBones = Math.max(3, remainingFactor);
-
-    phase2ATargetingBonesAndXYBlasters(numTargetBones, () => {
+    // normal 2A pattern: target bones bouncing then blaster
+    phase2ATargetBonesThenBlaster(() => {
       exitSoulMode();
       if (playerHP > 0) {
-        showDialogue("* \"still up? not bad.\"");
+        const lines = [
+          "* \"still goin'?\"",
+          "* \"hangin' in there.\"",
+          "* \"this is rough, huh?\""
+        ];
+        showDialogue(lines[Math.floor(Math.random() * lines.length)]);
         phase = "PLAYER_TURN";
+        playerActionUsedThisTurn = false;
       }
     });
   }
 
-  // ========= PHASE 2C ATTACKS (Bad-time-ish) =========
-  function startSansAttackPhase2C() {
-    phase = "PHASE2C_ATTACK";
-    last4AttacksMode = true;
+  // ========= BLUE ATTACK SEQUENCE =========
+  function blueAttackSequence(onEnd) {
+    setSoulColor("blue", true);
     enterSoulMode();
-    const attacks = [
-      phase2CBoneFlood,
-      phase2CSlidersCross,
-      phase2CBoneZoneSpam
-    ];
-    const attack = attacks[Math.floor(Math.random() * attacks.length)];
-    attack(() => {
-      exitSoulMode();
-      if (playerHP > 0) {
-        phase = "PLAYER_TURN";
-        showDialogue("* \"getting tired yet?\"");
+    const boxRect = soulBox.getBoundingClientRect();
+    soulX = (boxRect.width / 2) - 8;
+    soulY = (boxRect.height / 2) - 8;
+    soul.style.left = soulX + "px";
+    soul.style.top = soulY + "px";
+
+    const duration = 2800;
+    const startTime = performance.now();
+
+    const bone = spawnBone(0, boxRect.height - 18, boxRect.width, 18);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bone.remove();
+        setSoulColor("red", false);
+        onEnd();
+        return;
       }
-    });
+      if (t - startTime > duration) {
+        bone.remove();
+        setSoulColor("red", false);
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      const rect = bone.getBoundingClientRect();
+      if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   }
 
-  // ========= BASIC ATTACK HELPERS =========
-  function spawnBone(x, y, w, h) {
+  // ========= HELPER: BONES & BLASTERS =========
+  function spawnBone(x, y, w, h, blue=false) {
     const bone = document.createElement("div");
     bone.classList.add("bone");
+    if (blue) bone.classList.add("blue");
     bone.style.left = x + "px";
     bone.style.top = y + "px";
     bone.style.width = w + "px";
@@ -691,12 +787,6 @@
         beam.style.height = "16px";
         beam.style.left = "0px";
         beam.style.top = (y + 12) + "px";
-      } else if (orientation === "diagX") {
-        // approximate X diagonal: long beam at angle visually using tall rect
-        beam.style.width = "16px";
-        beam.style.height = boxRect.height + 40 + "px";
-        beam.style.left = (x + 12) + "px";
-        beam.style.top = "-20px";
       }
 
       const startTime = performance.now();
@@ -717,384 +807,184 @@
         requestAnimationFrame(loop);
       }
       requestAnimationFrame(loop);
-    }, delay);
+    }, delay + 800); // 0.8 sec delay before firing
   }
 
-  // ========= PHASE 1 ATTACKS =========
+  // ========= PHASE 1 ATTACKS (improved) =========
 
-  function pacifistBottomZoneJump(onEnd) {
+  // 1) Bouncing bones that turn blue after wall collision, then back
+  function phase1BouncingBlueBones(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-
-    const groundZoneHeight = 25;
-    const duration = 5000;
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 6000;
     const startTime = performance.now();
 
-    const ground = spawnBone(0, height - groundZoneHeight, width, groundZoneHeight);
-    const gaps = 3;
-    const gapWidth = 20;
-    for (let i = 0; i < gaps; i++) {
-      const gx = (width / (gaps + 1)) * (i + 1) - gapWidth / 2;
-      const gap = spawnBone(gx, height - groundZoneHeight, gapWidth, groundZoneHeight);
-      gap.style.background = "#000";
-      gap.style.boxShadow = "none";
+    // many bones from left
+    for (let i = 0; i < 6; i++) {
+      const y = 20 + i * 15;
+      const bone = spawnBone(-40, y, 40, 10);
+      bones.push({ el: bone, x: -40, y, vx: 2.2, vy: 0, bounced: false, special: true, blueTime: 0 });
+    }
+
+    // 2 extra "bouncer" bones from right
+    for (let i = 0; i < 2; i++) {
+      const y = 30 + i * 40;
+      const bone = spawnBone(w + 40, y, 40, 10);
+      bones.push({ el: bone, x: w + 40, y, vx: -2.6, vy: 0, bounceOnly: true });
     }
 
     function loop(t) {
       if (!inSoulMode) {
-        ground.remove();
+        bones.forEach(b => b.el.remove());
         onEnd();
         return;
       }
       if (t - startTime > duration) {
-        ground.remove();
+        bones.forEach(b => b.el.remove());
         onEnd();
         return;
       }
+
       const soulRect = soul.getBoundingClientRect();
-      const rect = ground.getBoundingClientRect();
-      if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+
+      bones.forEach(b => {
+        b.x += b.vx;
+        b.el.style.left = b.x + "px";
+
+        // collisions with walls
+        if (!b.bounced && b.special) {
+          if (b.x <= 0 || b.x + 40 >= w) {
+            b.vx = -b.vx;
+            b.bounced = true;
+            // turn special bones blue for a short time
+            b.el.classList.add("blue");
+            b.blueTime = 0;
+          }
+        } else if (b.special && b.bounced) {
+          b.blueTime++;
+          if (b.blueTime > 60) {
+            b.el.classList.remove("blue");
+          }
+        }
+
+        if (b.bounceOnly && (b.x <= 0 || b.x + 40 >= w)) {
+          b.vx = -b.vx;
+        }
+
+        const rect = b.el.getBoundingClientRect();
+        const isBlue = b.el.classList.contains("blue");
+        if (rectsOverlap(rect, soulRect)) {
+          if (isBlue && gravityEnabled) damagePlayer(1);
+          if (!isBlue) damagePlayer(1);
+        }
+      });
+
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
   }
 
-  function pacifistDoubleSpinBones(onEnd) {
+  // 2) Spinning blue bones around player (move = damage)
+  function phase1SpinningBlueBones(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const cx = boxRect.width / 2;
     const cy = boxRect.height / 2;
+    setSoulColor("blue", true);
+    soulX = cx - 8;
+    soulY = cy - 8;
+    soul.style.left = soulX + "px";
+    soul.style.top = soulY + "px";
 
-    const bone1 = spawnBone(cx - 5, cy - 40, 10, 40);
-    const bone2 = spawnBone(cx - 5, cy, 10, 40);
-
+    const bones = [];
+    const count = 6;
+    const radius = 45;
     let angle = 0;
-    const duration = 6000;
+    const duration = 5000;
     const startTime = performance.now();
+
+    for (let i = 0; i < count; i++) {
+      const bone = spawnBone(cx, cy, 14, 14, true);
+      bones.push({ el: bone, angleOffset: (Math.PI * 2 / count) * i, spin: 0 });
+    }
 
     function loop(t) {
       if (!inSoulMode) {
-        bone1.remove();
-        bone2.remove();
+        bones.forEach(b => b.el.remove());
+        setSoulColor("red", false);
         onEnd();
         return;
       }
       if (t - startTime > duration) {
-        bone1.remove();
-        bone2.remove();
+        bones.forEach(b => b.el.remove());
+        setSoulColor("red", false);
+        exitSoulMode();
         onEnd();
         return;
       }
 
       angle += 0.03;
-      const r = 35;
-      const x1 = cx + Math.cos(angle) * r;
-      const y1 = cy + Math.sin(angle) * r - 20;
-      const x2 = cx + Math.cos(angle + Math.PI) * r;
-      const y2 = cy + Math.sin(angle + Math.PI) * r - 20;
-
-      bone1.style.left = (x1 - 5) + "px";
-      bone1.style.top = y1 + "px";
-      bone2.style.left = (x2 - 5) + "px";
-      bone2.style.top = y2 + "px";
-
       const soulRect = soul.getBoundingClientRect();
-      const r1 = bone1.getBoundingClientRect();
-      const r2 = bone2.getBoundingClientRect();
-      if (rectsOverlap(r1, soulRect) || rectsOverlap(r2, soulRect)) damagePlayer(1);
+      const moving = keys["w"] || keys["a"] || keys["s"] || keys["d"] ||
+                     keys["W"] || keys["A"] || keys["S"] || keys["D"];
+
+      bones.forEach(b => {
+        b.spin += 0.2;
+        const x = cx + Math.cos(angle + b.angleOffset) * radius;
+        const y = cy + Math.sin(angle + b.angleOffset) * radius;
+        b.el.style.left = (x - 7) + "px";
+        b.el.style.top = (y - 7) + "px";
+        b.el.style.transform = "rotate(" + (b.spin * 180 / Math.PI) + "deg)";
+        const rect = b.el.getBoundingClientRect();
+        if (moving && rectsOverlap(rect, soulRect)) {
+          damagePlayer(1);
+        }
+      });
 
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
   }
 
-  function pacifistWaveBlueThenSideBones(onEnd) {
+  // 3) Mixed wave + later target bones (before spare)
+  function phase1MixedWaves(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-
+    const w = boxRect.width;
+    const h = boxRect.height;
     const bones = [];
     const duration = 7000;
     const startTime = performance.now();
 
-    for (let i = 0; i < 5; i++) {
-      const bone = spawnBone(-40, 20 + i * 15, 40, 10);
-      bones.push({ el: bone, x: -40, y: 20 + i * 15, speed: 2 });
+    // wave from left and right
+    for (let i = 0; i < 4; i++) {
+      const y = 20 + i * 18;
+      const left = spawnBone(-40, y, 40, 10);
+      const right = spawnBone(w + 40, y + 10, 40, 10);
+      bones.push({ el: left, x: -40, y, vx: 2 });
+      bones.push({ el: right, x: w + 40, y: y + 10, vx: -2 });
     }
 
+    // 4 targeting bones appear later
     setTimeout(() => {
-      const blue = spawnBone(width / 2 - 10, height - 20, 20, 20);
-      blue.style.background = "#0000ff";
-      blue.style.boxShadow = "0 0 8px rgba(0,128,255,0.9)";
-      bones.push({ el: blue, blue: true });
-    }, 1500);
-
-    setTimeout(() => {
-      const top = spawnBone(-40, 10, 40, 10);
-      const bottom = spawnBone(width + 40, height - 20, 40, 10);
-      bones.push({ el: top, x: -40, y: 10, speed: 3, dir: 1 });
-      bones.push({ el: bottom, x: width + 40, y: height - 20, speed: 3, dir: -1 });
-    }, 3000);
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
+      for (let i = 0; i < 4; i++) {
+        const fromLeft = i % 2 === 0;
+        const startY = 20 + i * 18;
+        const startX = fromLeft ? -20 : w + 20;
+        const bone = spawnBone(startX, startY, 20, 10);
+        const sx = soulX;
+        const sy = soulY;
+        const dirX = sx - startX;
+        const dirY = sy - startY;
+        const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+        bones.push({
+          el: bone,
+          x: startX,
+          y: startY,
+          vx: (dirX / len) * 2.2,
+          vy: (dirY / len) * 2.2
+        });
       }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        if (b.blue) {
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect) && gravityEnabled) damagePlayer(1);
-        } else {
-          if (b.dir == null) b.dir = 1;
-          b.x += b.speed * b.dir;
-          b.el.style.left = b.x + "px";
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect)) damagePlayer(1);
-        }
-      });
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-
-  function pacifistTopWavesBlueBottom(onEnd) {
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 6500;
-    const startTime = performance.now();
-
-    for (let i = 0; i < 5; i++) {
-      const x = (width / 6) * (i + 1);
-      const bone = spawnBone(x, -20, 10, 30);
-      bones.push({ el: bone, x, y: -20, speed: 1.8 });
-    }
-
-    const blue = spawnBone(width / 2 - 15, height - 18, 30, 18);
-    blue.style.background = "#0000ff";
-    blue.style.boxShadow = "0 0 8px rgba(0,128,255,0.9)";
-    bones.push({ el: blue, blue: true });
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        if (b.blue) {
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect) && gravityEnabled) damagePlayer(1);
-        } else {
-          b.y += b.speed;
-          b.el.style.top = b.y + "px";
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect)) damagePlayer(1);
-        }
-      });
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-
-  function pacifistTopBottomAlternating(onEnd) {
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 6500;
-    const startTime = performance.now();
-
-    function spawnRow(fromTop) {
-      const count = 5;
-      for (let i = 0; i < count; i++) {
-        const x = (width / (count + 1)) * (i + 1) - 10;
-        const y = fromTop ? -20 : height + 20;
-        const bone = spawnBone(x, y, 16, 30);
-        bones.push({ el: bone, x, y, speed: fromTop ? 2 : -2 });
-      }
-    }
-
-    spawnRow(true);
-    setTimeout(() => spawnRow(false), 1200);
-    setTimeout(() => spawnRow(true), 2400);
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        b.y += b.speed;
-        b.el.style.top = b.y + "px";
-        const rect = b.el.getBoundingClientRect();
-        if (rectsOverlap(rect, soulRect)) damagePlayer(1);
-      });
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-
-  // ========= BLUE ATTACK SEQUENCE =========
-  function blueAttackSequence(onEnd) {
-    setSoulColor("blue", true);
-    enterSoulMode();
-    const boxRect = soulBox.getBoundingClientRect();
-    soulX = (boxRect.width / 2) - 8;
-    soulY = (boxRect.height / 2) - 8;
-    soul.style.left = soulX + "px";
-    soul.style.top = soulY + "px";
-
-    const duration = 3500;
-    const startTime = performance.now();
-
-    const bone = spawnBone(0, boxRect.height - 18, boxRect.width, 18);
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bone.remove();
-        setSoulColor("red", false);
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bone.remove();
-        setSoulColor("red", false);
-        exitSoulMode();
-        onEnd();
-        return;
-      }
-
-      const soulRect = soul.getBoundingClientRect();
-      const rect = bone.getBoundingClientRect();
-      if (rectsOverlap(rect, soulRect)) damagePlayer(1);
-
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-
-  // ========= SPECIAL ATTACK PHASE 1 =========
-  function specialAttackPhase1(onEnd) {
-    // simpler, guaranteed finish
-    enterSoulMode();
-    setSoulColor("red", false);
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 5500;
-    const startTime = performance.now();
-
-    // long bottom bone zone like Papyrus
-    const floor = spawnBone(0, height - 18, width, 18);
-    bones.push({ el: floor });
-
-    // waves of bones from left and right
-    for (let i = 0; i < 5; i++) {
-      const y = 20 + i * 16;
-      const boneL = spawnBone(-40, y, 40, 10);
-      const boneR = spawnBone(width + 40, y + 8, 40, 10);
-      bones.push({ el: boneL, x: -40, y, dir: 1, speed: 2.6 });
-      bones.push({ el: boneR, x: width + 40, y: y + 8, dir: -1, speed: 2.6 });
-    }
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        exitSoulMode();
-        onEnd();
-        return;
-      }
-
-      const soulRect = soul.getBoundingClientRect();
-      const floorRect = floor.getBoundingClientRect();
-      if (rectsOverlap(floorRect, soulRect)) damagePlayer(1);
-
-      bones.forEach(b => {
-        if (b.dir != null) {
-          b.x += b.speed * b.dir;
-          b.el.style.left = b.x + "px";
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect)) damagePlayer(1);
-        }
-      });
-
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-
-  // ========= PHASE 2A TARGETING BONES + X/Y BLASTERS =========
-  function phase2ATargetingBonesAndXYBlasters(count, onEnd) {
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 6500;
-    const startTime = performance.now();
-
-    // targeting bones: from edges aimed at player's position at spawn
-    for (let i = 0; i < count; i++) {
-      const fromLeft = Math.random() < 0.5;
-      const startY = Math.random() * (height - 10);
-      const sx = soulX;
-      const sy = soulY;
-      const x = fromLeft ? -30 : width + 30;
-      const bone = spawnBone(x, startY, 20, 10);
-      const dirX = sx - x;
-      const dirY = sy - startY;
-      const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
-      bones.push({
-        el: bone,
-        x,
-        y: startY,
-        vx: (dirX / len) * 1.8,
-        vy: (dirY / len) * 1.8
-      });
-    }
-
-    // X-shaped blasters
-    setTimeout(() => {
-      spawnBlaster(-20, -20, 200, 800, 2, "diagX");
-      spawnBlaster(width - 20, -20, 200, 800, 2, "diagX");
-    }, 1200);
-
-    // Y-shaped (top and sides)
-    setTimeout(() => {
-      spawnBlaster(width / 2 - 20, -20, 200, 800, 2, "down");
-      spawnBlaster(-20, height / 2 - 20, 400, 700, 2, "horizontal");
-      spawnBlaster(width - 20, height / 2 - 20, 400, 700, 2, "horizontal");
     }, 2600);
 
     function loop(t) {
@@ -1111,10 +1001,158 @@
 
       const soulRect = soul.getBoundingClientRect();
       bones.forEach(b => {
+        b.x += b.vx || 0;
+        b.y += b.vy || 0;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        const isBlue = b.el.classList.contains("blue");
+        if (rectsOverlap(rect, soulRect)) {
+          if (isBlue && gravityEnabled) damagePlayer(1);
+          if (!isBlue) damagePlayer(1);
+        }
+      });
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= PHASE 1 PRE-SPARE SPECIAL =========
+  function phase1PreSpareSpecial(onEnd) {
+    enterSoulMode();
+    const boxRect = soulBox.getBoundingClientRect();
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 6000;
+    const startTime = performance.now();
+
+    // first wave from both sides
+    for (let i = 0; i < 4; i++) {
+      const y = 20 + i * 15;
+      const left = spawnBone(-40, y, 40, 10);
+      const right = spawnBone(w + 40, y + 10, 40, 10);
+      bones.push({ el: left, x: -40, y, vx: 2.4 });
+      bones.push({ el: right, x: w + 40, y: y + 10, vx: -2.4 });
+    }
+
+    // bounce and target bones
+    setTimeout(() => {
+      bones.forEach(b => {
+        if (!b.vy) {
+          // bounce off walls
+          if (b.x <= 0 || b.x + 40 >= w) b.vx = -b.vx;
+        }
+      });
+
+      for (let i = 0; i < 4; i++) {
+        const fromLeft = i % 2 === 0;
+        const startY = 30 + i * 16;
+        const startX = fromLeft ? -20 : w + 20;
+        const bone = spawnBone(startX, startY, 20, 10);
+        const sx = soulX;
+        const sy = soulY;
+        const dirX = sx - startX;
+        const dirY = sy - startY;
+        const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+        bones.push({
+          el: bone,
+          x: startX,
+          y: startY,
+          vx: (dirX / len) * 2.4,
+          vy: (dirY / len) * 2.4
+        });
+      }
+    }, 2400);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.x += b.vx || 0;
+        b.y += b.vy || 0;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+      });
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= PHASE 2A ATTACK: target bones that bounce, then blaster =========
+  function phase2ATargetBonesThenBlaster(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 7000;
+    const startTime = performance.now();
+
+    const numBones = 6;
+    for (let i = 0; i < numBones; i++) {
+      const fromLeft = Math.random() < 0.5;
+      const sy = Math.random() * (h - 20);
+      const sxStart = fromLeft ? -20 : w + 20;
+      const bone = spawnBone(sxStart, sy, 20, 10);
+      const targetX = soulX;
+      const targetY = soulY;
+      const dirX = targetX - sxStart;
+      const dirY = targetY - sy;
+      const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+      bones.push({
+        el: bone,
+        x: sxStart,
+        y: sy,
+        vx: (dirX / len) * 2.2,
+        vy: (dirY / len) * 1.8,
+        bounced: false
+      });
+    }
+
+    // slower blaster at end
+    setTimeout(() => {
+      spawnBlaster(w / 2 - 20, -20, 0, 600, 2, "down");
+    }, 3500);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
         b.x += b.vx;
         b.y += b.vy;
         b.el.style.left = b.x + "px";
         b.el.style.top = b.y + "px";
+
+        if (!b.bounced && (b.x <= 0 || b.x + 20 >= w)) {
+          b.vx = -b.vx;
+          b.vy = 1.0;
+          b.bounced = true;
+        }
+
         const rect = b.el.getBoundingClientRect();
         if (rectsOverlap(rect, soulRect)) damagePlayer(2);
       });
@@ -1124,8 +1162,8 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= SPIRAL GASTER FINAL (PHASE 2A) =========
-  function spiralGasterFinal(onEnd) {
+  // ========= PHASE 2A FINAL SPIRAL (simplified but works) =========
+  function spiralGasterFinalPhase2A(onEnd) {
     enterSoulMode();
     setSoulColor("blue", true);
     const boxRect = soulBox.getBoundingClientRect();
@@ -1136,180 +1174,66 @@
 
     const duration = 9000;
     const startTime = performance.now();
-    const bones = [];
-
-    // Spiral of beams / blasters
     let angle = 0;
-    const spawnInterval = 400;
     let lastSpawn = 0;
+    const spawnInterval = 450;
 
     function loop(t) {
       if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
         setSoulColor("red", false);
         onEnd();
         return;
       }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
+      const elapsed = t - startTime;
+      if (elapsed > duration) {
         setSoulColor("red", false);
         exitSoulMode();
         onEnd();
         return;
       }
 
-      const elapsed = t - startTime;
       if (elapsed - lastSpawn > spawnInterval) {
         lastSpawn = elapsed;
         angle += Math.PI / 6;
         const x = cx + Math.cos(angle) * (boxRect.width / 3);
         const y = cy + Math.sin(angle) * (boxRect.height / 3);
-        spawnBlaster(x - 20, y - 20, 0, 700, 3, "down");
+        spawnBlaster(x - 20, y - 20, 0, 500, 2, "down");
       }
-
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        const rect = b.el.getBoundingClientRect();
-        if (rectsOverlap(rect, soulRect)) damagePlayer(3);
-      });
 
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
   }
 
-  // ========= PHASE 2C ATTACKS (Bad Time style) =========
-  function phase2CBoneFlood(onEnd) {
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 5000;
-    const startTime = performance.now();
-
-    for (let i = 0; i < 14; i++) {
-      const fromTop = i % 2 === 0;
-      const x = Math.random() * (width - 20);
-      const y = fromTop ? -20 : height + 20;
-      const bone = spawnBone(x, y, 20, 20);
-      bones.push({ el: bone, x, y, speed: fromTop ? 3 : -3 });
-    }
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        b.y += b.speed;
-        b.el.style.top = b.y + "px";
-        const rect = b.el.getBoundingClientRect();
-        if (rectsOverlap(rect, soulRect)) damagePlayer(2);
-      });
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
+  // ========= FIGHT BAR & TARGET MENU =========
+  function openTargetMenu() {
+    targetMenu.style.display = "flex";
+    targetMenuIndex = 0;
+    targetOptions.forEach((opt, i) => {
+      opt.classList.toggle("selected", i === targetMenuIndex);
+    });
+    phase = "FIGHT_TARGET";
   }
 
-  function phase2CSlidersCross(onEnd) {
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 5000;
-    const startTime = performance.now();
-
-    for (let i = 0; i < 4; i++) {
-      const fromLeft = i % 2 === 0;
-      const y = (height / 5) * (i + 1);
-      const bone = spawnBone(fromLeft ? -40 : width + 40, y, 40, 10);
-      bones.push({ el: bone, x: fromLeft ? -40 : width + 40, y, dir: fromLeft ? 1 : -1, speed: 3 });
-    }
-
-    setTimeout(() => {
-      spawnBlaster(-20, height / 2 - 20, 0, 800, 2, "horizontal");
-      spawnBlaster(width - 20, height / 2 - 20, 0, 800, 2, "horizontal");
-    }, 800);
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        b.x += b.speed * b.dir;
-        b.el.style.left = b.x + "px";
-        const rect = b.el.getBoundingClientRect();
-        if (rectsOverlap(rect, soulRect)) damagePlayer(2);
-      });
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
+  function closeTargetMenu() {
+    targetMenu.style.display = "none";
   }
 
-  function phase2CBoneZoneSpam(onEnd) {
-    const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
-    const bones = [];
-    const duration = 5500;
-    const startTime = performance.now();
-
-    const floor = spawnBone(0, height - 18, width, 18);
-    bones.push({ el: floor });
-
-    setTimeout(() => {
-      for (let i = 0; i < 4; i++) {
-        const x = (width / 5) * (i + 1);
-        const bone = spawnBone(x, -20, 16, 40);
-        bones.push({ el: bone, x, y: -20, speed: 3 });
-      }
-    }, 1000);
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      if (t - startTime > duration) {
-        bones.forEach(b => b.el.remove());
-        onEnd();
-        return;
-      }
-      const soulRect = soul.getBoundingClientRect();
-      const floorRect = floor.getBoundingClientRect();
-      if (rectsOverlap(floorRect, soulRect)) damagePlayer(2);
-
-      bones.forEach(b => {
-        if (b.speed) {
-          b.y += b.speed;
-          b.el.style.top = b.y + "px";
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect)) damagePlayer(2);
-        }
-      });
-
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
+  function setTargetMenuIndex(i) {
+    targetMenuIndex = (i + targetOptions.length) % targetOptions.length;
+    targetOptions.forEach((opt, idx) => {
+      opt.classList.toggle("selected", idx === targetMenuIndex);
+    });
   }
 
-  // ========= FIGHT BAR =========
+  function confirmTargetSelection() {
+    const target = targetOptions[targetMenuIndex].dataset.target;
+    if (target === "sans") {
+      closeTargetMenu();
+      startFightBar();
+    }
+  }
+
   function startFightBar() {
     phase = "FIGHT_BAR";
     fightBarContainer.style.display = "flex";
@@ -1344,8 +1268,13 @@
     }
 
     if (phase2AActive) {
-      // 9999 damage but nothing happens
       damageText.textContent = "9999";
+      enemyHP = 0;
+      updateEnemyHP();
+      setTimeout(() => {
+        enemyHP = 0.0000128;
+        updateEnemyHP();
+      }, 100);
       showDialogue("* you strike with everything you have.\n* it doesn't change anything.");
     } else if (!sansCanBeHit) {
       damageText.textContent = quality + " (sans dodged)";
@@ -1353,12 +1282,12 @@
     } else {
       const damage = Math.max(1, Math.floor(hitStrength * 10));
       enemyHP -= damage;
-      if (enemyHP <= 0) enemyHP = 1; 
+      if (!phase2AActive && canSpare && enemyHP <= 0) {
+        enemyHP = 0.0000128;
+      }
       updateEnemyHP();
       damageText.textContent = quality + " - " + damage;
       showDialogue("* you land a hit.\n* something feels... wrong.");
-
-      // Hit after canSpare -> phase2A
       if (!phase2AActive && canSpare) {
         startPhase2A();
       }
@@ -1368,7 +1297,6 @@
       damageText.textContent = "";
       if (playerHP > 0 && phase !== "END") {
         if (phase2AActive) startSansAttackPhase2A();
-        else if (phase2CActive) startSansAttackPhase2C();
         else startSansAttack();
       }
     }, 1000);
@@ -1394,16 +1322,11 @@
     requestAnimationFrame(fightBarLoop);
   }
 
-  // ========= PHASE 2A START =========
   function startPhase2A() {
     phase2AActive = true;
     phase2ATurns = 0;
-    showDialogue(
-      "* your blow lands awkwardly.\n" +
-      "* sans staggers.\n" +
-      "* \"heh. guess that one went a little deep.\"\n" +
-      "* \"don't worry. i've got... 0.0001 hp left.\""
-    );
+    showMonsterBubble("heh.\nthat one actually hurt.", true);
+    showDialogue("* he looks like he is about to use his special attack.");
   }
 
   // ========= SUB MENUS =========
@@ -1447,6 +1370,8 @@
   }
 
   function handleActOption(id) {
+    if (playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
     actCount++;
     if (id === "CHECK") {
       showDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.");
@@ -1462,6 +1387,8 @@
   }
 
   function handleItemOption(id) {
+    if (playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
     const item = items.find(i => i.id === id);
     if (!item) {
       showDialogue("* (you fumble with your pockets.)");
@@ -1476,14 +1403,16 @@
   }
 
   function handleMercyOption(id) {
+    if (playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
     if (id === "SPARE") {
-      if (!canSpare || phase2AActive || phase2CActive) {
+      if (!canSpare || phase2AActive) {
         showDialogue("* you reach for MERCY.\n* \"sorry pal, no mercy 'till you prove yourself.\"");
         closeSubMenu();
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1000);
         return;
       }
-      // Pacifist Spare -> Phase 2B special
+      // Pacifist spare -> Phase 2B special
       showDialogue(
         "* you lower your hands.\n" +
         "* sans smiles.\n" +
@@ -1493,7 +1422,6 @@
       phase2BQueued = true;
       closeSubMenu();
       setTimeout(() => {
-        // Phase 2B: final test of skill
         phase = "PHASE2B_SPECIAL";
         enterSoulMode();
         phase2BFinalTest(() => {
@@ -1508,32 +1436,53 @@
     }
   }
 
-  // ========= PHASE 2B FINAL TEST =========
+  // ========= PHASE 2B FINAL TEST (simplified version) =========
   function phase2BFinalTest(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
-    const width = boxRect.width;
-    const height = boxRect.height;
+    const w = boxRect.width;
+    const h = boxRect.height;
     const bones = [];
-    const duration = 8000;
+    const duration = 6000;
     const startTime = performance.now();
 
-    // mix of everything but fair
-    for (let i = 0; i < 5; i++) {
-      const y = 20 + i * 16;
-      const boneL = spawnBone(-40, y, 40, 10);
-      bones.push({ el: boneL, x: -40, y, dir: 1, speed: 2.2 });
+    // first bones both sides
+    for (let i = 0; i < 4; i++) {
+      const y = 20 + i * 15;
+      const left = spawnBone(-40, y, 40, 10);
+      const right = spawnBone(w + 40, y + 10, 40, 10);
+      bones.push({ el: left, x: -40, y, vx: 2.2 });
+      bones.push({ el: right, x: w + 40, y: y + 10, vx: -2.2, canBlue: true, blueTimer: 0 });
     }
 
-    setTimeout(() => {
-      const blue = spawnBone(width / 2 - 10, height - 18, 20, 18);
-      blue.style.background = "#0000ff";
-      blue.style.boxShadow = "0 0 8px rgba(0,128,255,0.9)";
-      bones.push({ el: blue, blue: true });
-    }, 1800);
+    // make right-side bones blue for first 4 seconds
+    const blueDurationFrames = 60 * 4 / (1000/60);
 
+    // 3 target bones
     setTimeout(() => {
-      spawnBlaster(width / 2 - 20, -20, 0, 900, 2, "down");
-    }, 3500);
+      for (let i = 0; i < 3; i++) {
+        const fromLeft = i % 2 === 0;
+        const startY = 30 + i * 20;
+        const startX = fromLeft ? -20 : w + 20;
+        const bone = spawnBone(startX, startY, 20, 10);
+        const sx = soulX;
+        const sy = soulY;
+        const dirX = sx - startX;
+        const dirY = sy - startY;
+        const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+        bones.push({
+          el: bone,
+          x: startX,
+          y: startY,
+          vx: (dirX / len) * 2.4,
+          vy: (dirY / len) * 2.4
+        });
+      }
+    }, 2500);
+
+    // one blaster at end
+    setTimeout(() => {
+      spawnBlaster(w / 2 - 20, -20, 0, 700, 2, "down");
+    }, 4000);
 
     function loop(t) {
       if (!inSoulMode) {
@@ -1546,17 +1495,27 @@
         onEnd();
         return;
       }
-
       const soulRect = soul.getBoundingClientRect();
       bones.forEach(b => {
-        if (b.blue) {
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect) && gravityEnabled) damagePlayer(1);
-        } else if (b.dir != null) {
-          b.x += b.speed * b.dir;
-          b.el.style.left = b.x + "px";
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+        b.x += b.vx || 0;
+        b.y += b.vy || 0;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+
+        if (b.canBlue) {
+          if (b.blueTimer === 0) b.el.classList.add("blue");
+          b.blueTimer++;
+          if (b.blueTimer > blueDurationFrames) {
+            b.el.classList.remove("blue");
+            b.canBlue = false;
+          }
+        }
+
+        const rect = b.el.getBoundingClientRect();
+        const isBlue = b.el.classList.contains("blue");
+        if (rectsOverlap(rect, soulRect)) {
+          if (isBlue && gravityEnabled) damagePlayer(1);
+          if (!isBlue) damagePlayer(1);
         }
       });
 
@@ -1572,14 +1531,11 @@
       endText.textContent =
         "YOU DIED.\n\n* \"whoops. guess that was a bit much.\"\n* \"sorry, kid.\"";
     } else if (spared) {
-      const gold = 20;
       endText.textContent =
-        "YOU WON!\nGained " + gold + "G.\n\n* you feel like you're ready for what's next.";
+        "YOU WON!\nGained 20G.\n\n* you feel like you're ready for what's next.";
     } else if (killedSans) {
-      const gold = 10;
-      const exp = 1;
       endText.textContent =
-        "YOU WON.\nEXP: " + exp + "\nG: " + gold + "\n\n* the dust settles.\n* jokes feel a lot heavier now.";
+        "YOU WON.\nEXP: 120\nG: 10\n\n* your LOVE increased.\n* the silence after the joke hurts more than the fight.";
     } else {
       endText.textContent = "YOU WON!";
     }
@@ -1587,7 +1543,9 @@
   }
 
   function confirmMenuSelection() {
-    if (phase !== "PLAYER_TURN") return;
+    if (phase !== "PLAYER_TURN" || playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
+
     const action = menuItems[menuIndex];
 
     if (action === "FIGHT") {
@@ -1595,8 +1553,8 @@
       showDialogue("* you get ready to attack.");
       setTimeout(() => {
         showDialogue("");
-        startFightBar();
-      }, 500);
+        openTargetMenu();
+      }, 300);
     } else if (action === "ACT") {
       openSubMenu("ACT", [
         { id: "CHECK", label: "Check" },
@@ -1607,12 +1565,13 @@
     } else if (action === "ITEM") {
       if (items.length === 0) {
         showDialogue("* (you don’t have any items.)");
+        playerActionUsedThisTurn = true;
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
       } else {
         openSubMenu("ITEM", items.map(it => ({ id: it.id, label: it.name })));
       }
     } else if (action === "MERCY") {
-      const spareLabel = canSpare && !phase2AActive && !phase2CActive ? "Spare (yellow)" : "Spare";
+      const spareLabel = canSpare && !phase2AActive ? "Spare (yellow)" : "Spare";
       openSubMenu("MERCY", [
         { id: "SPARE", label: spareLabel },
         { id: "FLEE", label: "Flee" }
@@ -1634,17 +1593,25 @@
           "* \"well, paps is kinda busy at the moment.\"\n" +
           "* \"a little dog stole his 'special attack'.\""
         );
+        playerActionUsedThisTurn = false;
       } else if (phase === "PLAYER_TURN") {
         confirmMenuSelection();
       } else if (phase === "MENU_SUB") {
         confirmSubSelection();
       } else if (phase === "FIGHT_BAR") {
         stopFightBar();
+      } else if (phase === "FIGHT_TARGET") {
+        confirmTargetSelection();
       }
     }
 
     if (e.key === "x" || e.key === "X") {
       if (phase === "MENU_SUB") closeSubMenu();
+      if (phase === "FIGHT_TARGET") {
+        closeTargetMenu();
+        phase = "PLAYER_TURN";
+        playerActionUsedThisTurn = false;
+      }
     }
 
     if (phase === "PLAYER_TURN") {
@@ -1653,6 +1620,9 @@
     } else if (phase === "MENU_SUB") {
       if (e.key === "a" || e.key === "A") setSubIndex(subIndex - 1);
       else if (e.key === "d" || e.key === "D") setSubIndex(subIndex + 1);
+    } else if (phase === "FIGHT_TARGET") {
+      if (e.key === "a" || e.key === "A") setTargetMenuIndex(targetMenuIndex - 1);
+      else if (e.key === "d" || e.key === "D") setTargetMenuIndex(targetMenuIndex + 1);
     }
   });
 
