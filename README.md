@@ -322,19 +322,30 @@
 
   let inSoulMode = false;
   let canMoveSoul = false;
-  let phase = "INTRO"; // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_BAR, MENU_SUB, PHASE2A, PHASE2A_ATTACK, END
+  let phase = "INTRO"; 
+  // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_BAR, MENU_SUB,
+  // PHASE2A, PHASE2A_ATTACK, PHASE2B_SPECIAL, PHASE2C, PHASE2C_ATTACK, END
 
   let turnCount = 0;
   let actCount = 0;
-  let pureAttackTurns = 0;
+  let pureAttackTurns = 0; // counts FIGHT usage
   let sansCanBeHit = false;
   let canSpare = false;
   let usedFinalAttackPhase1 = false;
   let usedBlueIntro = false;
 
+  // Phase 2A: slashed Sans
   let phase2AActive = false;
   let phase2ATurns = 0;
-  const phase2ATurnTarget = 10; // survive 10 turns
+  const phase2AStartTargets = 8; // starting # targeting bones
+  const phase2ATurnTarget = 10;  // number of turns to survive
+
+  // Phase 2B: pacifist special after spare
+  let phase2BQueued = false;
+
+  // Phase 2C: pure fighter punish (bad time-ish)
+  let phase2CActive = false;
+  let last4AttacksMode = false;
 
   const dialogueBox = document.getElementById("dialogue-box");
   const soulBox = document.getElementById("soul-box");
@@ -398,10 +409,6 @@
     const ratio = enemyHP / enemyMaxHP;
     enemyHPBar.style.width = (ratio * 100) + "%";
     enemyHPText.textContent = "HP: " + enemyHP + " / " + enemyMaxHP;
-    if (enemyHP <= 0 && !phase2AActive) {
-      // If he hits 0 HP in phase 1 and phase2A not started (you forced kill), we treat as kill ending
-      endBattle(true, false, true);
-    }
   }
 
   function setMenuIndex(index) {
@@ -496,7 +503,6 @@
   }
 
   function updateDifficulty() {
-    // A bit faster if player keeps FIGHTing
     const pureFactor = Math.floor(pureAttackTurns / 2);
     soulSpeed = baseSoulSpeed + pureFactor * 0.5;
   }
@@ -507,12 +513,26 @@
       startSansAttackPhase2A();
       return;
     }
+    if (phase2CActive) {
+      startSansAttackPhase2C();
+      return;
+    }
 
     phase = "ENEMY_ATTACK";
     turnCount++;
     updateDifficulty();
 
-    // Blue attack joke early in the fight
+    // If player only fights, after 5-6 fights, trigger phase2C mode
+    if (!phase2CActive && pureAttackTurns >= 6 && !phase2AActive && !phase2BQueued) {
+      phase2CActive = true;
+      showDialogue(
+        "* \"ya haven't tried anything else, huh?\"\n" +
+        "* \"guess i'll have to get a bit more serious.\""
+      );
+      return;
+    }
+
+    // Blue attack joke
     if (!usedBlueIntro && turnCount === 1) {
       exitSoulMode();
       showDialogue(
@@ -539,8 +559,8 @@
       return;
     }
 
-    // Phase 1 final attack BEFORE spare
-    if (!usedFinalAttackPhase1 && turnCount >= 5) {
+    // Phase 1 special attack that DOES end
+    if (!usedFinalAttackPhase1 && turnCount >= 5 && !phase2BQueued) {
       usedFinalAttackPhase1 = true;
       exitSoulMode();
       showDialogue(
@@ -549,7 +569,7 @@
         "* \"guess i’ll borrow the idea.\""
       );
       setTimeout(() => {
-        finalAttackPhase1(() => {
+        specialAttackPhase1(() => {
           showDialogue(
             "* \"welp, that sure was fun.\"\n" +
             "* \"you seem pretty much ready for waterfall.\"\n" +
@@ -582,38 +602,56 @@
     });
   }
 
-  // ========= PHASE 2A ATTACKS =========
+  // ========= PHASE 2A ATTACKS (slashed Sans) =========
   function startSansAttackPhase2A() {
     phase = "PHASE2A_ATTACK";
     phase2ATurns++;
 
     enterSoulMode();
 
-    if (phase2ATurns === phase2ATurnTarget) {
+    if (phase2ATurns >= phase2ATurnTarget) {
+      // spiral gaster special
       exitSoulMode();
       showDialogue(
         "* \"heh. still standin', huh?\"\n" +
         "* \"guess that's enough... for both of us.\""
       );
       setTimeout(() => {
-        finalAttackPhase2A(() => {
-          endBattle(true, false, true); // dust ending
+        spiralGasterFinal(() => {
+          endBattle(true, false, true);
         });
       }, 1000);
       return;
     }
 
+    const remainingFactor = Math.max(0, phase2AStartTargets - phase2ATurns);
+    const numTargetBones = Math.max(3, remainingFactor);
+
+    phase2ATargetingBonesAndXYBlasters(numTargetBones, () => {
+      exitSoulMode();
+      if (playerHP > 0) {
+        showDialogue("* \"still up? not bad.\"");
+        phase = "PLAYER_TURN";
+      }
+    });
+  }
+
+  // ========= PHASE 2C ATTACKS (Bad-time-ish) =========
+  function startSansAttackPhase2C() {
+    phase = "PHASE2C_ATTACK";
+    last4AttacksMode = true;
+    enterSoulMode();
     const attacks = [
-      phase2AFastBoneRain,
-      phase2ABoneSlidersWithBlaster,
-      phase2ABoneCircleAndBlaster
+      phase2CBoneFlood,
+      phase2CSlidersCross,
+      phase2CBoneZoneSpam
     ];
     const attack = attacks[Math.floor(Math.random() * attacks.length)];
     attack(() => {
       exitSoulMode();
       if (playerHP > 0) {
-        showDialogue("* \"still up? not bad.\"");
         phase = "PLAYER_TURN";
+        showDialogue("* \"getting tired yet?\"");
       }
     });
   }
@@ -653,6 +691,12 @@
         beam.style.height = "16px";
         beam.style.left = "0px";
         beam.style.top = (y + 12) + "px";
+      } else if (orientation === "diagX") {
+        // approximate X diagonal: long beam at angle visually using tall rect
+        beam.style.width = "16px";
+        beam.style.height = boxRect.height + 40 + "px";
+        beam.style.left = (x + 12) + "px";
+        beam.style.top = "-20px";
       }
 
       const startTime = performance.now();
@@ -677,6 +721,7 @@
   }
 
   // ========= PHASE 1 ATTACKS =========
+
   function pacifistBottomZoneJump(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -772,13 +817,11 @@
     const duration = 7000;
     const startTime = performance.now();
 
-    // wave from left
     for (let i = 0; i < 5; i++) {
       const bone = spawnBone(-40, 20 + i * 15, 40, 10);
       bones.push({ el: bone, x: -40, y: 20 + i * 15, speed: 2 });
     }
 
-    // blue bone
     setTimeout(() => {
       const blue = spawnBone(width / 2 - 10, height - 20, 20, 20);
       blue.style.background = "#0000ff";
@@ -786,7 +829,6 @@
       bones.push({ el: blue, blue: true });
     }, 1500);
 
-    // side bones
     setTimeout(() => {
       const top = spawnBone(-40, 10, 40, 10);
       const bottom = spawnBone(width + 40, height - 20, 40, 10);
@@ -957,71 +999,55 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= FINAL ATTACK PHASE 1 =========
-  function finalAttackPhase1(onEnd) {
-    soulBox.style.width = "400px";
-    soulBox.style.height = "180px";
-    const boxRect = soulBox.getBoundingClientRect();
+  // ========= SPECIAL ATTACK PHASE 1 =========
+  function specialAttackPhase1(onEnd) {
+    // simpler, guaranteed finish
     enterSoulMode();
-    soulX = boxRect.width / 2 - 8;
-    soulY = boxRect.height / 2 - 8;
-
-    const duration = 9000;
-    const startTime = performance.now();
+    setSoulColor("red", false);
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
     const bones = [];
+    const duration = 5500;
+    const startTime = performance.now();
 
-    const floor = spawnBone(0, boxRect.height - 20, boxRect.width, 20);
+    // long bottom bone zone like Papyrus
+    const floor = spawnBone(0, height - 18, width, 18);
     bones.push({ el: floor });
 
-    const bigBone = spawnBone(boxRect.width + 160, boxRect.height - 50, 160, 50);
-    bones.push({ el: bigBone, x: boxRect.width + 160, y: boxRect.height - 50 });
-
-    const smallBones = [];
-    for (let i = 0; i < 6; i++) {
-      const b = spawnBone(-20, boxRect.height - 30 - i * 20, 30, 10);
-      smallBones.push({ el: b, x: -20, y: boxRect.height - 30 - i * 20 });
-      bones.push({ el: b });
+    // waves of bones from left and right
+    for (let i = 0; i < 5; i++) {
+      const y = 20 + i * 16;
+      const boneL = spawnBone(-40, y, 40, 10);
+      const boneR = spawnBone(width + 40, y + 8, 40, 10);
+      bones.push({ el: boneL, x: -40, y, dir: 1, speed: 2.6 });
+      bones.push({ el: boneR, x: width + 40, y: y + 8, dir: -1, speed: 2.6 });
     }
-
-    const startTimeSmall = Date.now();
 
     function loop(t) {
       if (!inSoulMode) {
         bones.forEach(b => b.el.remove());
-        soulBox.style.width = "280px";
-        soulBox.style.height = "120px";
         onEnd();
         return;
       }
       if (t - startTime > duration) {
         bones.forEach(b => b.el.remove());
-        soulBox.style.width = "280px";
-        soulBox.style.height = "120px";
         exitSoulMode();
         onEnd();
         return;
       }
 
-      const dt = (Date.now() - startTimeSmall) / 1000;
-      smallBones.forEach(s => {
-        s.x = Math.min(s.x + 2.2, 60 + Math.sin(dt * 2 + s.y) * 10);
-        s.el.style.left = s.x + "px";
-      });
-
       const soulRect = soul.getBoundingClientRect();
-
-      bigBone.x -= 2.2;
-      bigBone.el.style.left = bigBone.x + "px";
-
       const floorRect = floor.getBoundingClientRect();
       if (rectsOverlap(floorRect, soulRect)) damagePlayer(1);
 
-      const bigRect = bigBone.el.getBoundingClientRect();
-      if (rectsOverlap(bigRect, soulRect)) damagePlayer(2);
-
-      smallBones.forEach(s => {
-        const r = s.el.getBoundingClientRect();
-        if (rectsOverlap(r, soulRect)) damagePlayer(1);
+      bones.forEach(b => {
+        if (b.dir != null) {
+          b.x += b.speed * b.dir;
+          b.el.style.left = b.x + "px";
+          const rect = b.el.getBoundingClientRect();
+          if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+        }
       });
 
       requestAnimationFrame(loop);
@@ -1029,28 +1055,145 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= PHASE 2A ATTACKS =========
-  function phase2AFastBoneRain(onEnd) {
+  // ========= PHASE 2A TARGETING BONES + X/Y BLASTERS =========
+  function phase2ATargetingBonesAndXYBlasters(count, onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
     const height = boxRect.height;
     const bones = [];
-    const duration = 7000;
+    const duration = 6500;
     const startTime = performance.now();
 
-    // Many bones, each moving slower but more of them
-    const count = 14;
+    // targeting bones: from edges aimed at player's position at spawn
     for (let i = 0; i < count; i++) {
-      const x = Math.random() * (width - 10);
-      const bone = spawnBone(x, -20, 10, 24);
-      bones.push({ el: bone, x, y: -20, speed: 1.4 + Math.random() * 0.6 });
+      const fromLeft = Math.random() < 0.5;
+      const startY = Math.random() * (height - 10);
+      const sx = soulX;
+      const sy = soulY;
+      const x = fromLeft ? -30 : width + 30;
+      const bone = spawnBone(x, startY, 20, 10);
+      const dirX = sx - x;
+      const dirY = sy - startY;
+      const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+      bones.push({
+        el: bone,
+        x,
+        y: startY,
+        vx: (dirX / len) * 1.8,
+        vy: (dirY / len) * 1.8
+      });
     }
 
-    // occasional blaster from top
+    // X-shaped blasters
     setTimeout(() => {
-      const x = soulX;
-      spawnBlaster(x, -20, 0, 800, 2, "down");
-    }, 2000);
+      spawnBlaster(-20, -20, 200, 800, 2, "diagX");
+      spawnBlaster(width - 20, -20, 200, 800, 2, "diagX");
+    }, 1200);
+
+    // Y-shaped (top and sides)
+    setTimeout(() => {
+      spawnBlaster(width / 2 - 20, -20, 200, 800, 2, "down");
+      spawnBlaster(-20, height / 2 - 20, 400, 700, 2, "horizontal");
+      spawnBlaster(width - 20, height / 2 - 20, 400, 700, 2, "horizontal");
+    }, 2600);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.x += b.vx;
+        b.y += b.vy;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(2);
+      });
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= SPIRAL GASTER FINAL (PHASE 2A) =========
+  function spiralGasterFinal(onEnd) {
+    enterSoulMode();
+    setSoulColor("blue", true);
+    const boxRect = soulBox.getBoundingClientRect();
+    const cx = boxRect.width / 2;
+    const cy = boxRect.height / 2;
+    soulX = cx - 8;
+    soulY = cy - 8;
+
+    const duration = 9000;
+    const startTime = performance.now();
+    const bones = [];
+
+    // Spiral of beams / blasters
+    let angle = 0;
+    const spawnInterval = 400;
+    let lastSpawn = 0;
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        setSoulColor("red", false);
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        setSoulColor("red", false);
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+
+      const elapsed = t - startTime;
+      if (elapsed - lastSpawn > spawnInterval) {
+        lastSpawn = elapsed;
+        angle += Math.PI / 6;
+        const x = cx + Math.cos(angle) * (boxRect.width / 3);
+        const y = cy + Math.sin(angle) * (boxRect.height / 3);
+        spawnBlaster(x - 20, y - 20, 0, 700, 3, "down");
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(3);
+      });
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= PHASE 2C ATTACKS (Bad Time style) =========
+  function phase2CBoneFlood(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
+    const bones = [];
+    const duration = 5000;
+    const startTime = performance.now();
+
+    for (let i = 0; i < 14; i++) {
+      const fromTop = i % 2 === 0;
+      const x = Math.random() * (width - 20);
+      const y = fromTop ? -20 : height + 20;
+      const bone = spawnBone(x, y, 20, 20);
+      bones.push({ el: bone, x, y, speed: fromTop ? 3 : -3 });
+    }
 
     function loop(t) {
       if (!inSoulMode) {
@@ -1075,26 +1218,25 @@
     requestAnimationFrame(loop);
   }
 
-  function phase2ABoneSlidersWithBlaster(onEnd) {
+  function phase2CSlidersCross(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
     const height = boxRect.height;
     const bones = [];
-    const duration = 6500;
+    const duration = 5000;
     const startTime = performance.now();
 
-    // left-right bone sliders
     for (let i = 0; i < 4; i++) {
       const fromLeft = i % 2 === 0;
       const y = (height / 5) * (i + 1);
       const bone = spawnBone(fromLeft ? -40 : width + 40, y, 40, 10);
-      bones.push({ el: bone, x: fromLeft ? -40 : width + 40, y, dir: fromLeft ? 1 : -1, speed: 2.1 });
+      bones.push({ el: bone, x: fromLeft ? -40 : width + 40, y, dir: fromLeft ? 1 : -1, speed: 3 });
     }
 
-    // central blaster
     setTimeout(() => {
-      spawnBlaster(width / 2 - 20, 0, 300, 900, 2, "down");
-    }, 1200);
+      spawnBlaster(-20, height / 2 - 20, 0, 800, 2, "horizontal");
+      spawnBlaster(width - 20, height / 2 - 20, 0, 800, 2, "horizontal");
+    }, 800);
 
     function loop(t) {
       if (!inSoulMode) {
@@ -1119,26 +1261,24 @@
     requestAnimationFrame(loop);
   }
 
-  function phase2ABoneCircleAndBlaster(onEnd) {
+  function phase2CBoneZoneSpam(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
-    const cx = boxRect.width / 2;
-    const cy = boxRect.height / 2;
+    const width = boxRect.width;
+    const height = boxRect.height;
     const bones = [];
-    const count = 10;
-    const radius = 45;
-    const duration = 7000;
+    const duration = 5500;
     const startTime = performance.now();
 
-    for (let i = 0; i < count; i++) {
-      const bone = spawnBone(cx, cy, 12, 12);
-      bones.push({ el: bone, angle: (Math.PI * 2 / count) * i });
-    }
+    const floor = spawnBone(0, height - 18, width, 18);
+    bones.push({ el: floor });
 
-    // cross blasters
     setTimeout(() => {
-      spawnBlaster(-20, cy - 20, 200, 700, 2, "horizontal");
-      spawnBlaster(boxRect.width - 20, cy - 20, 200, 700, 2, "horizontal");
-    }, 1500);
+      for (let i = 0; i < 4; i++) {
+        const x = (width / 5) * (i + 1);
+        const bone = spawnBone(x, -20, 16, 40);
+        bones.push({ el: bone, x, y: -20, speed: 3 });
+      }
+    }, 1000);
 
     function loop(t) {
       if (!inSoulMode) {
@@ -1152,103 +1292,13 @@
         return;
       }
       const soulRect = soul.getBoundingClientRect();
+      const floorRect = floor.getBoundingClientRect();
+      if (rectsOverlap(floorRect, soulRect)) damagePlayer(2);
+
       bones.forEach(b => {
-        b.angle += 0.035;
-        const x = cx + Math.cos(b.angle) * radius - 6;
-        const y = cy + Math.sin(b.angle) * radius - 6;
-        b.el.style.left = x + "px";
-        b.el.style.top = y + "px";
-        const rect = b.el.getBoundingClientRect();
-        if (rectsOverlap(rect, soulRect)) damagePlayer(2);
-      });
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-
-  // ========= FINAL ATTACK PHASE 2A (DUST) =========
-  function finalAttackPhase2A(onEnd) {
-    enterSoulMode();
-    setSoulColor("blue", true);
-    const boxRect = soulBox.getBoundingClientRect();
-    soulX = boxRect.width / 2 - 8;
-    soulY = boxRect.height / 2 - 8;
-
-    const totalDuration = 12000;
-    const startTime = performance.now();
-    const bones = [];
-
-    // bone wave left
-    for (let i = 0; i < 5; i++) {
-      const y = (boxRect.height / 6) * (i + 1);
-      const bone = spawnBone(-40, y, 40, 10);
-      bones.push({ el: bone, x: -40, y, speed: 2.2 });
-    }
-
-    // then jumps
-    setTimeout(() => {
-      for (let i = 0; i < 5; i++) {
-        const x = (boxRect.width / 6) * (i + 1);
-        const bone = spawnBone(x, boxRect.height + 40, 20, 40);
-        bones.push({ el: bone, x, y: boxRect.height + 40, phase: Math.random() * Math.PI * 2, jump: true });
-      }
-    }, 1500);
-
-    // bone zone
-    setTimeout(() => {
-      const floor = spawnBone(0, boxRect.height - 18, boxRect.width, 18);
-      floor.style.background = "#0000ff";
-      floor.style.boxShadow = "0 0 10px rgba(0,128,255,0.9)";
-      bones.push({ el: floor, zone: true });
-    }, 3000);
-
-    // corner blasters
-    setTimeout(() => {
-      spawnBlaster(-20, -20, 600, 800, 3, "down");
-      spawnBlaster(boxRect.width - 20, -20, 600, 800, 3, "down");
-    }, 4500);
-
-    // player‑facing blasters
-    let shotCount = 0;
-    function spawnPlayerBlaster() {
-      if (!inSoulMode) return;
-      const x = soulX;
-      spawnBlaster(x, -20, 0, 500 + shotCount * 150, 3, "down");
-      shotCount++;
-      if (shotCount < 4) setTimeout(spawnPlayerBlaster, 1200);
-    }
-    setTimeout(spawnPlayerBlaster, 6500);
-
-    function loop(t) {
-      if (!inSoulMode) {
-        bones.forEach(b => b.el.remove());
-        setSoulColor("red", false);
-        onEnd();
-        return;
-      }
-      if (t - startTime > totalDuration) {
-        bones.forEach(b => b.el.remove());
-        setSoulColor("red", false);
-        exitSoulMode();
-        onEnd();
-        return;
-      }
-
-      const soulRect = soul.getBoundingClientRect();
-      bones.forEach(b => {
-        if (b.zone) {
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect) && gravityEnabled) damagePlayer(2);
-        } else if (b.jump) {
-          b.phase += 0.11;
-          const offset = Math.abs(Math.sin(b.phase)) * 40;
-          b.y = (boxRect.height - 40) - offset;
+        if (b.speed) {
+          b.y += b.speed;
           b.el.style.top = b.y + "px";
-          const rect = b.el.getBoundingClientRect();
-          if (rectsOverlap(rect, soulRect)) damagePlayer(2);
-        } else {
-          b.x += b.speed;
-          b.el.style.left = b.x + "px";
           const rect = b.el.getBoundingClientRect();
           if (rectsOverlap(rect, soulRect)) damagePlayer(2);
         }
@@ -1293,8 +1343,8 @@
       hitStrength = 0;
     }
 
-    // Phase 2A: 9999 damage but nothing happens yet
     if (phase2AActive) {
+      // 9999 damage but nothing happens
       damageText.textContent = "9999";
       showDialogue("* you strike with everything you have.\n* it doesn't change anything.");
     } else if (!sansCanBeHit) {
@@ -1303,11 +1353,12 @@
     } else {
       const damage = Math.max(1, Math.floor(hitStrength * 10));
       enemyHP -= damage;
-      if (enemyHP <= 0) enemyHP = 1; // he won't die normally here
+      if (enemyHP <= 0) enemyHP = 1; 
       updateEnemyHP();
       damageText.textContent = quality + " - " + damage;
-      showDialogue("* you land a hit.\n* something feels... off.");
-      // This triggers Phase 2A transition:
+      showDialogue("* you land a hit.\n* something feels... wrong.");
+
+      // Hit after canSpare -> phase2A
       if (!phase2AActive && canSpare) {
         startPhase2A();
       }
@@ -1315,10 +1366,10 @@
 
     setTimeout(() => {
       damageText.textContent = "";
-      if (playerHP > 0 && phase !== "END" && !phase2AActive) {
-        startSansAttack();
-      } else if (playerHP > 0 && phase2AActive) {
-        startSansAttackPhase2A();
+      if (playerHP > 0 && phase !== "END") {
+        if (phase2AActive) startSansAttackPhase2A();
+        else if (phase2CActive) startSansAttackPhase2C();
+        else startSansAttack();
       }
     }, 1000);
   }
@@ -1348,9 +1399,10 @@
     phase2AActive = true;
     phase2ATurns = 0;
     showDialogue(
-      "* \"...heh. there it is.\"\n" +
-      "* \"that feeling.\"\n" +
-      "* \"guess you're not the only one with determination today.\""
+      "* your blow lands awkwardly.\n" +
+      "* sans staggers.\n" +
+      "* \"heh. guess that one went a little deep.\"\n" +
+      "* \"don't worry. i've got... 0.0001 hp left.\""
     );
   }
 
@@ -1425,20 +1477,30 @@
 
   function handleMercyOption(id) {
     if (id === "SPARE") {
-      if (!canSpare || phase2AActive) {
+      if (!canSpare || phase2AActive || phase2CActive) {
         showDialogue("* you reach for MERCY.\n* \"sorry pal, no mercy 'till you prove yourself.\"");
         closeSubMenu();
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1000);
         return;
       }
+      // Pacifist Spare -> Phase 2B special
       showDialogue(
         "* you lower your hands.\n" +
-        "* sans smiles faintly.\n" +
-        "* \"guess you're ready after all.\"\n" +
-        "* \"waterfall's waitin', kid.\""
+        "* sans smiles.\n" +
+        "* \"heh. not bad.\"\n" +
+        "* \"how 'bout one last test, then we both move on?\""
       );
+      phase2BQueued = true;
       closeSubMenu();
-      setTimeout(() => endBattle(true, true, false), 2000);
+      setTimeout(() => {
+        // Phase 2B: final test of skill
+        phase = "PHASE2B_SPECIAL";
+        enterSoulMode();
+        phase2BFinalTest(() => {
+          exitSoulMode();
+          endBattle(true, true, false);
+        });
+      }, 1200);
     } else if (id === "FLEE") {
       showDialogue("* you think about running away...\n* but your feet won't move.");
       closeSubMenu();
@@ -1446,6 +1508,64 @@
     }
   }
 
+  // ========= PHASE 2B FINAL TEST =========
+  function phase2BFinalTest(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
+    const bones = [];
+    const duration = 8000;
+    const startTime = performance.now();
+
+    // mix of everything but fair
+    for (let i = 0; i < 5; i++) {
+      const y = 20 + i * 16;
+      const boneL = spawnBone(-40, y, 40, 10);
+      bones.push({ el: boneL, x: -40, y, dir: 1, speed: 2.2 });
+    }
+
+    setTimeout(() => {
+      const blue = spawnBone(width / 2 - 10, height - 18, 20, 18);
+      blue.style.background = "#0000ff";
+      blue.style.boxShadow = "0 0 8px rgba(0,128,255,0.9)";
+      bones.push({ el: blue, blue: true });
+    }, 1800);
+
+    setTimeout(() => {
+      spawnBlaster(width / 2 - 20, -20, 0, 900, 2, "down");
+    }, 3500);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        if (b.blue) {
+          const rect = b.el.getBoundingClientRect();
+          if (rectsOverlap(rect, soulRect) && gravityEnabled) damagePlayer(1);
+        } else if (b.dir != null) {
+          b.x += b.speed * b.dir;
+          b.el.style.left = b.x + "px";
+          const rect = b.el.getBoundingClientRect();
+          if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+        }
+      });
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= ENDING =========
   function endBattle(playerWon, spared = false, killedSans = false) {
     endScreen.style.display = "flex";
     if (!playerWon) {
@@ -1492,7 +1612,7 @@
         openSubMenu("ITEM", items.map(it => ({ id: it.id, label: it.name })));
       }
     } else if (action === "MERCY") {
-      const spareLabel = canSpare && !phase2AActive ? "Spare (yellow)" : "Spare";
+      const spareLabel = canSpare && !phase2AActive && !phase2CActive ? "Spare (yellow)" : "Spare";
       openSubMenu("MERCY", [
         { id: "SPARE", label: spareLabel },
         { id: "FLEE", label: "Flee" }
