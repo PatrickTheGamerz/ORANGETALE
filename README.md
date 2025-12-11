@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>A Test of Skill - Sans Fight (Base)</title>
+  <title>A Test of Skill - Sans Fight (Base, Fixed)</title>
   <style>
     body {
       margin: 0;
@@ -35,6 +35,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
+      z-index: 5;
     }
     #enemy-name {
       font-size: 24px;
@@ -93,7 +94,7 @@
       font-size: 14px;
     }
 
-    /* Bottom main box (like Undertale) */
+    /* Bottom main box */
     #bottom-box {
       position: absolute;
       left: 40px;
@@ -103,9 +104,10 @@
       border: 4px solid white;
       box-sizing: border-box;
       background: black;
+      z-index: 1;
     }
 
-    /* Soul box (inside bottom box) */
+    /* Soul box */
     #soul-box {
       position: absolute;
       left: 160px;
@@ -117,6 +119,7 @@
       overflow: hidden;
       display: none;
       background: black;
+      z-index: 2;
     }
 
     #soul {
@@ -155,7 +158,7 @@
       box-shadow: 0 0 15px rgba(0,255,255,1);
     }
 
-    /* Dialogue box (bottom, inside bottom-box) */
+    /* Dialogue box (bottom) */
     #dialogue-box {
       position: absolute;
       left: 10px;
@@ -170,9 +173,35 @@
       white-space: pre-line;
       padding: 6px;
       display: none;
+      z-index: 3;
     }
 
-    /* Fight bar (inside bottom box) */
+    /* Target menu (inside bottom box) */
+    #target-menu {
+      position: absolute;
+      left: 180px;
+      right: 180px;
+      top: 30px;
+      height: 40px;
+      border: 2px solid white;
+      background: black;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      font-size: 18px;
+      z-index: 4;
+    }
+    .target-option {
+      padding: 2px 8px;
+      border: 2px solid white;
+    }
+    .target-option.selected {
+      color: yellow;
+      border-color: yellow;
+    }
+
+    /* Fight bar (above dialogue) */
     #fight-bar-container {
       position: absolute;
       left: 20px;
@@ -184,6 +213,7 @@
       align-items: center;
       justify-content: center;
       color: white;
+      z-index: 5;
     }
 
     #fight-bar {
@@ -216,31 +246,7 @@
       height: 20px;
     }
 
-    /* Target menu (inside bottom box) */
-    #target-menu {
-      position: absolute;
-      left: 180px;
-      right: 180px;
-      top: 30px;
-      height: 40px;
-      border: 2px solid white;
-      background: black;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      gap: 20px;
-      font-size: 18px;
-    }
-    .target-option {
-      padding: 2px 8px;
-      border: 2px solid white;
-    }
-    .target-option.selected {
-      color: yellow;
-      border-color: yellow;
-    }
-
-    /* Bottom UI (name, HP, menu) */
+    /* Bottom UI (HP, menu) */
     #ui-bar {
       position: absolute;
       left: 50px;
@@ -248,6 +254,7 @@
       bottom: 50px;
       height: 140px;
       pointer-events: none;
+      z-index: 6;
     }
 
     #hp-line {
@@ -258,15 +265,10 @@
       height: 30px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 10px;
       font-size: 18px;
       pointer-events: none;
-    }
-
-    #hp-info {
-      display: flex;
-      gap: 10px;
-      align-items: center;
     }
 
     #hp-bar-inner {
@@ -343,6 +345,7 @@
       font-size: 24px;
       text-align: center;
       white-space: pre-line;
+      z-index: 100;
     }
   </style>
 </head>
@@ -382,18 +385,13 @@
 
   <div id="ui-bar">
     <div id="hp-line">
-      <div id="hp-info">
-        <span id="name-label">CHARA</span>
-        <span>LV 19</span>
-        <span>HP</span>
-        <div id="hp-bar-inner">
-          <div id="hp-fill"></div>
-        </div>
-        <span id="hp-text">92 / 92</span>
+      <span>CHARA</span>
+      <span>LV 1</span>
+      <span>HP</span>
+      <div id="hp-bar-inner">
+        <div id="hp-fill"></div>
       </div>
-      <div id="kr-info">
-        KR <span id="kr-value">0</span> / 92
-      </div>
+      <span id="hp-text">20 / 20</span>
     </div>
 
     <div id="menu-line">
@@ -414,9 +412,9 @@
 
 <script>
   // ========= CORE STATE =========
-  let playerHP = 92;
-  const playerMaxHP = 92;
-  let enemyHP = 1;
+  let playerHP = 20;
+  const playerMaxHP = 20;
+  let enemyHP = 1; // numeric only, no NaN hacks
   const enemyMaxHP = 1;
 
   const menuItems = ["FIGHT", "ACT", "ITEM", "MERCY"];
@@ -480,8 +478,8 @@
   let targetMenuIndex = 0;
 
   let items = [
-    { id: "PIE", name: "Butterscotch Pie", heal: 92 },
-    { id: "CREAM", name: "Nice Cream", heal: 20 }
+    { id: "PIE", name: "Butterscotch Pie", heal: 20 },
+    { id: "CREAM", name: "Nice Cream", heal: 12 }
   ];
 
   // Text writer
@@ -514,9 +512,13 @@
     setTimeout(stepTextWriter, TEXT_SPEED);
   }
 
-  function showDialogue(text) {
+  function showDialogue(text, afterDelayCallback=null) {
     dialogueBox.style.display = "block";
-    writeText(dialogueBox, text);
+    writeText(dialogueBox, text, () => {
+      if (afterDelayCallback) {
+        setTimeout(afterDelayCallback, 2000);
+      }
+    });
   }
   function hideDialogue() {
     dialogueBox.style.display = "none";
@@ -543,7 +545,7 @@
     if (enemyHP < 0) enemyHP = 0;
     const ratio = enemyHP / enemyMaxHP;
     enemyHPBar.style.width = (ratio * 100) + "%";
-    enemyHPText.textContent = "HP: " + enemyHP.toFixed(7) + " / 1";
+    enemyHPText.textContent = "HP: " + enemyHP.toFixed(1) + " / 1";
   }
 
   function setMenuIndex(index) {
@@ -661,24 +663,19 @@
 
     if (!usedBlueIntro && turnCount === 1) {
       exitSoulMode();
-      showMonsterBubble("you've probably wondering\nwhat i'm doing here, huh?");
+      showMonsterBubble("heya.\nlet's see what you can do.");
       setTimeout(() => {
-        showMonsterBubble("well, paps is kinda busy\nat the moment.");
+        showMonsterBubble("oh right, my blue attack.\nalmost forgot about it,\nheh heh heh.");
         setTimeout(() => {
-          showMonsterBubble("a little dog stole his\n\"special attack\".");
+          showMonsterBubble("are ya ready?\n'cause here it comes.");
           setTimeout(() => {
-            showMonsterBubble("oh right, my blue attack.\nalmost forgot about it,\nheh heh heh.");
-            setTimeout(() => {
-              showMonsterBubble("are ya ready?\n'cause here it comes.");
-              setTimeout(() => {
-                blueSoulZoneAttack(() => {
-                  hideMonsterBubble();
-                  showDialogue("* \"what are you looking so blue for?\"");
-                  phase = "PLAYER_TURN";
-                });
-              }, 600);
-            }, 800);
-          }, 800);
+            blueSoulZoneAttack(() => {
+              hideMonsterBubble();
+              showDialogue("* \"what are you looking so blue for?\"", () => {
+                phase = "PLAYER_TURN";
+              });
+            });
+          }, 600);
         }, 800);
       }, 800);
       usedBlueIntro = true;
@@ -695,11 +692,13 @@
           showMonsterBubble("...yeah.\ni think you're ready.");
           showDialogue(
             "* \"welp, that sure was fun.\"\n" +
-            "* \"now just spare me and we can both be on our way.\""
+            "* \"now just spare me and we can both be on our way.\"",
+            () => {
+              canSpare = true;
+              sansCanBeHit = true;
+              phase = "PLAYER_TURN";
+            }
           );
-          canSpare = true;
-          sansCanBeHit = true;
-          phase = "PLAYER_TURN";
         });
       }, 800);
       return;
@@ -720,8 +719,9 @@
           "* \"still standin', huh?\"",
           "* \"not bad, kid.\""
         ];
-        showDialogue(lines[Math.floor(Math.random() * lines.length)]);
-        phase = "PLAYER_TURN";
+        showDialogue(lines[Math.floor(Math.random() * lines.length)], () => {
+          phase = "PLAYER_TURN";
+        });
       }
     });
   }
@@ -780,47 +780,6 @@
     bone.style.height = h + "px";
     soulBox.appendChild(bone);
     return bone;
-  }
-
-  function spawnBlaster(x, y, beamDuration, damage, orientation) {
-    const blaster = document.createElement("div");
-    blaster.classList.add("blaster");
-    blaster.style.left = x + "px";
-    blaster.style.top = y + "px";
-    soulBox.appendChild(blaster);
-
-    const beam = document.createElement("div");
-    beam.classList.add("blast-beam");
-
-    setTimeout(() => {
-      soulBox.appendChild(beam);
-      const boxRect = soulBox.getBoundingClientRect();
-      if (orientation === "down") {
-        beam.style.width = "16px";
-        beam.style.height = boxRect.height + "px";
-        beam.style.left = (x + 12) + "px";
-        beam.style.top = "0px";
-      }
-
-      const startTime = performance.now();
-      function loop(t) {
-        if (!inSoulMode) {
-          beam.remove();
-          blaster.remove();
-          return;
-        }
-        if (t - startTime > beamDuration) {
-          beam.remove();
-          blaster.remove();
-          return;
-        }
-        const soulRect = soul.getBoundingClientRect();
-        const rect = beam.getBoundingClientRect();
-        if (rectsOverlap(rect, soulRect)) damagePlayer(damage);
-        requestAnimationFrame(loop);
-      }
-      requestAnimationFrame(loop);
-    }, 800);
   }
 
   // ========= PHASE 1 ATTACKS =========
@@ -1071,25 +1030,18 @@
 
     if (!sansCanBeHit) {
       damageText.textContent = quality + " (sans dodged)";
-      showDialogue("* \"heh. close.\"\n* \"but not that close.\"");
+      showDialogue("* \"heh. close.\"\n* \"but not that close.\"", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     } else {
       const damage = Math.max(1, Math.floor(hitStrength * 10));
-      enemyHP -= damage;
-      if (enemyHP <= 0 && canSpare) {
-        enemyHP = 0.0000128;
-      }
+      enemyHP = Math.max(0, enemyHP - damage);
       updateEnemyHP();
       damageText.textContent = quality + " - " + damage;
-      showDialogue("* you land a hit.\n* something feels... wrong.");
-      // Hook: Phase 2A could start here later.
+      showDialogue("* you land a hit.\n* something feels... wrong.", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     }
-
-    setTimeout(() => {
-      damageText.textContent = "";
-      if (playerHP > 0 && phase !== "END") {
-        startSansAttack();
-      }
-    }, 1000);
   }
 
   function fightBarLoop() {
@@ -1157,16 +1109,23 @@
     playerActionUsedThisTurn = true;
     actCount++;
     if (id === "CHECK") {
-      showDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.");
+      showDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     } else if (id === "JOKE") {
-      showDialogue("* you tell a joke.\n* sans chuckles.\n* \"heh. not bad, kid.\"");
+      showDialogue("* you tell a joke.\n* sans chuckles.\n* \"heh. not bad, kid.\"", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     } else if (id === "FLIRT") {
-      showDialogue("* you try to flirt.\n* sans just grins.\n* \"you know i'm not the tall one, right?\"");
+      showDialogue("* you try to flirt.\n* sans just grins.\n* \"you know i'm not the tall one, right?\"", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     } else if (id === "TALK") {
-      showDialogue("* you talk about paps.\n* sans smiles.\n* \"yeah. he’s really lookin' forward to you.\"");
+      showDialogue("* you talk about paps.\n* sans smiles.\n* \"yeah. he’s really lookin' forward to you.\"", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     }
     closeSubMenu();
-    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
   }
 
   function handleItemOption(id) {
@@ -1174,15 +1133,18 @@
     playerActionUsedThisTurn = true;
     const item = items.find(i => i.id === id);
     if (!item) {
-      showDialogue("* (you fumble with your pockets.)");
+      showDialogue("* (you fumble with your pockets.)", () => {
+        if (playerHP > 0) startSansAttack();
+      });
     } else {
       playerHP = Math.min(playerMaxHP, playerHP + item.heal);
       updatePlayerHP();
-      showDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.");
+      showDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.", () => {
+        if (playerHP > 0) startSansAttack();
+      });
       items = items.filter(i => i.id !== id);
     }
     closeSubMenu();
-    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
   }
 
   function handleMercyOption(id) {
@@ -1190,23 +1152,25 @@
     playerActionUsedThisTurn = true;
     if (id === "SPARE") {
       if (!canSpare) {
-        showDialogue("* you reach for MERCY.\n* \"sorry pal, no mercy 'till you prove yourself.\"");
+        showDialogue("* you reach for MERCY.\n* \"sorry pal, no mercy 'till you prove yourself.\"", () => {
+          if (playerHP > 0) startSansAttack();
+        });
         closeSubMenu();
-        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1000);
         return;
       }
       showDialogue(
         "* you lower your hands.\n" +
         "* sans smiles.\n" +
         "* \"heh. not bad.\"\n" +
-        "* \"guess we can both move on now.\""
+        "* \"guess we can both move on now.\"",
+        () => endBattle(true, true, false)
       );
       closeSubMenu();
-      setTimeout(() => endBattle(true, true, false), 2000);
     } else if (id === "FLEE") {
-      showDialogue("* you think about running away...\n* but your feet won't move.");
+      showDialogue("* you think about running away...\n* but your feet won't move.", () => {
+        if (playerHP > 0) startSansAttack();
+      });
       closeSubMenu();
-      setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
     }
   }
 
@@ -1235,11 +1199,10 @@
 
     if (action === "FIGHT") {
       pureAttackTurns++;
-      showDialogue("* you get ready to attack.");
-      setTimeout(() => {
+      showDialogue("* you get ready to attack.", () => {
         hideDialogue();
         openTargetMenu();
-      }, 300);
+      });
     } else if (action === "ACT") {
       openSubMenu("ACT", [
         { id: "CHECK", label: "Check" },
@@ -1249,8 +1212,9 @@
       ]);
     } else if (action === "ITEM") {
       if (items.length === 0) {
-        showDialogue("* (you don’t have any items.)");
-        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
+        showDialogue("* (you don’t have any items.)", () => {
+          if (playerHP > 0) startSansAttack();
+        });
       } else {
         openSubMenu("ITEM", items.map(it => ({ id: it.id, label: it.name })));
       }
@@ -1271,7 +1235,7 @@
     if (e.key === "z" || e.key === "Z") {
       if (phase === "INTRO") {
         phase = "PLAYER_TURN";
-        showDialogue("* ...");
+        showDialogue("* heya.\n* how 'bout a little test of skill?");
         playerActionUsedThisTurn = false;
       } else if (phase === "PLAYER_TURN") {
         confirmMenuSelection();
