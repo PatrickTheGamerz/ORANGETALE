@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>A Test of Skill - Sans Fight (Base, Fixed)</title>
+  <title>A Test of Skill - Sans Fight (Improved Base)</title>
   <style>
     body {
       margin: 0;
@@ -55,7 +55,7 @@
       background: black;
     }
 
-    /* Monster bubble to the right of Sans */
+    /* Sans bubble: white inside, black text */
     #monster-bubble {
       position: absolute;
       top: -10px;
@@ -114,7 +114,7 @@
       right: 160px;
       top: 20px;
       height: 80px;
-      border: 2px solid white;
+      border: 0; /* no inner frame */
       box-sizing: border-box;
       overflow: hidden;
       display: none;
@@ -158,7 +158,7 @@
       box-shadow: 0 0 15px rgba(0,255,255,1);
     }
 
-    /* Dialogue box (bottom) */
+    /* Dialogue box: black inside, white text */
     #dialogue-box {
       position: absolute;
       left: 10px;
@@ -167,8 +167,8 @@
       height: 80px;
       border: 2px solid white;
       box-sizing: border-box;
-      background: white;
-      color: black;
+      background: black;
+      color: white;
       font-size: 18px;
       white-space: pre-line;
       padding: 6px;
@@ -176,7 +176,7 @@
       z-index: 3;
     }
 
-    /* Target menu (inside bottom box) */
+    /* Target menu */
     #target-menu {
       position: absolute;
       left: 180px;
@@ -195,6 +195,8 @@
     .target-option {
       padding: 2px 8px;
       border: 2px solid white;
+      background: black;
+      color: white;
     }
     .target-option.selected {
       color: yellow;
@@ -246,7 +248,7 @@
       height: 20px;
     }
 
-    /* Bottom UI (HP, menu) */
+    /* Bottom UI */
     #ui-bar {
       position: absolute;
       left: 50px;
@@ -302,9 +304,14 @@
 
     .menu-item {
       cursor: pointer;
+      border: 2px solid white;
+      padding: 4px 10px;
+      background: black;
+      color: white;
     }
     .menu-item.selected {
       color: yellow;
+      border-color: yellow;
     }
 
     #sub-menu {
@@ -324,8 +331,8 @@
       border: 2px solid white;
       padding: 4px 8px;
       cursor: pointer;
-      background: white;
-      color: black;
+      background: black;
+      color: white;
     }
     .sub-option.selected {
       color: yellow;
@@ -414,7 +421,7 @@
   // ========= CORE STATE =========
   let playerHP = 20;
   const playerMaxHP = 20;
-  let enemyHP = 1; // numeric only, no NaN hacks
+  let enemyHP = 1;
   const enemyMaxHP = 1;
 
   const menuItems = ["FIGHT", "ACT", "ITEM", "MERCY"];
@@ -424,7 +431,7 @@
   let inSoulMode = false;
   let canMoveSoul = false;
   let phase = "INTRO";
-  // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_TARGET, FIGHT_BAR, MENU_SUB, END
+  // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_TARGET, FIGHT_BAR, MENU_SUB, PHASE2B, END
 
   let turnCount = 0;
   let actCount = 0;
@@ -433,6 +440,7 @@
   let canSpare = false;
   let usedBlueIntro = false;
   let usedPreSpareSpecial = false;
+  let usedPhase2BSpecial = false;
 
   // Anti-spam
   let playerActionUsedThisTurn = false;
@@ -515,9 +523,7 @@
   function showDialogue(text, afterDelayCallback=null) {
     dialogueBox.style.display = "block";
     writeText(dialogueBox, text, () => {
-      if (afterDelayCallback) {
-        setTimeout(afterDelayCallback, 2000);
-      }
+      if (afterDelayCallback) setTimeout(afterDelayCallback, 2000);
     });
   }
   function hideDialogue() {
@@ -656,11 +662,20 @@
 
   // ========= ATTACK DISPATCH =========
   function startSansAttack() {
+    if (phase === "PHASE2B") {
+      phase2BFinalTest(() => {
+        exitSoulMode();
+        endBattle(true, true, false);
+      });
+      return;
+    }
+
     phase = "ENEMY_ATTACK";
     turnCount++;
     updateDifficulty();
     playerActionUsedThisTurn = false;
 
+    // Blue intro
     if (!usedBlueIntro && turnCount === 1) {
       exitSoulMode();
       showMonsterBubble("heya.\nlet's see what you can do.");
@@ -674,7 +689,7 @@
               showDialogue("* \"what are you looking so blue for?\"", () => {
                 phase = "PLAYER_TURN";
               });
-            });
+            }, 1000); // 1 second zone
           }, 600);
         }, 800);
       }, 800);
@@ -682,6 +697,7 @@
       return;
     }
 
+    // Pre-spare special
     if (!usedPreSpareSpecial && turnCount >= 4 && !canSpare) {
       usedPreSpareSpecial = true;
       exitSoulMode();
@@ -704,11 +720,13 @@
       return;
     }
 
+    // Normal attacks
     enterSoulMode();
 
     const attacks = [
       phase1WaveAndBounce,
-      phase1SpinningBlueBones
+      phase1SpinningBlueBones,
+      phase1MixedWaveAndTargets
     ];
     const attack = attacks[Math.floor(Math.random() * attacks.length)];
     attack(() => {
@@ -726,15 +744,15 @@
     });
   }
 
-  // ========= BLUE SOUL ZONE ATTACK =========
-  function blueSoulZoneAttack(onEnd) {
+  // ========= BLUE SOUL ZONE ATTACK (1 second) =========
+  function blueSoulZoneAttack(onEnd, durationMs) {
+    const zoneDuration = durationMs || 1000; // 1 second
     setSoulColor("blue", true);
     enterSoulMode();
     const boxRect = soulBox.getBoundingClientRect();
     const h = boxRect.height;
 
     const zoneDelay = 1000;
-    const zoneDuration = 1800;
     let zone;
     setTimeout(() => {
       zone = spawnBone(0, h - 18, boxRect.width, 18, false);
@@ -769,7 +787,7 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= BONE & BLASTER HELPERS =========
+  // ========= BONE HELPER =========
   function spawnBone(x, y, w, h, blue=false) {
     const bone = document.createElement("div");
     bone.classList.add("bone");
@@ -901,6 +919,68 @@
     requestAnimationFrame(loop);
   }
 
+  function phase1MixedWaveAndTargets(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 6500;
+    const startTime = performance.now();
+
+    for (let i = 0; i < 4; i++) {
+      const y = 20 + i * 16;
+      const left = spawnBone(-40, y, 40, 10);
+      const right = spawnBone(w + 40, y + 8, 40, 10);
+      bones.push({ el: left, x: -40, y, vx: 2.1 });
+      bones.push({ el: right, x: w + 40, y: y + 8, vx: -2.1 });
+    }
+
+    setTimeout(() => {
+      for (let i = 0; i < 4; i++) {
+        const fromLeft = i % 2 === 0;
+        const startY = 20 + i * 18;
+        const startX = fromLeft ? -20 : w + 20;
+        const bone = spawnBone(startX, startY, 20, 10);
+        const sx = soulX;
+        const sy = soulY;
+        const dirX = sx - startX;
+        const dirY = sy - startY;
+        const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+        bones.push({
+          el: bone,
+          x: startX,
+          y: startY,
+          vx: (dirX / len) * 2.6,
+          vy: (dirY / len) * 2.6
+        });
+      }
+    }, 2200);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.x += b.vx || 0;
+        b.y += b.vy || 0;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+      });
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
   // ========= PHASE 1 PRE-SPARE SPECIAL =========
   function phase1PreSpareSpecial(onEnd) {
     enterSoulMode();
@@ -960,6 +1040,128 @@
         b.el.style.top = b.y + "px";
         const rect = b.el.getBoundingClientRect();
         if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+      });
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= PHASE 2B FINAL TEST (after spare chosen) =========
+  function phase2BFinalTest(onEnd) {
+    enterSoulMode();
+    const boxRect = soulBox.getBoundingClientRect();
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 6000;
+    const startTime = performance.now();
+
+    // bones both sides
+    for (let i = 0; i < 4; i++) {
+      const y = 20 + i * 15;
+      const left = spawnBone(-40, y, 40, 10);
+      const right = spawnBone(w + 40, y + 10, 40, 10);
+      bones.push({ el: left, x: -40, y, vx: 2.3 });
+      bones.push({ el: right, x: w + 40, y: y + 10, vx: -2.3, canBlue: true, blueTimer: 0 });
+    }
+
+    const blueFrames = 60 * 4 / (1000/60);
+
+    setTimeout(() => {
+      for (let i = 0; i < 3; i++) {
+        const fromLeft = i % 2 === 0;
+        const startY = 30 + i * 20;
+        const startX = fromLeft ? -20 : w + 20;
+        const bone = spawnBone(startX, startY, 20, 10);
+        const sx = soulX;
+        const sy = soulY;
+        const dirX = sx - startX;
+        const dirY = sy - startY;
+        const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+        bones.push({
+          el: bone,
+          x: startX,
+          y: startY,
+          vx: (dirX / len) * 2.5,
+          vy: (dirY / len) * 2.5
+        });
+      }
+    }, 2500);
+
+    setTimeout(() => {
+      const cx = w / 2 - 20;
+      const topY = -20;
+      const blaster = document.createElement("div");
+      blaster.classList.add("blaster");
+      blaster.style.left = cx + "px";
+      blaster.style.top = topY + "px";
+      soulBox.appendChild(blaster);
+
+      const beam = document.createElement("div");
+      beam.classList.add("blast-beam");
+
+      setTimeout(() => {
+        soulBox.appendChild(beam);
+        beam.style.width = "16px";
+        beam.style.height = h + "px";
+        beam.style.left = (cx + 12) + "px";
+        beam.style.top = "0px";
+
+        const startTimeBeam = performance.now();
+        function loopBeam(t2) {
+          if (!inSoulMode) {
+            beam.remove();
+            blaster.remove();
+            return;
+          }
+          if (t2 - startTimeBeam > 900) {
+            beam.remove();
+            blaster.remove();
+            return;
+          }
+          const soulRect = soul.getBoundingClientRect();
+          const rect = beam.getBoundingClientRect();
+          if (rectsOverlap(rect, soulRect)) damagePlayer(2);
+          requestAnimationFrame(loopBeam);
+        }
+        requestAnimationFrame(loopBeam);
+      }, 800);
+    }, 4000);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.x += b.vx || 0;
+        b.y += b.vy || 0;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+
+        if (b.canBlue) {
+          if (b.blueTimer === 0) b.el.classList.add("blue");
+          b.blueTimer++;
+          if (b.blueTimer > blueFrames) {
+            b.el.classList.remove("blue");
+            b.canBlue = false;
+          }
+        }
+
+        const rect = b.el.getBoundingClientRect();
+        const blue = b.el.classList.contains("blue");
+        if (rectsOverlap(rect, soulRect)) {
+          if (blue && gravityEnabled) damagePlayer(1);
+          if (!blue) damagePlayer(1);
+        }
       });
       requestAnimationFrame(loop);
     }
@@ -1158,14 +1360,18 @@
         closeSubMenu();
         return;
       }
+      // after spare → Phase 2B final test
       showDialogue(
         "* you lower your hands.\n" +
         "* sans smiles.\n" +
         "* \"heh. not bad.\"\n" +
-        "* \"guess we can both move on now.\"",
-        () => endBattle(true, true, false)
+        "* \"how 'bout one more test?\"",
+        () => {
+          closeSubMenu();
+          phase = "PHASE2B";
+          startSansAttack(); // triggers phase2BFinalTest
+        }
       );
-      closeSubMenu();
     } else if (id === "FLEE") {
       showDialogue("* you think about running away...\n* but your feet won't move.", () => {
         if (playerHP > 0) startSansAttack();
