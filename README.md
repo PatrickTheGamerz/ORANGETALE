@@ -3,26 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mini Scratch — Improved (Load JSON + Responsive)</title>
+<title>Event Driven Mini Scratch Editor</title>
 <style>
   :root{
     --bg:#04101a; --panel:#071827; --muted:#9fb0c2; --accent:#06b6d4; --text:#e6eef6;
     --card:#0f1724; --glass: rgba(255,255,255,0.03);
   }
   html,body{height:100%;margin:0;background:linear-gradient(180deg,#04101a,#071827);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text);-webkit-font-smoothing:antialiased}
-  .app{display:grid;grid-template-columns:300px 1fr 360px;gap:14px;padding:14px;height:100vh;box-sizing:border-box}
+  .app{display:grid;grid-template-columns:320px 1fr 380px;gap:14px;padding:14px;height:100vh;box-sizing:border-box}
   .panel{background:linear-gradient(180deg,var(--card),#06121a);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);overflow:hidden;display:flex;flex-direction:column}
   h3{margin:0 0 10px 0;color:var(--muted);font-size:13px;letter-spacing:.6px}
-  /* Left palette */
   .palette{flex:1;overflow:auto;padding-right:6px;display:flex;flex-direction:column;gap:8px}
   .palette-search{display:flex;gap:8px;margin-bottom:8px}
   .palette-search input{flex:1;padding:8px;border-radius:8px;border:1px solid var(--glass);background:#071827;color:var(--muted)}
   .block-tpl{display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:var(--text);cursor:grab;border:1px solid rgba(255,255,255,.02)}
   .block-tpl .kind{width:10px;height:10px;border-radius:50%}
-  .kind-move{background:#2b6cb0}.kind-turn{background:#f97316}.kind-look{background:#10b981}.kind-control{background:#ef4444}.kind-sound{background:#7c3aed}.kind-pen{background:#f59e0b}.kind-sense{background:#06b6d4}.kind-operator{background:#06b6d4}.kind-variable{background:#f97316}
+  .kind-move{background:#2b6cb0}.kind-turn{background:#f97316}.kind-look{background:#10b981}.kind-control{background:#ef4444}.kind-sound{background:#7c3aed}.kind-pen{background:#f59e0b}.kind-sense{background:#06b6d4}.kind-operator{background:#06b6d4}.kind-variable{background:#f97316}.kind-event{background:#06b6d4}
   .block-tpl small{color:var(--muted);margin-left:auto}
 
-  /* Center workspace */
   .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .toolbar .left{display:flex;gap:8px;align-items:center}
   .toolbar .right{display:flex;gap:8px;align-items:center;margin-left:auto}
@@ -39,24 +37,24 @@
     background:rgba(255,255,255,.06);border:none;color:var(--text);padding:4px 6px;border-radius:6px;font-size:13px;min-width:40px
   }
 
-  /* Right stage */
-  .stage{height:360px;background:linear-gradient(180deg,#e6f7ff,#dff6ff);border-radius:8px;position:relative;overflow:hidden;border:6px solid #071827}
+  .stage{height:420px;background:linear-gradient(180deg,#e6f7ff,#dff6ff);border-radius:8px;position:relative;overflow:hidden;border:6px solid #071827}
   #stageCanvas{position:absolute;left:0;top:0;width:100%;height:100%}
-  .sprite{position:absolute;width:64px;height:64px;background:#ffcc00;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#071827;box-shadow:0 8px 20px rgba(2,6,23,.4);transform:translate(-50%,-50%);transition:transform .12s linear}
-  .json-area{width:100%;height:120px;background:#071827;border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:12px;border:1px solid rgba(255,255,255,.02);resize:vertical}
+  .sprite{position:absolute;width:64px;height:64px;background:#ffcc00;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#071827;box-shadow:0 8px 20px rgba(2,6,23,.4);transform:translate(-50%,-50%);transition:transform .12s linear;cursor:pointer}
+  .json-area{width:100%;height:140px;background:#071827;border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:12px;border:1px solid rgba(255,255,255,.02);resize:vertical}
   .footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;margin-top:8px}
   .snap-line{position:absolute;height:6px;background:linear-gradient(90deg,transparent,#0ea5a4,transparent);left:0;right:0;border-radius:4px;pointer-events:none;opacity:0;transition:opacity .12s}
   .controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .vars{background:linear-gradient(180deg,#071827,#06121a);border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:13px;min-height:40px}
   .small{font-size:12px;color:var(--muted)}
-  /* responsive */
+  .event-buttons{display:flex;gap:6px;flex-wrap:wrap}
+  .kbd-btn{padding:6px 8px;border-radius:6px;background:#0b1220;border:1px solid rgba(255,255,255,.03);cursor:pointer;color:var(--muted)}
   @media (max-width:1100px){.app{grid-template-columns:1fr;grid-auto-rows:auto;padding:10px}.right{order:3}.left{order:1}.center{order:2}}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="panel left">
-    <h3>Blocks (50)</h3>
+    <h3>Blocks</h3>
     <div class="palette-search">
       <input id="search" placeholder="Search blocks..." aria-label="search blocks" />
       <button class="btn ghost" id="resetSearch" title="Reset search">Reset</button>
@@ -89,7 +87,7 @@
 
     <div class="workspace">
       <div class="canvas" id="canvas">
-        <div class="drop-hint">Drag blocks here to build a script</div>
+        <div class="drop-hint">Drag blocks here to build scripts. Top-level event blocks start scripts</div>
         <div class="script" id="scriptArea" aria-label="workspace"></div>
         <div class="snap-line" id="snapLine"></div>
       </div>
@@ -97,38 +95,56 @@
   </div>
 
   <div class="panel right">
-    <h3>Stage & Controls</h3>
+    <h3>Stage Controls</h3>
     <div class="stage" id="stage">
       <canvas id="stageCanvas"></canvas>
       <div class="sprite" id="sprite" style="left:50%;top:50%">🙂</div>
     </div>
 
     <div style="margin-top:12px;display:flex;gap:8px;flex-direction:column">
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="flex:1">
           <h3 style="margin:0 0 6px 0">Project JSON</h3>
           <textarea id="jsonArea" class="json-area" placeholder="Exported project JSON appears here"></textarea>
         </div>
-        <div style="width:140px">
+        <div style="width:160px">
           <h3 style="margin:0 0 6px 0">Variables</h3>
-          <div class="vars" id="varsUI">score: 0</div>
+          <div class="vars" id="varsUI">—</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+        <div>
+          <h3 style="margin:0 0 6px 0">Event Buttons</h3>
+          <div class="event-buttons" id="eventButtons">
+            <button class="kbd-btn" data-key="ArrowLeft">Left</button>
+            <button class="kbd-btn" data-key="ArrowRight">Right</button>
+            <button class="kbd-btn" data-key="ArrowUp">Up</button>
+            <button class="kbd-btn" data-key="ArrowDown">Down</button>
+            <button class="kbd-btn" data-key="Space">Space</button>
+            <button class="kbd-btn" data-key="Enter">Enter</button>
+          </div>
+        </div>
+        <div style="width:220px">
+          <h3 style="margin:0 0 6px 0">Live Info</h3>
+          <div class="vars" id="liveInfo">fps: —</div>
         </div>
       </div>
 
       <div class="footer">
-        <div>Mini Scratch — Improved</div>
-        <div class="small">Drag blocks • Load JSON • Responsive UI</div>
+        <div>Event Driven Mini Scratch</div>
+        <div class="small">Drag blocks • Events • Load JSON • Responsive UI</div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-/* Improved editor with JSON file load and responsive toolbar
-   - Load JSON from file or textarea
-   - Export copies JSON to textarea and clipboard
-   - Live variables UI
-   - Responsive toolbar (wraps) so buttons don't overflow
+/* Event Driven Mini Scratch Editor
+   - Many blocks including event blocks: when_run, when_key, when_clicked, when_received
+   - Scripts are sequences starting with an event block; event triggers run their script body
+   - UI buttons simulate key presses; clicking sprite triggers when_clicked scripts
+   - Import/export JSON, load file, live variables UI
 */
 
 document.addEventListener('DOMContentLoaded', ()=> {
@@ -149,12 +165,14 @@ document.addEventListener('DOMContentLoaded', ()=> {
   const searchInput = document.getElementById('search');
   const resetSearch = document.getElementById('resetSearch');
   const varsUI = document.getElementById('varsUI');
+  const liveInfo = document.getElementById('liveInfo');
+  const eventButtons = document.getElementById('eventButtons');
   const stageCanvas = document.getElementById('stageCanvas');
   const stage = document.getElementById('stage');
   const stageCtx = stageCanvas.getContext('2d');
 
   // State
-  let workspace = [];
+  let workspace = []; // ordered blocks; scripts are sequences starting with event blocks
   let running = false;
   let runAbort = false;
   let dragData = null;
@@ -163,6 +181,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
   let broadcasts = {};
   let penState = {down:false,color:'#000000',size:2};
   let timerStart = performance.now();
+  let lastFrame = performance.now();
 
   // Helpers
   function uid(){ return 'b'+(idCounter++); }
@@ -178,8 +197,15 @@ document.addEventListener('DOMContentLoaded', ()=> {
   window.addEventListener('resize', resizeStageCanvas);
   resizeStageCanvas();
 
-  // Block definitions (50)
+  // Block definitions extended with events and more blocks
   const blocks = [
+    // Event blocks
+    {id:'when_run', title:'when run', kind:'event', inputs:[]},
+    {id:'when_key', title:'when key pressed', kind:'event', inputs:[{name:'key',type:'text',label:'key',default:'Space'}]},
+    {id:'when_clicked', title:'when sprite clicked', kind:'event', inputs:[]},
+    {id:'when_received', title:'when I receive', kind:'event', inputs:[{name:'msg',type:'text',label:'',default:'message1'}]},
+
+    // Movement
     {id:'move', title:'move', kind:'move', inputs:[{name:'steps',type:'number',label:'steps',default:10}]},
     {id:'move_by', title:'move by', kind:'move', inputs:[{name:'dx',type:'number',label:'dx',default:10},{name:'dy',type:'number',label:'dy',default:0}]},
     {id:'glide', title:'glide to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:100},{name:'y',type:'number',label:'y',default:100},{name:'secs',type:'number',label:'secs',default:1}]},
@@ -191,6 +217,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     {id:'point_in_direction', title:'point in direction', kind:'move', inputs:[{name:'dir',type:'number',label:'deg',default:90}]},
     {id:'bounce_if_on_edge', title:'if on edge, bounce', kind:'move', inputs:[]},
 
+    // Rotation & looks
     {id:'turn_right', title:'turn right', kind:'turn', inputs:[{name:'deg',type:'number',label:'deg',default:15}]},
     {id:'turn_left', title:'turn left', kind:'turn', inputs:[{name:'deg',type:'number',label:'deg',default:15}]},
     {id:'set_rotation_style', title:'set rotation style', kind:'turn', inputs:[{name:'style',type:'select',label:'style',options:['all around','left-right','don\'t rotate'],default:'all around'}]},
@@ -198,6 +225,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     {id:'hide', title:'hide', kind:'look', inputs:[]},
     {id:'switch_costume', title:'next costume', kind:'look', inputs:[]},
 
+    // Looks & text
     {id:'say', title:'say', kind:'look', inputs:[{name:'text',type:'text',label:'',default:'Hello!'},{name:'secs',type:'number',label:'for',default:2}]},
     {id:'think', title:'think', kind:'look', inputs:[{name:'text',type:'text',label:'',default:'Hmm...'},{name:'secs',type:'number',label:'for',default:2}]},
     {id:'set_size', title:'set size to', kind:'look', inputs:[{name:'size',type:'number',label:'%',default:100}]},
@@ -205,11 +233,13 @@ document.addEventListener('DOMContentLoaded', ()=> {
     {id:'set_color', title:'set color', kind:'look', inputs:[{name:'color',type:'text',label:'',default:'#ffcc00'}]},
     {id:'change_color', title:'change color by', kind:'look', inputs:[{name:'delta',type:'number',label:'',default:10}]},
 
+    // Sound
     {id:'play_sound', title:'play sound', kind:'sound', inputs:[{name:'name',type:'text',label:'',default:'pop'}]},
     {id:'play_sound_wait', title:'play sound and wait', kind:'sound', inputs:[{name:'name',type:'text',label:'',default:'pop'}]},
     {id:'stop_sounds', title:'stop all sounds', kind:'sound', inputs:[]},
     {id:'set_volume', title:'set volume to', kind:'sound', inputs:[{name:'vol',type:'number',label:'%',default:100}]},
 
+    // Control
     {id:'wait', title:'wait', kind:'control', inputs:[{name:'secs',type:'number',label:'seconds',default:1}]},
     {id:'repeat', title:'repeat', kind:'control', inputs:[{name:'times',type:'number',label:'times',default:5}]},
     {id:'forever', title:'forever', kind:'control', inputs:[]},
@@ -219,18 +249,22 @@ document.addEventListener('DOMContentLoaded', ()=> {
     {id:'stop', title:'stop', kind:'control', inputs:[{name:'what',type:'select',label:'',options:['this script','all','other scripts in sprite'],default:'this script'}]},
     {id:'broadcast', title:'broadcast', kind:'control', inputs:[{name:'msg',type:'text',label:'',default:'message1'}]},
 
+    // Sensing and input
     {id:'ask', title:'ask', kind:'sense', inputs:[{name:'text',type:'text',label:'',default:'What?'}]},
     {id:'answer', title:'answer', kind:'sense', inputs:[]},
     {id:'touching_color', title:'touching color', kind:'sense', inputs:[{name:'color',type:'text',label:'',default:'#000000'}]},
     {id:'touching_sprite', title:'touching sprite', kind:'sense', inputs:[{name:'name',type:'text',label:'',default:'sprite2'}]},
     {id:'distance_to', title:'distance to', kind:'sense', inputs:[{name:'name',type:'text',label:'',default:'mouse'}]},
     {id:'timer_reset', title:'reset timer', kind:'sense', inputs:[]},
+    {id:'key_pressed', title:'key pressed', kind:'sense', inputs:[{name:'key',type:'text',label:'',default:'Space'}]},
 
+    // Operators
     {id:'math', title:'math', kind:'operator', inputs:[{name:'expr',type:'text',label:'',default:'1+1'}]},
     {id:'random', title:'pick random', kind:'operator', inputs:[{name:'min',type:'number',label:'min',default:1},{name:'max',type:'number',label:'max',default:10}]},
     {id:'join', title:'join', kind:'operator', inputs:[{name:'a',type:'text',label:'',default:'hello'},{name:'b',type:'text',label:'',default:'world'}]},
     {id:'length', title:'length of', kind:'operator', inputs:[{name:'s',type:'text',label:'',default:'hello'}]},
 
+    // Variables
     {id:'set_var', title:'set', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'},{name:'value',type:'text',label:'to',default:'0'}]},
     {id:'change_var', title:'change', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'},{name:'delta',type:'number',label:'by',default:1}]},
     {id:'show_var', title:'show variable', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'}]},
@@ -238,10 +272,15 @@ document.addEventListener('DOMContentLoaded', ()=> {
     {id:'set_list', title:'set list', kind:'variable', inputs:[{name:'list',type:'text',label:'',default:'myList'},{name:'value',type:'text',label:'to',default:''}]},
     {id:'add_to_list', title:'add to list', kind:'variable', inputs:[{name:'list',type:'text',label:'',default:'myList'},{name:'value',type:'text',label:'',default:''}]},
 
+    // Pen
     {id:'pen_down', title:'pen down', kind:'pen', inputs:[]},
     {id:'pen_up', title:'pen up', kind:'pen', inputs:[]},
     {id:'pen_set_color', title:'set pen color', kind:'pen', inputs:[{name:'color',type:'text',label:'',default:'#000000'}]},
-    {id:'pen_set_size', title:'set pen size', kind:'pen', inputs:[{name:'size',type:'number',label:'',default:2}]}
+    {id:'pen_set_size', title:'set pen size', kind:'pen', inputs:[{name:'size',type:'number',label:'',default:2}]},
+
+    // Utility
+    {id:'log', title:'log', kind:'utility', inputs:[{name:'text',type:'text',label:'',default:'hello'}]},
+    {id:'set_sprite_text', title:'set sprite text', kind:'utility', inputs:[{name:'text',type:'text',label:'',default:'🙂'}]}
   ];
 
   // Render palette
@@ -390,11 +429,16 @@ document.addEventListener('DOMContentLoaded', ()=> {
     updateVarsUI();
   }
 
-  // Initial demo blocks
-  appendBlock({id:uid(), type:'move', params:{steps:40}});
-  appendBlock({id:uid(), type:'turn_right', params:{deg:45}});
-  appendBlock({id:uid(), type:'say', params:{text:'Hello!', secs:2}});
-  appendBlock({id:uid(), type:'wait', params:{secs:0.6}});
+  // Initial demo script showing events
+  appendBlock({id:uid(), type:'when_run', params:{}});
+  appendBlock({id:uid(), type:'set_var', params:{var:'score', value:0}});
+  appendBlock({id:uid(), type:'say', params:{text:'Game ready', secs:1}});
+  appendBlock({id:uid(), type:'when_key', params:{key:'Space'}});
+  appendBlock({id:uid(), type:'say', params:{text:'Space pressed!', secs:1}});
+  appendBlock({id:uid(), type:'change_var', params:{var:'score', delta:1}});
+  appendBlock({id:uid(), type:'when_clicked', params:{}});
+  appendBlock({id:uid(), type:'say', params:{text:'Sprite clicked!', secs:1}});
+  appendBlock({id:uid(), type:'change_var', params:{var:'score', delta:2}});
 
   // Drag & drop into canvas
   canvas.addEventListener('dragover', (e)=>{
@@ -457,7 +501,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
     runBtn.classList.remove('primary');
     runBtn.classList.add('btn');
     try{
-      await runScript(workspace);
+      // run all when_run scripts immediately
+      await triggerEvent('when_run');
     }catch(e){
       console.error(e);
     } finally {
@@ -507,7 +552,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
       }
     };
     reader.readAsText(f);
-    // reset input so same file can be reloaded later
     fileInput.value = '';
   });
 
@@ -535,7 +579,66 @@ document.addEventListener('DOMContentLoaded', ()=> {
     varsUI.innerHTML = keys.map(k=>`${k}: <strong style="color:#fff">${variables[k]}</strong>`).join('<br>');
   }
 
-  // Interpreter (same core as before, with live variable updates)
+  // Parse workspace into scripts: each script starts at an event block (type starts with when_)
+  function extractScripts(){
+    const scripts = [];
+    let current = null;
+    for(const b of workspace){
+      if(b.type && b.type.startsWith('when_')){
+        if(current) scripts.push(current);
+        current = {triggerBlock: b, body: []};
+      } else {
+        if(!current){
+          // orphan block: treat as part of a default when_run script
+          current = {triggerBlock: {type:'when_run', params:{}}, body: []};
+        }
+        current.body.push(b);
+      }
+    }
+    if(current) scripts.push(current);
+    return scripts;
+  }
+
+  // Trigger event by type and optional param matching
+  async function triggerEvent(eventType, param){
+    const scripts = extractScripts();
+    const matched = scripts.filter(s=>{
+      const t = s.triggerBlock.type;
+      if(t !== eventType) return false;
+      if(eventType === 'when_key'){
+        const want = (s.triggerBlock.params && s.triggerBlock.params.key) || '';
+        return String(want).toLowerCase() === String(param || '').toLowerCase();
+      }
+      if(eventType === 'when_received'){
+        const want = (s.triggerBlock.params && s.triggerBlock.params.msg) || '';
+        return String(want) === String(param);
+      }
+      return true;
+    });
+    // run matched scripts concurrently
+    await Promise.all(matched.map(s=> runScript(s.body)));
+  }
+
+  // Event wiring: key buttons and sprite click
+  eventButtons.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-key]');
+    if(!btn) return;
+    const key = btn.dataset.key;
+    // simulate key press event
+    triggerEvent('when_key', key);
+  });
+
+  sprite.addEventListener('click', ()=> {
+    triggerEvent('when_clicked');
+  });
+
+  // Also listen to real keyboard for convenience
+  window.addEventListener('keydown', (e)=>{
+    const key = e.code === 'Space' ? 'Space' : e.key;
+    triggerEvent('when_key', key);
+  });
+
+  // Interpreter core for a list of blocks
   async function runScript(blocksList){
     const speed = Number(speedInput.value);
     function evalExpr(expr){
@@ -560,10 +663,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
     }
 
     async function execBlock(b){
-      const def = blocks.find(x=>x.id===b.type);
-      if(!def) return;
       const p = b.params || {};
-      // Implemented behaviors (core)
+      // Implemented behaviors
       if(b.type === 'move'){
         await animateMove(p.steps || 10, speed);
       } else if(b.type === 'move_by'){
@@ -657,6 +758,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
         if(p.what === 'all') runAbort = true;
       } else if(b.type === 'broadcast'){
         broadcasts[p.msg] = (broadcasts[p.msg]||0) + 1;
+        // trigger when_received scripts
+        triggerEvent('when_received', p.msg);
       } else if(b.type === 'ask'){
         const ans = prompt(p.text||'');
         variables['answer'] = ans;
@@ -696,6 +799,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
         penState.color = p.color || '#000';
       } else if(b.type === 'pen_set_size'){
         penState.size = Number(p.size||2);
+      } else if(b.type === 'log'){
+        console.log(p.text);
+      } else if(b.type === 'set_sprite_text'){
+        sprite.textContent = p.text || '';
       }
     }
 
@@ -790,6 +897,17 @@ document.addEventListener('DOMContentLoaded', ()=> {
       if(workspace.length) removeBlockById(workspace[workspace.length-1].id);
     }
   });
+
+  // Live info update loop
+  function updateLiveInfo(){
+    const now = performance.now();
+    const dt = now - lastFrame;
+    const fps = Math.round(1000 / Math.max(1, dt));
+    liveInfo.innerHTML = `fps: <strong style="color:#fff">${fps}</strong>`;
+    lastFrame = now;
+    requestAnimationFrame(updateLiveInfo);
+  }
+  updateLiveInfo();
 
   // Initialize palette and stage
   renderPalette();
