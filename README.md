@@ -1,925 +1,1330 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Event Driven Mini Scratch Editor</title>
-<style>
-  :root{
-    --bg:#04101a; --panel:#071827; --muted:#9fb0c2; --accent:#06b6d4; --text:#e6eef6;
-    --card:#0f1724; --glass: rgba(255,255,255,0.03);
-  }
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,#04101a,#071827);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text);-webkit-font-smoothing:antialiased}
-  .app{display:grid;grid-template-columns:320px 1fr 380px;gap:14px;padding:14px;height:100vh;box-sizing:border-box}
-  .panel{background:linear-gradient(180deg,var(--card),#06121a);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);overflow:hidden;display:flex;flex-direction:column}
-  h3{margin:0 0 10px 0;color:var(--muted);font-size:13px;letter-spacing:.6px}
-  .palette{flex:1;overflow:auto;padding-right:6px;display:flex;flex-direction:column;gap:8px}
-  .palette-search{display:flex;gap:8px;margin-bottom:8px}
-  .palette-search input{flex:1;padding:8px;border-radius:8px;border:1px solid var(--glass);background:#071827;color:var(--muted)}
-  .block-tpl{display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:var(--text);cursor:grab;border:1px solid rgba(255,255,255,.02)}
-  .block-tpl .kind{width:10px;height:10px;border-radius:50%}
-  .kind-move{background:#2b6cb0}.kind-turn{background:#f97316}.kind-look{background:#10b981}.kind-control{background:#ef4444}.kind-sound{background:#7c3aed}.kind-pen{background:#f59e0b}.kind-sense{background:#06b6d4}.kind-operator{background:#06b6d4}.kind-variable{background:#f97316}.kind-event{background:#06b6d4}
-  .block-tpl small{color:var(--muted);margin-left:auto}
+  <meta charset="UTF-8">
+  <title>A Test of Skill - Sans Fight (Base)</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      color: white;
+      font-family: "Courier New", monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #game {
+      width: 800px;
+      height: 600px;
+      border: 4px solid white;
+      box-sizing: border-box;
+      position: relative;
+      background: black;
+      overflow: hidden;
+    }
 
-  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .toolbar .left{display:flex;gap:8px;align-items:center}
-  .toolbar .right{display:flex;gap:8px;align-items:center;margin-left:auto}
-  .btn{background:#071827;border:1px solid rgba(255,255,255,.03);color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
-  .btn.primary{background:linear-gradient(90deg,#06b6d4,#0ea5a4);color:#042027;border:none}
-  .btn.ghost{background:transparent;border:1px solid var(--glass);color:var(--muted)}
-  .workspace{flex:1;background:linear-gradient(180deg,#06121a,#04101a);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:flex-start;min-height:520px}
-  .canvas{flex:1;background:linear-gradient(180deg,#071827,#04101a);border-radius:8px;padding:12px;min-height:520px;position:relative;overflow:auto;border:1px dashed rgba(255,255,255,.03)}
-  .drop-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);color:rgba(255,255,255,.04);font-size:12px}
-  .script{min-height:40px;padding:8px;border-radius:8px;background:linear-gradient(180deg,#06121a,#04101a);box-shadow:inset 0 1px 0 rgba(255,255,255,.02);display:flex;flex-direction:column;gap:8px}
-  .block-instance{display:flex;align-items:center;padding:8px;border-radius:8px;background:linear-gradient(180deg,#122433,#0b1b2a);color:#fff;cursor:grab;gap:8px;min-width:220px}
-  .block-instance .label{flex:1;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .block-instance input[type="text"], .block-instance input[type="number"], .block-instance select{
-    background:rgba(255,255,255,.06);border:none;color:var(--text);padding:4px 6px;border-radius:6px;font-size:13px;min-width:40px
-  }
+    /* Enemy area */
+    #enemy-area {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      width: 100%;
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    #enemy-name {
+      font-size: 24px;
+      margin-bottom: 8px;
+      text-transform: lowercase;
+    }
+    #enemy-sprite {
+      width: 80px;
+      height: 80px;
+      border: 2px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+      position: relative;
+      background: black;
+    }
 
-  .stage{height:420px;background:linear-gradient(180deg,#e6f7ff,#dff6ff);border-radius:8px;position:relative;overflow:hidden;border:6px solid #071827}
-  #stageCanvas{position:absolute;left:0;top:0;width:100%;height:100%}
-  .sprite{position:absolute;width:64px;height:64px;background:#ffcc00;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#071827;box-shadow:0 8px 20px rgba(2,6,23,.4);transform:translate(-50%,-50%);transition:transform .12s linear;cursor:pointer}
-  .json-area{width:100%;height:140px;background:#071827;border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:12px;border:1px solid rgba(255,255,255,.02);resize:vertical}
-  .footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;margin-top:8px}
-  .snap-line{position:absolute;height:6px;background:linear-gradient(90deg,transparent,#0ea5a4,transparent);left:0;right:0;border-radius:4px;pointer-events:none;opacity:0;transition:opacity .12s}
-  .controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .vars{background:linear-gradient(180deg,#071827,#06121a);border-radius:8px;padding:8px;color:var(--muted);font-family:monospace;font-size:13px;min-height:40px}
-  .small{font-size:12px;color:var(--muted)}
-  .event-buttons{display:flex;gap:6px;flex-wrap:wrap}
-  .kbd-btn{padding:6px 8px;border-radius:6px;background:#0b1220;border:1px solid rgba(255,255,255,.03);cursor:pointer;color:var(--muted)}
-  @media (max-width:1100px){.app{grid-template-columns:1fr;grid-auto-rows:auto;padding:10px}.right{order:3}.left{order:1}.center{order:2}}
-</style>
+    /* Monster bubble to the right of Sans */
+    #monster-bubble {
+      position: absolute;
+      top: -10px;
+      left: 90px;
+      max-width: 260px;
+      padding: 8px;
+      border: 2px solid white;
+      background: white;
+      color: black;
+      font-size: 16px;
+      white-space: pre-line;
+      display: none;
+    }
+    #monster-bubble.special {
+      border-color: #ff8000;
+      color: #ff8000;
+    }
+
+    #enemy-hp-container {
+      width: 280px;
+      height: 16px;
+      border: 2px solid white;
+      position: relative;
+      margin-top: 4px;
+    }
+    #enemy-hp-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: cyan;
+      width: 100%;
+    }
+    #enemy-hp-text {
+      margin-top: 4px;
+      font-size: 14px;
+    }
+
+    /* Bottom main box (like Undertale) */
+    #bottom-box {
+      position: absolute;
+      left: 40px;
+      right: 40px;
+      bottom: 40px;
+      height: 160px;
+      border: 4px solid white;
+      box-sizing: border-box;
+      background: black;
+    }
+
+    /* Soul box (inside bottom box) */
+    #soul-box {
+      position: absolute;
+      left: 160px;
+      right: 160px;
+      top: 20px;
+      height: 80px;
+      border: 2px solid white;
+      box-sizing: border-box;
+      overflow: hidden;
+      display: none;
+      background: black;
+    }
+
+    #soul {
+      width: 14px;
+      height: 14px;
+      background: red;
+      position: absolute;
+      border-radius: 50% 50% 40% 40%;
+      transform: rotate(45deg);
+      box-shadow: 0 0 6px rgba(255,0,0,0.9);
+    }
+
+    .bone {
+      position: absolute;
+      background: white;
+    }
+    .bone.blue {
+      background: #0000ff;
+      box-shadow: 0 0 6px rgba(0,128,255,0.9);
+    }
+
+    .blaster {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 2px solid white;
+      border-radius: 50%;
+      box-sizing: border-box;
+      box-shadow: 0 0 8px rgba(0,255,255,0.9);
+    }
+
+    .blast-beam {
+      position: absolute;
+      background: cyan;
+      opacity: 0.8;
+      box-shadow: 0 0 15px rgba(0,255,255,1);
+    }
+
+    /* Dialogue box (bottom, inside bottom-box) */
+    #dialogue-box {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: 10px;
+      height: 80px;
+      border: 2px solid white;
+      box-sizing: border-box;
+      background: white;
+      color: black;
+      font-size: 18px;
+      white-space: pre-line;
+      padding: 6px;
+      display: none;
+    }
+
+    /* Fight bar (inside bottom box) */
+    #fight-bar-container {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      top: 30px;
+      height: 40px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    #fight-bar {
+      width: 360px;
+      height: 20px;
+      border: 2px solid white;
+      position: relative;
+      margin-bottom: 4px;
+      background: black;
+    }
+    #fight-zone {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 80px;
+      background: yellow;
+      left: 140px;
+      opacity: 0.4;
+    }
+    #fight-pointer {
+      position: absolute;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      background: red;
+      box-shadow: 0 0 6px rgba(255,0,0,0.8);
+    }
+    #damage-text {
+      font-size: 16px;
+      height: 20px;
+    }
+
+    /* Target menu (inside bottom box) */
+    #target-menu {
+      position: absolute;
+      left: 180px;
+      right: 180px;
+      top: 30px;
+      height: 40px;
+      border: 2px solid white;
+      background: black;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      font-size: 18px;
+    }
+    .target-option {
+      padding: 2px 8px;
+      border: 2px solid white;
+    }
+    .target-option.selected {
+      color: yellow;
+      border-color: yellow;
+    }
+
+    /* Bottom UI (name, HP, menu) */
+    #ui-bar {
+      position: absolute;
+      left: 50px;
+      right: 50px;
+      bottom: 50px;
+      height: 140px;
+      pointer-events: none;
+    }
+
+    #hp-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 90px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 18px;
+      pointer-events: none;
+    }
+
+    #hp-info {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #hp-bar-inner {
+      width: 200px;
+      height: 16px;
+      border: 2px solid white;
+      position: relative;
+    }
+    #hp-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: #ff0000;
+      width: 100%;
+    }
+
+    #menu-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      font-size: 22px;
+      pointer-events: auto;
+    }
+
+    .menu-item {
+      cursor: pointer;
+    }
+    .menu-item.selected {
+      color: yellow;
+    }
+
+    #sub-menu {
+      position: absolute;
+      left: 200px;
+      right: 200px;
+      bottom: 80px;
+      height: 40px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      font-size: 18px;
+      pointer-events: auto;
+    }
+    .sub-option {
+      border: 2px solid white;
+      padding: 4px 8px;
+      cursor: pointer;
+      background: white;
+      color: black;
+    }
+    .sub-option.selected {
+      color: yellow;
+      border-color: yellow;
+    }
+
+    /* End screen */
+    #end-screen {
+      position: absolute;
+      inset: 0;
+      background: black;
+      color: white;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-size: 24px;
+      text-align: center;
+      white-space: pre-line;
+    }
+  </style>
 </head>
 <body>
-<div class="app">
-  <div class="panel left">
-    <h3>Blocks</h3>
-    <div class="palette-search">
-      <input id="search" placeholder="Search blocks..." aria-label="search blocks" />
-      <button class="btn ghost" id="resetSearch" title="Reset search">Reset</button>
+<div id="game">
+  <div id="enemy-area">
+    <div id="enemy-name">sans</div>
+    <div id="enemy-sprite">
+      S A N S
+      <div id="monster-bubble"></div>
     </div>
-    <div class="palette" id="palette" aria-label="block palette"></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn" id="exportBtn" title="Copy project JSON to textarea">Export</button>
-      <button class="btn" id="importBtn" title="Load JSON from textarea">Load JSON</button>
-      <label class="btn" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
-        Load file
-        <input id="fileInput" type="file" accept="application/json" style="display:none" />
-      </label>
+    <div id="enemy-hp-container">
+      <div id="enemy-hp-bar"></div>
+    </div>
+    <div id="enemy-hp-text">HP: 1 / 1</div>
+  </div>
+
+  <div id="bottom-box">
+    <div id="soul-box">
+      <div id="soul"></div>
+    </div>
+
+    <div id="dialogue-box"></div>
+
+    <div id="target-menu">
+      <span class="target-option selected" data-target="sans">sans</span>
+    </div>
+
+    <div id="fight-bar-container">
+      <div id="fight-bar">
+        <div id="fight-zone"></div>
+        <div id="fight-pointer"></div>
+      </div>
+      <div id="damage-text"></div>
     </div>
   </div>
 
-  <div class="panel center">
-    <div class="toolbar" role="toolbar" aria-label="editor toolbar">
-      <div class="left">
-        <button class="btn primary" id="runBtn" title="Run the script">Run</button>
-        <button class="btn" id="stopBtn" title="Stop execution">Stop</button>
-        <button class="btn" id="clearBtn" title="Clear workspace">Clear</button>
-      </div>
-      <div class="right">
-        <div class="controls-row">
-          <label class="small" style="margin-right:6px">Speed</label>
-          <input id="speed" type="range" min="0.2" max="2" step="0.1" value="1" />
+  <div id="ui-bar">
+    <div id="hp-line">
+      <div id="hp-info">
+        <span id="name-label">CHARA</span>
+        <span>LV 19</span>
+        <span>HP</span>
+        <div id="hp-bar-inner">
+          <div id="hp-fill"></div>
         </div>
+        <span id="hp-text">92 / 92</span>
+      </div>
+      <div id="kr-info">
+        KR <span id="kr-value">0</span> / 92
       </div>
     </div>
 
-    <div class="workspace">
-      <div class="canvas" id="canvas">
-        <div class="drop-hint">Drag blocks here to build scripts. Top-level event blocks start scripts</div>
-        <div class="script" id="scriptArea" aria-label="workspace"></div>
-        <div class="snap-line" id="snapLine"></div>
-      </div>
+    <div id="menu-line">
+      <span class="menu-item selected" data-action="FIGHT">FIGHT</span>
+      <span class="menu-item" data-action="ACT">ACT</span>
+      <span class="menu-item" data-action="ITEM">ITEM</span>
+      <span class="menu-item" data-action="MERCY">MERCY</span>
     </div>
+
+    <div id="sub-menu"></div>
   </div>
 
-  <div class="panel right">
-    <h3>Stage Controls</h3>
-    <div class="stage" id="stage">
-      <canvas id="stageCanvas"></canvas>
-      <div class="sprite" id="sprite" style="left:50%;top:50%">🙂</div>
-    </div>
-
-    <div style="margin-top:12px;display:flex;gap:8px;flex-direction:column">
-      <div style="display:flex;gap:8px;align-items:flex-start">
-        <div style="flex:1">
-          <h3 style="margin:0 0 6px 0">Project JSON</h3>
-          <textarea id="jsonArea" class="json-area" placeholder="Exported project JSON appears here"></textarea>
-        </div>
-        <div style="width:160px">
-          <h3 style="margin:0 0 6px 0">Variables</h3>
-          <div class="vars" id="varsUI">—</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-        <div>
-          <h3 style="margin:0 0 6px 0">Event Buttons</h3>
-          <div class="event-buttons" id="eventButtons">
-            <button class="kbd-btn" data-key="ArrowLeft">Left</button>
-            <button class="kbd-btn" data-key="ArrowRight">Right</button>
-            <button class="kbd-btn" data-key="ArrowUp">Up</button>
-            <button class="kbd-btn" data-key="ArrowDown">Down</button>
-            <button class="kbd-btn" data-key="Space">Space</button>
-            <button class="kbd-btn" data-key="Enter">Enter</button>
-          </div>
-        </div>
-        <div style="width:220px">
-          <h3 style="margin:0 0 6px 0">Live Info</h3>
-          <div class="vars" id="liveInfo">fps: —</div>
-        </div>
-      </div>
-
-      <div class="footer">
-        <div>Event Driven Mini Scratch</div>
-        <div class="small">Drag blocks • Events • Load JSON • Responsive UI</div>
-      </div>
-    </div>
+  <div id="end-screen">
+    <div id="end-text"></div>
+    <div style="font-size: 18px; margin-top: 10px;">(refresh the page to restart)</div>
   </div>
 </div>
 
 <script>
-/* Event Driven Mini Scratch Editor
-   - Many blocks including event blocks: when_run, when_key, when_clicked, when_received
-   - Scripts are sequences starting with an event block; event triggers run their script body
-   - UI buttons simulate key presses; clicking sprite triggers when_clicked scripts
-   - Import/export JSON, load file, live variables UI
-*/
+  // ========= CORE STATE =========
+  let playerHP = 92;
+  const playerMaxHP = 92;
+  let enemyHP = 1;
+  const enemyMaxHP = 1;
 
-document.addEventListener('DOMContentLoaded', ()=> {
-  // Elements
-  const paletteEl = document.getElementById('palette');
-  const scriptArea = document.getElementById('scriptArea');
-  const canvas = document.getElementById('canvas');
-  const sprite = document.getElementById('sprite');
-  const runBtn = document.getElementById('runBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const speedInput = document.getElementById('speed');
-  const exportBtn = document.getElementById('exportBtn');
-  const importBtn = document.getElementById('importBtn');
-  const fileInput = document.getElementById('fileInput');
-  const jsonArea = document.getElementById('jsonArea');
-  const snapLine = document.getElementById('snapLine');
-  const searchInput = document.getElementById('search');
-  const resetSearch = document.getElementById('resetSearch');
-  const varsUI = document.getElementById('varsUI');
-  const liveInfo = document.getElementById('liveInfo');
-  const eventButtons = document.getElementById('eventButtons');
-  const stageCanvas = document.getElementById('stageCanvas');
-  const stage = document.getElementById('stage');
-  const stageCtx = stageCanvas.getContext('2d');
+  const menuItems = ["FIGHT", "ACT", "ITEM", "MERCY"];
+  let menuIndex = 0;
+  const menuElements = Array.from(document.querySelectorAll(".menu-item"));
 
-  // State
-  let workspace = []; // ordered blocks; scripts are sequences starting with event blocks
-  let running = false;
-  let runAbort = false;
-  let dragData = null;
-  let idCounter = 1;
-  let variables = {};
-  let broadcasts = {};
-  let penState = {down:false,color:'#000000',size:2};
-  let timerStart = performance.now();
-  let lastFrame = performance.now();
+  let inSoulMode = false;
+  let canMoveSoul = false;
+  let phase = "INTRO";
+  // INTRO, PLAYER_TURN, ENEMY_ATTACK, FIGHT_TARGET, FIGHT_BAR, MENU_SUB, END
 
-  // Helpers
-  function uid(){ return 'b'+(idCounter++); }
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-  function ease(t){ return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; }
+  let turnCount = 0;
+  let actCount = 0;
+  let pureAttackTurns = 0;
+  let sansCanBeHit = false;
+  let canSpare = false;
+  let usedBlueIntro = false;
+  let usedPreSpareSpecial = false;
 
-  // Responsive canvas
-  function resizeStageCanvas(){
-    stageCanvas.width = stage.clientWidth;
-    stageCanvas.height = stage.clientHeight;
-  }
-  window.addEventListener('resize', resizeStageCanvas);
-  resizeStageCanvas();
+  // Anti-spam
+  let playerActionUsedThisTurn = false;
 
-  // Block definitions extended with events and more blocks
-  const blocks = [
-    // Event blocks
-    {id:'when_run', title:'when run', kind:'event', inputs:[]},
-    {id:'when_key', title:'when key pressed', kind:'event', inputs:[{name:'key',type:'text',label:'key',default:'Space'}]},
-    {id:'when_clicked', title:'when sprite clicked', kind:'event', inputs:[]},
-    {id:'when_received', title:'when I receive', kind:'event', inputs:[{name:'msg',type:'text',label:'',default:'message1'}]},
+  const dialogueBox = document.getElementById("dialogue-box");
+  const monsterBubble = document.getElementById("monster-bubble");
+  const soulBox = document.getElementById("soul-box");
+  const soul = document.getElementById("soul");
+  const hpFill = document.getElementById("hp-fill");
+  const hpText = document.getElementById("hp-text");
+  const enemyHPBar = document.getElementById("enemy-hp-bar");
+  const enemyHPText = document.getElementById("enemy-hp-text");
+  const subMenu = document.getElementById("sub-menu");
+  const fightBarContainer = document.getElementById("fight-bar-container");
+  const fightBar = document.getElementById("fight-bar");
+  const fightPointer = document.getElementById("fight-pointer");
+  const fightZone = document.getElementById("fight-zone");
+  const damageText = document.getElementById("damage-text");
+  const endScreen = document.getElementById("end-screen");
+  const endText = document.getElementById("end-text");
+  const targetMenu = document.getElementById("target-menu");
+  const targetOptions = Array.from(document.querySelectorAll(".target-option"));
 
-    // Movement
-    {id:'move', title:'move', kind:'move', inputs:[{name:'steps',type:'number',label:'steps',default:10}]},
-    {id:'move_by', title:'move by', kind:'move', inputs:[{name:'dx',type:'number',label:'dx',default:10},{name:'dy',type:'number',label:'dy',default:0}]},
-    {id:'glide', title:'glide to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:100},{name:'y',type:'number',label:'y',default:100},{name:'secs',type:'number',label:'secs',default:1}]},
-    {id:'set_x', title:'set x to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:0}]},
-    {id:'change_x', title:'change x by', kind:'move', inputs:[{name:'dx',type:'number',label:'dx',default:10}]},
-    {id:'set_y', title:'set y to', kind:'move', inputs:[{name:'y',type:'number',label:'y',default:0}]},
-    {id:'change_y', title:'change y by', kind:'move', inputs:[{name:'dy',type:'number',label:'dy',default:10}]},
-    {id:'go_to', title:'go to', kind:'move', inputs:[{name:'x',type:'number',label:'x',default:0},{name:'y',type:'number',label:'y',default:0}]},
-    {id:'point_in_direction', title:'point in direction', kind:'move', inputs:[{name:'dir',type:'number',label:'deg',default:90}]},
-    {id:'bounce_if_on_edge', title:'if on edge, bounce', kind:'move', inputs:[]},
+  let soulX = 0;
+  let soulY = 0;
+  let soulColor = "red";
+  let gravityEnabled = false;
+  let gravity = 0.12;
+  let yVelocity = 0;
+  let jumpHold = 0;
+  const maxJumpHold = 18;
+  let baseSoulSpeed = 3.0;
+  let soulSpeed = baseSoulSpeed;
 
-    // Rotation & looks
-    {id:'turn_right', title:'turn right', kind:'turn', inputs:[{name:'deg',type:'number',label:'deg',default:15}]},
-    {id:'turn_left', title:'turn left', kind:'turn', inputs:[{name:'deg',type:'number',label:'deg',default:15}]},
-    {id:'set_rotation_style', title:'set rotation style', kind:'turn', inputs:[{name:'style',type:'select',label:'style',options:['all around','left-right','don\'t rotate'],default:'all around'}]},
-    {id:'show', title:'show', kind:'look', inputs:[]},
-    {id:'hide', title:'hide', kind:'look', inputs:[]},
-    {id:'switch_costume', title:'next costume', kind:'look', inputs:[]},
+  const keys = {};
+  let currentSubType = null;
+  let currentSubOptions = [];
+  let subIndex = 0;
 
-    // Looks & text
-    {id:'say', title:'say', kind:'look', inputs:[{name:'text',type:'text',label:'',default:'Hello!'},{name:'secs',type:'number',label:'for',default:2}]},
-    {id:'think', title:'think', kind:'look', inputs:[{name:'text',type:'text',label:'',default:'Hmm...'},{name:'secs',type:'number',label:'for',default:2}]},
-    {id:'set_size', title:'set size to', kind:'look', inputs:[{name:'size',type:'number',label:'%',default:100}]},
-    {id:'change_size', title:'change size by', kind:'look', inputs:[{name:'delta',type:'number',label:'%',default:10}]},
-    {id:'set_color', title:'set color', kind:'look', inputs:[{name:'color',type:'text',label:'',default:'#ffcc00'}]},
-    {id:'change_color', title:'change color by', kind:'look', inputs:[{name:'delta',type:'number',label:'',default:10}]},
+  let fightPointerPos = 0;
+  let fightPointerDir = 1;
+  let fightBarActive = false;
+  let targetMenuIndex = 0;
 
-    // Sound
-    {id:'play_sound', title:'play sound', kind:'sound', inputs:[{name:'name',type:'text',label:'',default:'pop'}]},
-    {id:'play_sound_wait', title:'play sound and wait', kind:'sound', inputs:[{name:'name',type:'text',label:'',default:'pop'}]},
-    {id:'stop_sounds', title:'stop all sounds', kind:'sound', inputs:[]},
-    {id:'set_volume', title:'set volume to', kind:'sound', inputs:[{name:'vol',type:'number',label:'%',default:100}]},
-
-    // Control
-    {id:'wait', title:'wait', kind:'control', inputs:[{name:'secs',type:'number',label:'seconds',default:1}]},
-    {id:'repeat', title:'repeat', kind:'control', inputs:[{name:'times',type:'number',label:'times',default:5}]},
-    {id:'forever', title:'forever', kind:'control', inputs:[]},
-    {id:'if', title:'if', kind:'control', inputs:[{name:'cond',type:'text',label:'condition',default:'true'}]},
-    {id:'if_else', title:'if else', kind:'control', inputs:[{name:'cond',type:'text',label:'condition',default:'true'}]},
-    {id:'wait_until', title:'wait until', kind:'control', inputs:[{name:'cond',type:'text',label:'condition',default:'false'}]},
-    {id:'stop', title:'stop', kind:'control', inputs:[{name:'what',type:'select',label:'',options:['this script','all','other scripts in sprite'],default:'this script'}]},
-    {id:'broadcast', title:'broadcast', kind:'control', inputs:[{name:'msg',type:'text',label:'',default:'message1'}]},
-
-    // Sensing and input
-    {id:'ask', title:'ask', kind:'sense', inputs:[{name:'text',type:'text',label:'',default:'What?'}]},
-    {id:'answer', title:'answer', kind:'sense', inputs:[]},
-    {id:'touching_color', title:'touching color', kind:'sense', inputs:[{name:'color',type:'text',label:'',default:'#000000'}]},
-    {id:'touching_sprite', title:'touching sprite', kind:'sense', inputs:[{name:'name',type:'text',label:'',default:'sprite2'}]},
-    {id:'distance_to', title:'distance to', kind:'sense', inputs:[{name:'name',type:'text',label:'',default:'mouse'}]},
-    {id:'timer_reset', title:'reset timer', kind:'sense', inputs:[]},
-    {id:'key_pressed', title:'key pressed', kind:'sense', inputs:[{name:'key',type:'text',label:'',default:'Space'}]},
-
-    // Operators
-    {id:'math', title:'math', kind:'operator', inputs:[{name:'expr',type:'text',label:'',default:'1+1'}]},
-    {id:'random', title:'pick random', kind:'operator', inputs:[{name:'min',type:'number',label:'min',default:1},{name:'max',type:'number',label:'max',default:10}]},
-    {id:'join', title:'join', kind:'operator', inputs:[{name:'a',type:'text',label:'',default:'hello'},{name:'b',type:'text',label:'',default:'world'}]},
-    {id:'length', title:'length of', kind:'operator', inputs:[{name:'s',type:'text',label:'',default:'hello'}]},
-
-    // Variables
-    {id:'set_var', title:'set', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'},{name:'value',type:'text',label:'to',default:'0'}]},
-    {id:'change_var', title:'change', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'},{name:'delta',type:'number',label:'by',default:1}]},
-    {id:'show_var', title:'show variable', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'}]},
-    {id:'hide_var', title:'hide variable', kind:'variable', inputs:[{name:'var',type:'text',label:'',default:'myVar'}]},
-    {id:'set_list', title:'set list', kind:'variable', inputs:[{name:'list',type:'text',label:'',default:'myList'},{name:'value',type:'text',label:'to',default:''}]},
-    {id:'add_to_list', title:'add to list', kind:'variable', inputs:[{name:'list',type:'text',label:'',default:'myList'},{name:'value',type:'text',label:'',default:''}]},
-
-    // Pen
-    {id:'pen_down', title:'pen down', kind:'pen', inputs:[]},
-    {id:'pen_up', title:'pen up', kind:'pen', inputs:[]},
-    {id:'pen_set_color', title:'set pen color', kind:'pen', inputs:[{name:'color',type:'text',label:'',default:'#000000'}]},
-    {id:'pen_set_size', title:'set pen size', kind:'pen', inputs:[{name:'size',type:'number',label:'',default:2}]},
-
-    // Utility
-    {id:'log', title:'log', kind:'utility', inputs:[{name:'text',type:'text',label:'',default:'hello'}]},
-    {id:'set_sprite_text', title:'set sprite text', kind:'utility', inputs:[{name:'text',type:'text',label:'',default:'🙂'}]}
+  let items = [
+    { id: "PIE", name: "Butterscotch Pie", heal: 92 },
+    { id: "CREAM", name: "Nice Cream", heal: 20 }
   ];
 
-  // Render palette
-  function renderPalette(filter=''){
-    paletteEl.innerHTML = '';
-    const list = blocks.filter(b=>{
-      if(!filter) return true;
-      const f = filter.toLowerCase();
-      if(b.title.toLowerCase().includes(f)) return true;
-      return (b.inputs||[]).some(i=> String(i.name).toLowerCase().includes(f) || String(i.default||'').toLowerCase().includes(f));
-    });
-    if(list.length === 0){
-      const empty = document.createElement('div');
-      empty.style.color = 'var(--muted)';
-      empty.style.padding = '8px';
-      empty.textContent = 'No blocks match your search';
-      paletteEl.appendChild(empty);
+  // Text writer
+  let textWriterActive = false;
+  let textWriterBuffer = "";
+  let textWriterIndex = 0;
+  let textWriterTargetElement = null;
+  let textWriterCallback = null;
+  const TEXT_SPEED = 50;
+
+  function writeText(element, text, callback = null) {
+    textWriterActive = true;
+    textWriterBuffer = text;
+    textWriterIndex = 0;
+    textWriterTargetElement = element;
+    textWriterCallback = callback;
+    element.textContent = "";
+    stepTextWriter();
+  }
+
+  function stepTextWriter() {
+    if (!textWriterActive || !textWriterTargetElement) return;
+    if (textWriterIndex > textWriterBuffer.length) {
+      textWriterActive = false;
+      if (textWriterCallback) textWriterCallback();
       return;
     }
-    list.forEach(b=>{
-      const el = document.createElement('div');
-      el.className = 'block-tpl';
-      el.draggable = true;
-      el.dataset.type = b.id;
-      el.innerHTML = `<div class="kind kind-${b.kind}"></div><div style="flex:1">${b.title}</div><small>${b.inputs.length? b.inputs.map(i=>i.label||i.name).join(' '):''}</small>`;
-      paletteEl.appendChild(el);
+    textWriterTargetElement.textContent = textWriterBuffer.slice(0, textWriterIndex);
+    textWriterIndex++;
+    setTimeout(stepTextWriter, TEXT_SPEED);
+  }
 
-      el.addEventListener('dragstart', (e)=>{
-        dragData = {type:'palette', blockType: b.id};
-        e.dataTransfer.setData('text/plain','palette');
-        setTimeout(()=> el.style.opacity = '0.5', 0);
-      });
-      el.addEventListener('dragend', ()=> { dragData = null; el.style.opacity = '1'; });
-      el.addEventListener('click', ()=> {
-        const block = { id: uid(), type: b.id, params: cloneDefaults(b) };
-        appendBlock(block, null, true);
-      });
+  function showDialogue(text) {
+    dialogueBox.style.display = "block";
+    writeText(dialogueBox, text);
+  }
+  function hideDialogue() {
+    dialogueBox.style.display = "none";
+  }
+
+  function showMonsterBubble(text, isSpecial=false) {
+    monsterBubble.style.display = "block";
+    monsterBubble.classList.toggle("special", isSpecial);
+    writeText(monsterBubble, text);
+  }
+  function hideMonsterBubble() {
+    monsterBubble.style.display = "none";
+  }
+
+  function updatePlayerHP() {
+    if (playerHP < 0) playerHP = 0;
+    const ratio = playerHP / playerMaxHP;
+    hpFill.style.width = (ratio * 100) + "%";
+    hpText.textContent = playerHP + " / " + playerMaxHP;
+    if (playerHP <= 0) endBattle(false);
+  }
+
+  function updateEnemyHP() {
+    if (enemyHP < 0) enemyHP = 0;
+    const ratio = enemyHP / enemyMaxHP;
+    enemyHPBar.style.width = (ratio * 100) + "%";
+    enemyHPText.textContent = "HP: " + enemyHP.toFixed(7) + " / 1";
+  }
+
+  function setMenuIndex(index) {
+    menuIndex = (index + menuItems.length) % menuItems.length;
+    menuElements.forEach((el, i) => {
+      el.classList.toggle("selected", i === menuIndex);
     });
   }
 
-  // Search handlers
-  searchInput.addEventListener('input', ()=> renderPalette(searchInput.value));
-  resetSearch.addEventListener('click', ()=> { searchInput.value=''; renderPalette(); });
-
-  // Clone defaults
-  function cloneDefaults(def){
-    const p = {};
-    (def.inputs||[]).forEach(i=> p[i.name] = i.default);
-    return p;
+  function enterSoulMode() {
+    inSoulMode = true;
+    canMoveSoul = true;
+    soulBox.style.display = "block";
+    hideDialogue();
+    const boxRect = soulBox.getBoundingClientRect();
+    soulX = (boxRect.width / 2) - 7;
+    soulY = (boxRect.height / 2) - 7;
+    soul.style.left = soulX + "px";
+    soul.style.top = soulY + "px";
   }
 
-  // Create block instance element with inline inputs
-  function createBlockInstance(def, instance){
-    const el = document.createElement('div');
-    el.className = 'block-instance';
-    el.dataset.type = def.id;
-    el.dataset.id = instance.id;
-    el.style.margin = '6px 0';
-    const label = document.createElement('div');
-    label.className = 'label';
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'small';
-    titleSpan.textContent = def.title;
-    label.appendChild(titleSpan);
-
-    (def.inputs||[]).forEach(inp=>{
-      if(inp.type === 'text'){
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = instance.params[inp.name] ?? inp.default ?? '';
-        input.addEventListener('input', ()=> { instance.params[inp.name] = input.value; updateVarsUI(); });
-        label.appendChild(input);
-      } else if(inp.type === 'number'){
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.value = instance.params[inp.name] ?? inp.default ?? 0;
-        input.style.width = '80px';
-        input.addEventListener('input', ()=> { instance.params[inp.name] = Number(input.value); updateVarsUI(); });
-        label.appendChild(input);
-      } else if(inp.type === 'select'){
-        const sel = document.createElement('select');
-        (inp.options||[]).forEach(opt=> {
-          const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o);
-        });
-        sel.value = instance.params[inp.name] ?? inp.default;
-        sel.addEventListener('change', ()=> { instance.params[inp.name] = sel.value; updateVarsUI(); });
-        label.appendChild(sel);
-      }
-    });
-
-    el.appendChild(label);
-    const handle = document.createElement('div');
-    handle.className = 'handle';
-    handle.style.width='10px'; handle.style.height='10px'; handle.style.borderRadius='50%'; handle.style.background='rgba(255,255,255,.06)';
-    el.appendChild(handle);
-
-    // interactions
-    el.draggable = true;
-    el.addEventListener('dragstart', (e)=>{
-      dragData = {type:'instance', id:el.dataset.id};
-      e.dataTransfer.setData('text/plain','instance');
-      setTimeout(()=> el.style.opacity = '0.4', 0);
-    });
-    el.addEventListener('dragend', ()=> { dragData = null; el.style.opacity = '1'; snapLine.style.opacity = 0; });
-
-    el.addEventListener('contextmenu', (e)=>{
-      e.preventDefault();
-      removeBlockById(el.dataset.id);
-    });
-
-    el.addEventListener('dblclick', ()=>{
-      const first = el.querySelector('input,select');
-      if(first) first.focus();
-    });
-
-    return el;
+  function exitSoulMode() {
+    inSoulMode = false;
+    canMoveSoul = false;
+    soulBox.style.display = "none";
+    clearBullets();
+    setSoulColor("red", false);
   }
 
-  // Append block to workspace
-  function appendBlock(block, index=null, scrollIntoView=false){
-    const def = blocks.find(b=>b.id===block.type);
-    if(!def) return;
-    if(index === null || index >= workspace.length){
-      workspace.push(block);
-      const el = createBlockInstance(def, block);
-      scriptArea.appendChild(el);
-    } else {
-      workspace.splice(index,0,block);
-      const el = createBlockInstance(def, block);
-      scriptArea.insertBefore(el, scriptArea.children[index]);
-    }
-    if(scrollIntoView){
-      const el = scriptArea.querySelector(`[data-id="${block.id}"]`);
-      if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
-    }
-    updateVarsUI();
+  function clearBullets() {
+    const bullets = soulBox.querySelectorAll(".bone, .blaster, .blast-beam");
+    bullets.forEach(b => b.remove());
   }
 
-  // Remove block
-  function removeBlockById(id){
-    const idx = workspace.findIndex(b=>b.id===id);
-    if(idx===-1) return;
-    workspace.splice(idx,1);
-    const el = scriptArea.querySelector(`[data-id="${id}"]`);
-    if(el) el.remove();
-    updateVarsUI();
+  function rectsOverlap(a, b) {
+    return !(
+      a.right < b.left ||
+      a.left > b.right ||
+      a.bottom < b.top ||
+      a.top > b.bottom
+    );
   }
 
-  // Initial demo script showing events
-  appendBlock({id:uid(), type:'when_run', params:{}});
-  appendBlock({id:uid(), type:'set_var', params:{var:'score', value:0}});
-  appendBlock({id:uid(), type:'say', params:{text:'Game ready', secs:1}});
-  appendBlock({id:uid(), type:'when_key', params:{key:'Space'}});
-  appendBlock({id:uid(), type:'say', params:{text:'Space pressed!', secs:1}});
-  appendBlock({id:uid(), type:'change_var', params:{var:'score', delta:1}});
-  appendBlock({id:uid(), type:'when_clicked', params:{}});
-  appendBlock({id:uid(), type:'say', params:{text:'Sprite clicked!', secs:1}});
-  appendBlock({id:uid(), type:'change_var', params:{var:'score', delta:2}});
-
-  // Drag & drop into canvas
-  canvas.addEventListener('dragover', (e)=>{
-    e.preventDefault();
-    const y = e.clientY - canvas.getBoundingClientRect().top + canvas.scrollTop;
-    const children = Array.from(scriptArea.children);
-    let insertIndex = children.length;
-    for(let i=0;i<children.length;i++){
-      const r = children[i].getBoundingClientRect();
-      const top = r.top - canvas.getBoundingClientRect().top + canvas.scrollTop;
-      if(y < top + r.height/2){ insertIndex = i; break; }
+  function setSoulColor(color, enableGravity) {
+    soulColor = color;
+    soul.style.background = (color === "blue" ? "blue" : "red");
+    soul.style.boxShadow = color === "blue"
+      ? "0 0 6px rgba(0,128,255,0.9)"
+      : "0 0 6px rgba(255,0,0,0.9)";
+    gravityEnabled = enableGravity;
+    if (!enableGravity) {
+      yVelocity = 0;
+      jumpHold = 0;
     }
-    if(insertIndex === children.length){
-      snapLine.style.top = (scriptArea.getBoundingClientRect().bottom - canvas.getBoundingClientRect().top + canvas.scrollTop - 8) + 'px';
-    } else {
-      const target = children[insertIndex];
-      snapLine.style.top = (target.getBoundingClientRect().top - canvas.getBoundingClientRect().top + canvas.scrollTop - 6) + 'px';
-    }
-    snapLine.style.opacity = 1;
-  });
-  canvas.addEventListener('dragleave', ()=> snapLine.style.opacity = 0);
-
-  canvas.addEventListener('drop', (e)=>{
-    e.preventDefault();
-    snapLine.style.opacity = 0;
-    if(!dragData) return;
-    if(dragData.type === 'palette'){
-      const def = blocks.find(b=>b.id===dragData.blockType);
-      if(!def) return;
-      const block = { id: uid(), type: def.id, params: cloneDefaults(def) };
-      appendBlock(block, null, true);
-    } else if(dragData.type === 'instance'){
-      const id = dragData.id;
-      const el = scriptArea.querySelector(`[data-id="${id}"]`);
-      if(!el) return;
-      const y = e.clientY - canvas.getBoundingClientRect().top + canvas.scrollTop;
-      const children = Array.from(scriptArea.children).filter(c=>c.dataset.id !== id);
-      let insertIndex = children.length;
-      for(let i=0;i<children.length;i++){
-        const r = children[i].getBoundingClientRect();
-        const top = r.top - canvas.getBoundingClientRect().top + canvas.scrollTop;
-        if(y < top + r.height/2){ insertIndex = i; break; }
-      }
-      const idx = workspace.findIndex(b=>b.id===id);
-      if(idx === -1) return;
-      const [block] = workspace.splice(idx,1);
-      workspace.splice(insertIndex,0,block);
-      scriptArea.removeChild(el);
-      if(insertIndex >= scriptArea.children.length) scriptArea.appendChild(el);
-      else scriptArea.insertBefore(el, scriptArea.children[insertIndex]);
-    }
-    dragData = null;
-  });
-
-  // Run/Stop/Clear
-  runBtn.addEventListener('click', async ()=>{
-    if(running) return;
-    running = true; runAbort = false;
-    runBtn.textContent = 'Running...';
-    runBtn.classList.remove('primary');
-    runBtn.classList.add('btn');
-    try{
-      // run all when_run scripts immediately
-      await triggerEvent('when_run');
-    }catch(e){
-      console.error(e);
-    } finally {
-      running = false;
-      runBtn.textContent = 'Run';
-      runBtn.classList.remove('btn');
-      runBtn.classList.add('primary');
-      updateVarsUI();
-    }
-  });
-  stopBtn.addEventListener('click', ()=> { runAbort = true; });
-  clearBtn.addEventListener('click', ()=> { workspace=[]; scriptArea.innerHTML=''; updateVarsUI(); });
-
-  // Export: copy JSON to textarea and clipboard
-  exportBtn.addEventListener('click', ()=>{
-    const data = JSON.stringify({workspace,variables}, null, 2);
-    jsonArea.value = data;
-    jsonArea.select();
-    try{ document.execCommand('copy'); }catch(e){}
-    exportBtn.textContent = 'Copied';
-    setTimeout(()=> exportBtn.textContent = 'Export', 1200);
-  });
-
-  // Import from textarea
-  importBtn.addEventListener('click', ()=> {
-    try{
-      const data = JSON.parse(jsonArea.value);
-      loadProject(data);
-      importBtn.textContent = 'Loaded';
-      setTimeout(()=> importBtn.textContent = 'Load JSON', 1200);
-    }catch(e){
-      alert('Invalid JSON in textarea');
-    }
-  });
-
-  // Load from file input
-  fileInput.addEventListener('change', (ev)=>{
-    const f = ev.target.files && ev.target.files[0];
-    if(!f) return;
-    const reader = new FileReader();
-    reader.onload = ()=> {
-      try{
-        const data = JSON.parse(reader.result);
-        loadProject(data);
-      }catch(e){
-        alert('Invalid JSON file');
-      }
-    };
-    reader.readAsText(f);
-    fileInput.value = '';
-  });
-
-  // Load project helper
-  function loadProject(data){
-    workspace = data.workspace || [];
-    variables = data.variables || {};
-    scriptArea.innerHTML = '';
-    workspace.forEach(b=>{
-      const def = blocks.find(x=>x.id===b.type);
-      if(!def) return;
-      if(!b.id) b.id = uid();
-      appendBlock(b);
-    });
-    updateVarsUI();
   }
 
-  // Update variables UI
-  function updateVarsUI(){
-    const keys = Object.keys(variables);
-    if(keys.length === 0){
-      varsUI.textContent = '—';
-      return;
-    }
-    varsUI.innerHTML = keys.map(k=>`${k}: <strong style="color:#fff">${variables[k]}</strong>`).join('<br>');
-  }
+  function soulMovementLoop() {
+    if (inSoulMode && canMoveSoul) {
+      const boxRect = soulBox.getBoundingClientRect();
+      const boxWidth = boxRect.width;
+      const boxHeight = boxRect.height;
 
-  // Parse workspace into scripts: each script starts at an event block (type starts with when_)
-  function extractScripts(){
-    const scripts = [];
-    let current = null;
-    for(const b of workspace){
-      if(b.type && b.type.startsWith('when_')){
-        if(current) scripts.push(current);
-        current = {triggerBlock: b, body: []};
-      } else {
-        if(!current){
-          // orphan block: treat as part of a default when_run script
-          current = {triggerBlock: {type:'when_run', params:{}}, body: []};
-        }
-        current.body.push(b);
-      }
-    }
-    if(current) scripts.push(current);
-    return scripts;
-  }
-
-  // Trigger event by type and optional param matching
-  async function triggerEvent(eventType, param){
-    const scripts = extractScripts();
-    const matched = scripts.filter(s=>{
-      const t = s.triggerBlock.type;
-      if(t !== eventType) return false;
-      if(eventType === 'when_key'){
-        const want = (s.triggerBlock.params && s.triggerBlock.params.key) || '';
-        return String(want).toLowerCase() === String(param || '').toLowerCase();
-      }
-      if(eventType === 'when_received'){
-        const want = (s.triggerBlock.params && s.triggerBlock.params.msg) || '';
-        return String(want) === String(param);
-      }
-      return true;
-    });
-    // run matched scripts concurrently
-    await Promise.all(matched.map(s=> runScript(s.body)));
-  }
-
-  // Event wiring: key buttons and sprite click
-  eventButtons.addEventListener('click', (e)=>{
-    const btn = e.target.closest('button[data-key]');
-    if(!btn) return;
-    const key = btn.dataset.key;
-    // simulate key press event
-    triggerEvent('when_key', key);
-  });
-
-  sprite.addEventListener('click', ()=> {
-    triggerEvent('when_clicked');
-  });
-
-  // Also listen to real keyboard for convenience
-  window.addEventListener('keydown', (e)=>{
-    const key = e.code === 'Space' ? 'Space' : e.key;
-    triggerEvent('when_key', key);
-  });
-
-  // Interpreter core for a list of blocks
-  async function runScript(blocksList){
-    const speed = Number(speedInput.value);
-    function evalExpr(expr){
-      try{
-        const safe = String(expr).replace(/\b([A-Za-z_]\w*)\b/g, (m)=>{
-          if(Object.prototype.hasOwnProperty.call(variables,m)) return JSON.stringify(variables[m]);
-          return m;
-        });
-        // eslint-disable-next-line no-eval
-        return eval(safe);
-      }catch(e){
-        return false;
-      }
-    }
-
-    async function execList(list){
-      for(let i=0;i<list.length;i++){
-        if(runAbort) throw new Error('aborted');
-        const b = list[i];
-        await execBlock(b);
-      }
-    }
-
-    async function execBlock(b){
-      const p = b.params || {};
-      // Implemented behaviors
-      if(b.type === 'move'){
-        await animateMove(p.steps || 10, speed);
-      } else if(b.type === 'move_by'){
-        const cur = getSpritePos();
-        setSpritePos(cur.x + (p.dx||0), cur.y + (p.dy||0));
-        await sleep(20);
-      } else if(b.type === 'glide'){
-        await animateGlide(p.x||0, p.y||0, Math.max(0.01,p.secs||0.5), speed);
-      } else if(b.type === 'set_x'){
-        const pos = getSpritePos(); setSpritePos(p.x||0, pos.y);
-      } else if(b.type === 'change_x'){
-        const pos = getSpritePos(); setSpritePos(pos.x + (p.dx||0), pos.y);
-      } else if(b.type === 'set_y'){
-        const pos = getSpritePos(); setSpritePos(pos.x, p.y||0);
-      } else if(b.type === 'change_y'){
-        const pos = getSpritePos(); setSpritePos(pos.x, pos.y + (p.dy||0));
-      } else if(b.type === 'go_to'){
-        setSpritePos(p.x||0, p.y||0);
-      } else if(b.type === 'point_in_direction'){
-        sprite.dataset.dir = (p.dir||0);
-        sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir}deg)`;
-      } else if(b.type === 'bounce_if_on_edge'){
-        const pos = getSpritePos();
-        const st = stage.getBoundingClientRect();
-        if(pos.x < 20 || pos.x > st.width-20) sprite.dataset.dir = (Number(sprite.dataset.dir||0) + 180) % 360;
-        if(pos.y < 20 || pos.y > st.height-20) sprite.dataset.dir = (Number(sprite.dataset.dir||0) + 180) % 360;
-        sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir}deg)`;
-      } else if(b.type === 'turn_right'){
-        sprite.dataset.dir = (Number(sprite.dataset.dir||0) + (p.deg||15)) % 360;
-        sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir}deg)`;
-      } else if(b.type === 'turn_left'){
-        sprite.dataset.dir = (Number(sprite.dataset.dir||0) - (p.deg||15)) % 360;
-        sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir}deg)`;
-      } else if(b.type === 'show'){
-        sprite.style.display = 'flex';
-      } else if(b.type === 'hide'){
-        sprite.style.display = 'none';
-      } else if(b.type === 'say' || b.type === 'think'){
-        await animateSay(p.text||'', p.secs||2, speed, b.type==='think');
-      } else if(b.type === 'set_size'){
-        sprite.style.width = (64 * ((p.size||100)/100)) + 'px';
-        sprite.style.height = (64 * ((p.size||100)/100)) + 'px';
-      } else if(b.type === 'change_size'){
-        const curW = parseFloat(getComputedStyle(sprite).width);
-        sprite.style.width = (curW + (p.delta||10)) + 'px';
-        sprite.style.height = sprite.style.width;
-      } else if(b.type === 'set_color'){
-        sprite.style.background = p.color || '#ffcc00';
-      } else if(b.type === 'change_color'){
-        sprite.style.filter = `hue-rotate(${(Number(p.delta)||0)}deg)`;
-      } else if(b.type === 'play_sound' || b.type === 'play_sound_wait'){
-        await sleep(200);
-      } else if(b.type === 'stop_sounds'){
-        // no-op
-      } else if(b.type === 'set_volume'){
-        // no-op
-      } else if(b.type === 'wait'){
-        await sleep((p.secs||1)*1000 / speed);
-      } else if(b.type === 'repeat'){
-        const times = Math.max(0, Math.floor(p.times||0));
-        if(Array.isArray(p.body) && p.body.length){
-          for(let i=0;i<times;i++){
-            if(runAbort) throw new Error('aborted');
-            await execList(p.body);
+      if (gravityEnabled) {
+        if (keys["w"] || keys["W"]) {
+          if (jumpHold < maxJumpHold) {
+            yVelocity -= 0.4;
+            jumpHold++;
           }
         } else {
-          const idx = workspace.findIndex(x=>x.id===b.id);
-          if(idx !== -1 && idx+1 < workspace.length){
-            for(let i=0;i<times;i++){
-              if(runAbort) throw new Error('aborted');
-              await execBlock(workspace[idx+1]);
-            }
-          }
+          jumpHold = 0;
         }
-      } else if(b.type === 'forever'){
-        while(!runAbort){
-          await sleep(200);
-        }
-      } else if(b.type === 'if'){
-        if(evalExpr(p.cond)) {
-          // placeholder
-        }
-      } else if(b.type === 'if_else'){
-        // placeholder
-      } else if(b.type === 'wait_until'){
-        while(!evalExpr(p.cond)){
-          if(runAbort) throw new Error('aborted');
-          await sleep(100);
-        }
-      } else if(b.type === 'stop'){
-        if(p.what === 'all') runAbort = true;
-      } else if(b.type === 'broadcast'){
-        broadcasts[p.msg] = (broadcasts[p.msg]||0) + 1;
-        // trigger when_received scripts
-        triggerEvent('when_received', p.msg);
-      } else if(b.type === 'ask'){
-        const ans = prompt(p.text||'');
-        variables['answer'] = ans;
-        updateVarsUI();
-      } else if(b.type === 'answer'){
-        return variables['answer'];
-      } else if(b.type === 'touching_color'){
-        return (sprite.style.background === p.color);
-      } else if(b.type === 'distance_to'){
-        return 0;
-      } else if(b.type === 'timer_reset'){
-        timerStart = performance.now();
-      } else if(b.type === 'math'){
-        return evalExpr(p.expr);
-      } else if(b.type === 'random'){
-        const a = Number(p.min||0), b2 = Number(p.max||1);
-        return Math.floor(Math.random()*(b2-a+1))+a;
-      } else if(b.type === 'join'){
-        return String(p.a) + String(p.b);
-      } else if(b.type === 'length'){
-        return String(p.s).length;
-      } else if(b.type === 'set_var'){
-        variables[p.var] = p.value;
-        updateVarsUI();
-      } else if(b.type === 'change_var'){
-        variables[p.var] = (Number(variables[p.var]||0) + Number(p.delta||0));
-        updateVarsUI();
-      } else if(b.type === 'show_var' || b.type === 'hide_var'){
-        // no-op
-      } else if(b.type === 'set_list' || b.type === 'add_to_list'){
-        // no-op
-      } else if(b.type === 'pen_down'){
-        penState.down = true;
-      } else if(b.type === 'pen_up'){
-        penState.down = false;
-      } else if(b.type === 'pen_set_color'){
-        penState.color = p.color || '#000';
-      } else if(b.type === 'pen_set_size'){
-        penState.size = Number(p.size||2);
-      } else if(b.type === 'log'){
-        console.log(p.text);
-      } else if(b.type === 'set_sprite_text'){
-        sprite.textContent = p.text || '';
+        yVelocity += gravity;
+        soulY += yVelocity;
+      } else {
+        if (keys["w"] || keys["W"]) soulY -= soulSpeed;
+        if (keys["s"] || keys["S"]) soulY += soulSpeed;
       }
+
+      if (keys["a"] || keys["A"]) soulX -= soulSpeed;
+      if (keys["d"] || keys["D"]) soulX += soulSpeed;
+
+      if (soulX < 0) soulX = 0;
+      if (soulX > boxWidth - 14) soulX = boxWidth - 14;
+      if (soulY < 0) {
+        soulY = 0;
+        if (gravityEnabled) yVelocity = 0;
+      }
+      if (soulY > boxHeight - 14) {
+        soulY = boxHeight - 14;
+        if (gravityEnabled) yVelocity = 0;
+      }
+
+      soul.style.left = soulX + "px";
+      soul.style.top = soulY + "px";
+    }
+    requestAnimationFrame(soulMovementLoop);
+  }
+
+  function damagePlayer(amount) {
+    playerHP -= amount;
+    updatePlayerHP();
+  }
+
+  function updateDifficulty() {
+    const pureFactor = Math.floor(pureAttackTurns / 2);
+    soulSpeed = baseSoulSpeed + pureFactor * 0.2;
+  }
+
+  // ========= ATTACK DISPATCH =========
+  function startSansAttack() {
+    phase = "ENEMY_ATTACK";
+    turnCount++;
+    updateDifficulty();
+    playerActionUsedThisTurn = false;
+
+    if (!usedBlueIntro && turnCount === 1) {
+      exitSoulMode();
+      showMonsterBubble("you've probably wondering\nwhat i'm doing here, huh?");
+      setTimeout(() => {
+        showMonsterBubble("well, paps is kinda busy\nat the moment.");
+        setTimeout(() => {
+          showMonsterBubble("a little dog stole his\n\"special attack\".");
+          setTimeout(() => {
+            showMonsterBubble("oh right, my blue attack.\nalmost forgot about it,\nheh heh heh.");
+            setTimeout(() => {
+              showMonsterBubble("are ya ready?\n'cause here it comes.");
+              setTimeout(() => {
+                blueSoulZoneAttack(() => {
+                  hideMonsterBubble();
+                  showDialogue("* \"what are you looking so blue for?\"");
+                  phase = "PLAYER_TURN";
+                });
+              }, 600);
+            }, 800);
+          }, 800);
+        }, 800);
+      }, 800);
+      usedBlueIntro = true;
+      return;
     }
 
-    await execList(blocksList);
-  }
-
-  // Sprite helpers
-  function getSpritePos(){
-    const rect = sprite.getBoundingClientRect();
-    const stageRect = stage.getBoundingClientRect();
-    const x = (rect.left + rect.width/2) - stageRect.left;
-    const y = (rect.top + rect.height/2) - stageRect.top;
-    return {x,y};
-  }
-  function setSpritePos(x,y){
-    const st = stage.getBoundingClientRect();
-    const cx = clamp(x, 16, st.width-16);
-    const cy = clamp(y, 16, st.height-16);
-    sprite.style.left = (cx) + 'px';
-    sprite.style.top = (cy) + 'px';
-    sprite.style.transform = `translate(-50%,-50%) rotate(${sprite.dataset.dir||0}deg)`;
-    if(penState.down){
-      stageCtx.fillStyle = penState.color;
-      stageCtx.beginPath();
-      stageCtx.arc(cx, cy, penState.size, 0, Math.PI*2);
-      stageCtx.fill();
+    if (!usedPreSpareSpecial && turnCount >= 4 && !canSpare) {
+      usedPreSpareSpecial = true;
+      exitSoulMode();
+      showMonsterBubble("time for a little\nspecial demonstration.", true);
+      setTimeout(() => {
+        phase1PreSpareSpecial(() => {
+          hideMonsterBubble();
+          showMonsterBubble("...yeah.\ni think you're ready.");
+          showDialogue(
+            "* \"welp, that sure was fun.\"\n" +
+            "* \"now just spare me and we can both be on our way.\""
+          );
+          canSpare = true;
+          sansCanBeHit = true;
+          phase = "PLAYER_TURN";
+        });
+      }, 800);
+      return;
     }
-  }
 
-  // Animations
-  async function animateMove(steps, speed){
-    const px = (steps||10) * 2;
-    const start = getSpritePos();
-    const targetX = clamp(start.x + px, 16, stageCanvas.width-16);
-    const duration = clamp(Math.abs(px)/200 * 600 / speed, 80, 1200);
-    await tween(start.x, targetX, duration, (v)=> setSpritePos(v, start.y));
-  }
-  async function animateGlide(x,y,secs,speed){
-    const start = getSpritePos();
-    const duration = Math.max(20, secs*1000 / speed);
-    await tweenMulti(start.x, start.y, x, y, duration, (nx,ny)=> setSpritePos(nx,ny));
-  }
-  async function animateSay(text, secs, speed, think=false){
-    const bubble = document.createElement('div');
-    bubble.style.position = 'absolute';
-    bubble.style.left = sprite.style.left;
-    bubble.style.top = (parseFloat(sprite.style.top) - 60) + 'px';
-    bubble.style.transform = 'translate(-50%,-50%)';
-    bubble.style.padding = '8px 10px';
-    bubble.style.background = think ? '#f3f4f6' : '#fff';
-    bubble.style.color = '#071827';
-    bubble.style.borderRadius = '8px';
-    bubble.style.boxShadow = '0 6px 18px rgba(2,6,23,.2)';
-    bubble.style.fontSize = '14px';
-    bubble.textContent = text;
-    stage.appendChild(bubble);
-    await sleep((secs*1000) / speed);
-    bubble.remove();
-  }
-  function tween(a,b,duration,onUpdate){
-    return new Promise(res=>{
-      const start = performance.now();
-      function frame(now){
-        const t = clamp((now-start)/duration,0,1);
-        const v = a + (b-a) * ease(t);
-        onUpdate(v);
-        if(t < 1) requestAnimationFrame(frame);
-        else res();
+    enterSoulMode();
+
+    const attacks = [
+      phase1WaveAndBounce,
+      phase1SpinningBlueBones
+    ];
+    const attack = attacks[Math.floor(Math.random() * attacks.length)];
+    attack(() => {
+      exitSoulMode();
+      if (playerHP > 0) {
+        const lines = [
+          "* \"nice dodging.\"",
+          "* \"still standin', huh?\"",
+          "* \"not bad, kid.\""
+        ];
+        showDialogue(lines[Math.floor(Math.random() * lines.length)]);
+        phase = "PLAYER_TURN";
       }
-      requestAnimationFrame(frame);
-    });
-  }
-  function tweenMulti(x1,y1,x2,y2,duration,onUpdate){
-    return new Promise(res=>{
-      const start = performance.now();
-      function frame(now){
-        const t = clamp((now-start)/duration,0,1);
-        const v = ease(t);
-        const nx = x1 + (x2-x1)*v;
-        const ny = y1 + (y2-y1)*v;
-        onUpdate(nx,ny);
-        if(t < 1) requestAnimationFrame(frame);
-        else res();
-      }
-      requestAnimationFrame(frame);
     });
   }
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e)=>{
-    if(e.key === 'Delete' || e.key === 'Backspace'){
-      if(workspace.length) removeBlockById(workspace[workspace.length-1].id);
+  // ========= BLUE SOUL ZONE ATTACK =========
+  function blueSoulZoneAttack(onEnd) {
+    setSoulColor("blue", true);
+    enterSoulMode();
+    const boxRect = soulBox.getBoundingClientRect();
+    const h = boxRect.height;
+
+    const zoneDelay = 1000;
+    const zoneDuration = 1800;
+    let zone;
+    setTimeout(() => {
+      zone = spawnBone(0, h - 18, boxRect.width, 18, false);
+    }, zoneDelay);
+
+    const startTime = performance.now();
+
+    function loop(t) {
+      if (!inSoulMode) {
+        if (zone) zone.remove();
+        setSoulColor("red", false);
+        onEnd();
+        return;
+      }
+      const elapsed = t - startTime;
+      if (elapsed > zoneDelay + zoneDuration) {
+        if (zone) zone.remove();
+        setSoulColor("red", false);
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+
+      if (zone) {
+        const soulRect = soul.getBoundingClientRect();
+        const rect = zone.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+      }
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= BONE & BLASTER HELPERS =========
+  function spawnBone(x, y, w, h, blue=false) {
+    const bone = document.createElement("div");
+    bone.classList.add("bone");
+    if (blue) bone.classList.add("blue");
+    bone.style.left = x + "px";
+    bone.style.top = y + "px";
+    bone.style.width = w + "px";
+    bone.style.height = h + "px";
+    soulBox.appendChild(bone);
+    return bone;
+  }
+
+  function spawnBlaster(x, y, beamDuration, damage, orientation) {
+    const blaster = document.createElement("div");
+    blaster.classList.add("blaster");
+    blaster.style.left = x + "px";
+    blaster.style.top = y + "px";
+    soulBox.appendChild(blaster);
+
+    const beam = document.createElement("div");
+    beam.classList.add("blast-beam");
+
+    setTimeout(() => {
+      soulBox.appendChild(beam);
+      const boxRect = soulBox.getBoundingClientRect();
+      if (orientation === "down") {
+        beam.style.width = "16px";
+        beam.style.height = boxRect.height + "px";
+        beam.style.left = (x + 12) + "px";
+        beam.style.top = "0px";
+      }
+
+      const startTime = performance.now();
+      function loop(t) {
+        if (!inSoulMode) {
+          beam.remove();
+          blaster.remove();
+          return;
+        }
+        if (t - startTime > beamDuration) {
+          beam.remove();
+          blaster.remove();
+          return;
+        }
+        const soulRect = soul.getBoundingClientRect();
+        const rect = beam.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(damage);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }, 800);
+  }
+
+  // ========= PHASE 1 ATTACKS =========
+  function phase1WaveAndBounce(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 6000;
+    const startTime = performance.now();
+
+    for (let i = 0; i < 5; i++) {
+      const y = 20 + i * 12;
+      const bone = spawnBone(-40, y, 40, 10);
+      bones.push({ el: bone, x: -40, y, vx: 2.2, bounced: false, blueTime: 0 });
+    }
+
+    const b1 = spawnBone(w + 40, 20, 40, 10);
+    const b2 = spawnBone(w + 40, h - 40, 40, 10);
+    bones.push({ el: b1, x: w + 40, y: 20, vx: -2.4, bounceOnly: true });
+    bones.push({ el: b2, x: w + 40, y: h - 40, vx: -2.4, bounceOnly: true });
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.x += b.vx;
+        b.el.style.left = b.x + "px";
+        const rect = b.el.getBoundingClientRect();
+
+        if (!b.bounceOnly && !b.bounced && (b.x <= 0 || b.x + 40 >= w)) {
+          b.vx = -b.vx;
+          b.bounced = true;
+          b.el.classList.add("blue");
+        } else if (!b.bounceOnly && b.bounced) {
+          b.blueTime++;
+          if (b.blueTime > 90) b.el.classList.remove("blue");
+        }
+
+        if (b.bounceOnly && (b.x <= 0 || b.x + 40 >= w)) {
+          b.vx = -b.vx;
+        }
+
+        const blue = b.el.classList.contains("blue");
+        if (rectsOverlap(rect, soulRect)) {
+          if (blue && gravityEnabled) damagePlayer(1);
+          if (!blue) damagePlayer(1);
+        }
+      });
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function phase1SpinningBlueBones(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const cx = boxRect.width / 2;
+    const cy = boxRect.height / 2;
+    setSoulColor("blue", true);
+    soulX = cx - 7;
+    soulY = cy - 7;
+    soul.style.left = soulX + "px";
+    soul.style.top = soulY + "px";
+
+    const bones = [];
+    const count = 6;
+    const radius = 40;
+    let angle = 0;
+    const duration = 5000;
+    const startTime = performance.now();
+
+    for (let i = 0; i < count; i++) {
+      const bone = spawnBone(cx, cy, 12, 12, true);
+      bones.push({ el: bone, angleOffset: (Math.PI * 2 / count) * i, spin: 0 });
+    }
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        setSoulColor("red", false);
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        setSoulColor("red", false);
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+
+      angle += 0.035;
+      const soulRect = soul.getBoundingClientRect();
+      const moving = keys["w"] || keys["a"] || keys["s"] || keys["d"] ||
+                     keys["W"] || keys["A"] || keys["S"] || keys["D"];
+
+      bones.forEach(b => {
+        b.spin += 0.2;
+        const x = cx + Math.cos(angle + b.angleOffset) * radius;
+        const y = cy + Math.sin(angle + b.angleOffset) * radius;
+        b.el.style.left = (x - 6) + "px";
+        b.el.style.top = (y - 6) + "px";
+        b.el.style.transform = "rotate(" + (b.spin * 180 / Math.PI) + "deg)";
+        const rect = b.el.getBoundingClientRect();
+        if (moving && rectsOverlap(rect, soulRect)) damagePlayer(1);
+      });
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= PHASE 1 PRE-SPARE SPECIAL =========
+  function phase1PreSpareSpecial(onEnd) {
+    enterSoulMode();
+    const boxRect = soulBox.getBoundingClientRect();
+    const w = boxRect.width;
+    const h = boxRect.height;
+    const bones = [];
+    const duration = 6000;
+    const startTime = performance.now();
+
+    for (let i = 0; i < 4; i++) {
+      const y = 20 + i * 14;
+      const left = spawnBone(-40, y, 40, 10);
+      const right = spawnBone(w + 40, y + 8, 40, 10);
+      bones.push({ el: left, x: -40, y, vx: 2.6 });
+      bones.push({ el: right, x: w + 40, y: y + 8, vx: -2.6 });
+    }
+
+    setTimeout(() => {
+      for (let i = 0; i < 4; i++) {
+        const fromLeft = i % 2 === 0;
+        const startY = 20 + i * 14;
+        const startX = fromLeft ? -20 : w + 20;
+        const bone = spawnBone(startX, startY, 20, 10);
+        const sx = soulX;
+        const sy = soulY;
+        const dirX = sx - startX;
+        const dirY = sy - startY;
+        const len = Math.max(1, Math.sqrt(dirX * dirX + dirY * dirY));
+        bones.push({
+          el: bone,
+          x: startX,
+          y: startY,
+          vx: (dirX / len) * 2.4,
+          vy: (dirY / len) * 2.4
+        });
+      }
+    }, 2400);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bones.forEach(b => b.el.remove());
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bones.forEach(b => b.el.remove());
+        exitSoulMode();
+        onEnd();
+        return;
+      }
+      const soulRect = soul.getBoundingClientRect();
+      bones.forEach(b => {
+        b.x += b.vx || 0;
+        b.y += b.vy || 0;
+        b.el.style.left = b.x + "px";
+        b.el.style.top = b.y + "px";
+        const rect = b.el.getBoundingClientRect();
+        if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+      });
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ========= FIGHT BAR & TARGET MENU =========
+  function openTargetMenu() {
+    targetMenu.style.display = "flex";
+    targetMenuIndex = 0;
+    targetOptions.forEach((opt, i) => {
+      opt.classList.toggle("selected", i === targetMenuIndex);
+    });
+    phase = "FIGHT_TARGET";
+  }
+
+  function closeTargetMenu() {
+    targetMenu.style.display = "none";
+  }
+
+  function setTargetMenuIndex(i) {
+    targetMenuIndex = (i + targetOptions.length) % targetOptions.length;
+    targetOptions.forEach((opt, idx) => {
+      opt.classList.toggle("selected", idx === targetMenuIndex);
+    });
+  }
+
+  function confirmTargetSelection() {
+    const target = targetOptions[targetMenuIndex].dataset.target;
+    if (target === "sans") {
+      closeTargetMenu();
+      startFightBar();
+    }
+  }
+
+  function startFightBar() {
+    phase = "FIGHT_BAR";
+    fightBarContainer.style.display = "flex";
+    fightPointerPos = 0;
+    fightPointerDir = 1;
+    fightBarActive = true;
+    damageText.textContent = "";
+  }
+
+  function stopFightBar() {
+    fightBarActive = false;
+    fightBarContainer.style.display = "none";
+
+    const barWidth = fightBar.clientWidth;
+    const zoneRect = fightZone.getBoundingClientRect();
+    const barRect = fightBar.getBoundingClientRect();
+    const zoneStart = zoneRect.left - barRect.left;
+    const zoneEnd = zoneStart + fightZone.clientWidth;
+    const pointerX = fightPointerPos * barWidth;
+
+    let quality = "";
+    let hitStrength = 0;
+    if (pointerX >= zoneStart && pointerX <= zoneEnd) {
+      quality = "GOOD HIT!";
+      const center = (zoneStart + zoneEnd) / 2;
+      const dist = Math.abs(pointerX - center);
+      const maxDist = fightZone.clientWidth / 2;
+      hitStrength = 1 - (dist / maxDist);
+    } else {
+      quality = "MISS...";
+      hitStrength = 0;
+    }
+
+    if (!sansCanBeHit) {
+      damageText.textContent = quality + " (sans dodged)";
+      showDialogue("* \"heh. close.\"\n* \"but not that close.\"");
+    } else {
+      const damage = Math.max(1, Math.floor(hitStrength * 10));
+      enemyHP -= damage;
+      if (enemyHP <= 0 && canSpare) {
+        enemyHP = 0.0000128;
+      }
+      updateEnemyHP();
+      damageText.textContent = quality + " - " + damage;
+      showDialogue("* you land a hit.\n* something feels... wrong.");
+      // Hook: Phase 2A could start here later.
+    }
+
+    setTimeout(() => {
+      damageText.textContent = "";
+      if (playerHP > 0 && phase !== "END") {
+        startSansAttack();
+      }
+    }, 1000);
+  }
+
+  function fightBarLoop() {
+    if (fightBarActive) {
+      const barWidth = fightBar.clientWidth;
+      const pointerWidth = fightPointer.clientWidth;
+      const max = (barWidth - pointerWidth) / barWidth;
+      const speed = 0.013 + pureAttackTurns * 0.002;
+      fightPointerPos += fightPointerDir * speed;
+      if (fightPointerPos <= 0) {
+        fightPointerPos = 0;
+        fightPointerDir = 1;
+      } else if (fightPointerPos >= max) {
+        fightPointerPos = max;
+        fightPointerDir = -1;
+      }
+      const x = fightPointerPos * barWidth;
+      fightPointer.style.left = x + "px";
+    }
+    requestAnimationFrame(fightBarLoop);
+  }
+
+  // ========= SUB MENUS =========
+  function openSubMenu(type, options) {
+    currentSubType = type;
+    currentSubOptions = options;
+    subIndex = 0;
+    subMenu.innerHTML = "";
+    subMenu.style.display = "flex";
+    options.forEach((opt, idx) => {
+      const span = document.createElement("span");
+      span.classList.add("sub-option");
+      if (idx === 0) span.classList.add("selected");
+      span.textContent = opt.label;
+      subMenu.appendChild(span);
+    });
+    phase = "MENU_SUB";
+  }
+
+  function closeSubMenu() {
+    subMenu.style.display = "none";
+    subMenu.innerHTML = "";
+    currentSubType = null;
+    currentSubOptions = [];
+    phase = "PLAYER_TURN";
+  }
+
+  function setSubIndex(index) {
+    if (!currentSubOptions.length) return;
+    subIndex = (index + currentSubOptions.length) % currentSubOptions.length;
+    const subs = Array.from(subMenu.querySelectorAll(".sub-option"));
+    subs.forEach((s, i) => s.classList.toggle("selected", i === subIndex));
+  }
+
+  function confirmSubSelection() {
+    if (!currentSubOptions.length) return;
+    const opt = currentSubOptions[subIndex];
+    if (currentSubType === "ACT") handleActOption(opt.id);
+    else if (currentSubType === "ITEM") handleItemOption(opt.id);
+    else if (currentSubType === "MERCY") handleMercyOption(opt.id);
+  }
+
+  function handleActOption(id) {
+    if (playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
+    actCount++;
+    if (id === "CHECK") {
+      showDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.");
+    } else if (id === "JOKE") {
+      showDialogue("* you tell a joke.\n* sans chuckles.\n* \"heh. not bad, kid.\"");
+    } else if (id === "FLIRT") {
+      showDialogue("* you try to flirt.\n* sans just grins.\n* \"you know i'm not the tall one, right?\"");
+    } else if (id === "TALK") {
+      showDialogue("* you talk about paps.\n* sans smiles.\n* \"yeah. he’s really lookin' forward to you.\"");
+    }
+    closeSubMenu();
+    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
+  }
+
+  function handleItemOption(id) {
+    if (playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
+    const item = items.find(i => i.id === id);
+    if (!item) {
+      showDialogue("* (you fumble with your pockets.)");
+    } else {
+      playerHP = Math.min(playerMaxHP, playerHP + item.heal);
+      updatePlayerHP();
+      showDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.");
+      items = items.filter(i => i.id !== id);
+    }
+    closeSubMenu();
+    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
+  }
+
+  function handleMercyOption(id) {
+    if (playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
+    if (id === "SPARE") {
+      if (!canSpare) {
+        showDialogue("* you reach for MERCY.\n* \"sorry pal, no mercy 'till you prove yourself.\"");
+        closeSubMenu();
+        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1000);
+        return;
+      }
+      showDialogue(
+        "* you lower your hands.\n" +
+        "* sans smiles.\n" +
+        "* \"heh. not bad.\"\n" +
+        "* \"guess we can both move on now.\""
+      );
+      closeSubMenu();
+      setTimeout(() => endBattle(true, true, false), 2000);
+    } else if (id === "FLEE") {
+      showDialogue("* you think about running away...\n* but your feet won't move.");
+      closeSubMenu();
+      setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
+    }
+  }
+
+  // ========= ENDING =========
+  function endBattle(playerWon, spared = false, killedSans = false) {
+    endScreen.style.display = "flex";
+    if (!playerWon) {
+      endText.textContent =
+        "YOU DIED.\n\n* \"whoops. guess that was a bit much.\"\n* \"sorry, kid.\"";
+    } else if (spared) {
+      endText.textContent =
+        "YOU WON!\nGained 20G.\n\n* you feel like you're ready for what's next.";
+    } else if (killedSans) {
+      endText.textContent =
+        "YOU WON.\nEXP: 120\nG: 10\n\n* your LOVE increased.\n* the silence after the joke hurts more than the fight.";
+    } else {
+      endText.textContent = "YOU WON!";
+    }
+    phase = "END";
+  }
+
+  function confirmMenuSelection() {
+    if (phase !== "PLAYER_TURN" || playerActionUsedThisTurn) return;
+    playerActionUsedThisTurn = true;
+    const action = menuItems[menuIndex];
+
+    if (action === "FIGHT") {
+      pureAttackTurns++;
+      showDialogue("* you get ready to attack.");
+      setTimeout(() => {
+        hideDialogue();
+        openTargetMenu();
+      }, 300);
+    } else if (action === "ACT") {
+      openSubMenu("ACT", [
+        { id: "CHECK", label: "Check" },
+        { id: "JOKE", label: "Joke" },
+        { id: "FLIRT", label: "Flirt" },
+        { id: "TALK", label: "Talk" }
+      ]);
+    } else if (action === "ITEM") {
+      if (items.length === 0) {
+        showDialogue("* (you don’t have any items.)");
+        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 900);
+      } else {
+        openSubMenu("ITEM", items.map(it => ({ id: it.id, label: it.name })));
+      }
+    } else if (action === "MERCY") {
+      const spareLabel = canSpare ? "Spare (yellow)" : "Spare";
+      openSubMenu("MERCY", [
+        { id: "SPARE", label: spareLabel },
+        { id: "FLEE", label: "Flee" }
+      ]);
+    }
+  }
+
+  // ========= INPUT =========
+  document.addEventListener("keydown", (e) => {
+    keys[e.key] = true;
+    if (phase === "END") return;
+
+    if (e.key === "z" || e.key === "Z") {
+      if (phase === "INTRO") {
+        phase = "PLAYER_TURN";
+        showDialogue("* ...");
+        playerActionUsedThisTurn = false;
+      } else if (phase === "PLAYER_TURN") {
+        confirmMenuSelection();
+      } else if (phase === "MENU_SUB") {
+        confirmSubSelection();
+      } else if (phase === "FIGHT_BAR") {
+        stopFightBar();
+      } else if (phase === "FIGHT_TARGET") {
+        confirmTargetSelection();
+      }
+    }
+
+    if (e.key === "x" || e.key === "X") {
+      if (phase === "MENU_SUB") {
+        closeSubMenu();
+        playerActionUsedThisTurn = false;
+      }
+      if (phase === "FIGHT_TARGET") {
+        closeTargetMenu();
+        phase = "PLAYER_TURN";
+        playerActionUsedThisTurn = false;
+      }
+    }
+
+    if (phase === "PLAYER_TURN") {
+      if (e.key === "a" || e.key === "A") setMenuIndex(menuIndex - 1);
+      else if (e.key === "d" || e.key === "D") setMenuIndex(menuIndex + 1);
+    } else if (phase === "MENU_SUB") {
+      if (e.key === "a" || e.key === "A") setSubIndex(subIndex - 1);
+      else if (e.key === "d" || e.key === "D") setSubIndex(subIndex + 1);
+    } else if (phase === "FIGHT_TARGET") {
+      if (e.key === "a" || e.key === "A") setTargetMenuIndex(targetMenuIndex - 1);
+      else if (e.key === "d" || e.key === "D") setTargetMenuIndex(targetMenuIndex + 1);
     }
   });
 
-  // Live info update loop
-  function updateLiveInfo(){
-    const now = performance.now();
-    const dt = now - lastFrame;
-    const fps = Math.round(1000 / Math.max(1, dt));
-    liveInfo.innerHTML = `fps: <strong style="color:#fff">${fps}</strong>`;
-    lastFrame = now;
-    requestAnimationFrame(updateLiveInfo);
+  document.addEventListener("keyup", (e) => {
+    keys[e.key] = false;
+  });
+
+  // ========= INIT =========
+  function initIntro() {
+    dialogueBox.style.display = "block";
+    writeText(dialogueBox, "* ...");
+    phase = "INTRO";
   }
-  updateLiveInfo();
 
-  // Initialize palette and stage
-  renderPalette();
-  (function init(){
-    const st = stage.getBoundingClientRect();
-    setSpritePos(st.width/2, st.height/2);
-    sprite.dataset.dir = 0;
-    stageCtx.clearRect(0,0,stageCanvas.width,stageCanvas.height);
-    updateVarsUI();
-  })();
-
-});
+  updatePlayerHP();
+  updateEnemyHP();
+  setMenuIndex(0);
+  initIntro();
+  requestAnimationFrame(soulMovementLoop);
+  requestAnimationFrame(fightBarLoop);
 </script>
 </body>
 </html>
