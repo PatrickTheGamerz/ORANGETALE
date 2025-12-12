@@ -78,7 +78,7 @@
     /* Player dialogue box (resize upward, same bottom) */
     #dialogue-box {
       position: absolute;
-      bottom: 150px; /* same */
+      bottom: 150px; /* same bottom */
       left: 20px;
       right: 20px;
       min-height: 40px;
@@ -431,7 +431,7 @@
 
   // persistent status line for idle state
   let currentPlayerStatusText = "";
-  let isCurrentPlayerStatus = false;
+  let lastTextHadEndPause = false; // dot/question at end
 
   function clearTypewriter(target) {
     if (target === "player" && playerTyping) {
@@ -445,25 +445,22 @@
   }
 
   function charDelay(ch) {
-    if (ch === ".") return DOT_DELAY;
+    if (ch === "." || ch === "?") return DOT_DELAY;
     if (ch === ",") return COMMA_DELAY;
     return BASE_CHAR_DELAY;
   }
 
-  function typeText(element, fullText, target) {
+  function typeText(element, fullText, target, onComplete) {
     clearTypewriter(target);
     element.textContent = "";
     let i = 0;
-    const now = performance.now();
 
     if (target === "player") {
       playerTextFull = fullText;
       playerTextDone = false;
-      playerTextStartTime = now;
     } else {
       sansTextFull = fullText;
       sansTextDone = false;
-      sansTextStartTime = now;
     }
 
     function step() {
@@ -485,11 +482,23 @@
           sansTextDone = true;
           sansTextStartTime = performance.now();
         }
+
+        // if last char is . or ?, pause DOT_DELAY before calling onComplete
+        const last = fullText.trim().slice(-1);
+        if (last === "." || last === "?") {
+          lastTextHadEndPause = true;
+          setTimeout(() => {
+            if (onComplete) onComplete();
+          }, DOT_DELAY);
+        } else {
+          lastTextHadEndPause = false;
+          if (onComplete) onComplete();
+        }
         return;
       }
 
-      const ch = fullText.charAt(i - 1) || "";
-      const delay = charDelay(ch);
+      const prevChar = fullText.charAt(i - 1) || "";
+      const delay = charDelay(prevChar);
 
       i++;
       const id = setTimeout(step, delay);
@@ -537,10 +546,17 @@
 
     if (target === "player") {
       dialogueBox.style.display = "block";
-      typeText(dialogueBox, text, "player");
+      typeText(dialogueBox, text, "player", () => {
+        if (!allowAdvance && callback) callback();
+      });
     } else {
       sansDialogueBox.style.display = "block";
-      typeText(sansDialogueBox, text, "sans");
+      typeText(sansDialogueBox, text, "sans", () => {
+        if (!allowAdvance && callback) {
+          sansDialogueBox.style.display = "none";
+          callback();
+        }
+      });
     }
   }
 
@@ -566,12 +582,7 @@
   }
 
   function showPlayerDialogue(text, callback, allowAdvance, isStatus) {
-    if (isStatus) {
-      currentPlayerStatusText = text;
-      isCurrentPlayerStatus = true;
-    } else {
-      isCurrentPlayerStatus = false;
-    }
+    if (isStatus) currentPlayerStatusText = text;
     beginDialogue(text, "player", callback || null, !!allowAdvance);
   }
 
@@ -767,7 +778,7 @@
     updateDifficulty();
 
     hideSansDialogue();
-    hidePlayerDialogue(); // status text should not show during attacks
+    hidePlayerDialogue(); // hide status during attacks
 
     // pure fight route -> phase2C
     if (!phase2CActive && pureAttackTurns >= 6 && !phase2AActive && !phase2BQueued) {
@@ -781,7 +792,7 @@
       return;
     }
 
-    // blue attack intro: 3s normal movement, then 3s blue with floor after 1s
+    // blue attack intro: 3s normal, then blue, floor after 1s
     if (!usedBlueIntro && turnCount === 1) {
       showSansDialogue(
         "i'll let ya have your turn first, kid.\n" +
@@ -801,6 +812,7 @@
                   setSoulColor("blue", true);
                   canMoveSoul = true;
                   setTimeout(() => {
+                    // BONE ZONE: first blue attack floor
                     blueAttackSequence(() => {
                       setSoulColor("red", false);
                       exitSoulMode();
@@ -1244,6 +1256,38 @@
     requestAnimationFrame(loop);
   }
 
+  // ========= BLUE ATTACK FLOOR =========
+  function blueAttackSequence(onEnd) {
+    const boxRect = soulBox.getBoundingClientRect();
+    const width = boxRect.width;
+    const height = boxRect.height;
+
+    const duration = 3500;
+    const startTime = performance.now();
+
+    const bone = spawnBone(0, height - 18, width, 18);
+
+    function loop(t) {
+      if (!inSoulMode) {
+        bone.remove();
+        onEnd();
+        return;
+      }
+      if (t - startTime > duration) {
+        bone.remove();
+        onEnd();
+        return;
+      }
+
+      const soulRect = soul.getBoundingClientRect();
+      const rect = bone.getBoundingClientRect();
+      if (rectsOverlap(rect, soulRect)) damagePlayer(1);
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+
   // ========= SPECIAL ATTACK PHASE 1 =========
   function specialAttackPhase1(onEnd) {
     setSoulColor("red", false);
@@ -1672,6 +1716,7 @@
     currentSubType = null;
     currentSubOptions = [];
     phase = "PLAYER_TURN";
+    dialogueBox.style.display = "block";
     restorePlayerStatusWithTypewriter();
   }
 
