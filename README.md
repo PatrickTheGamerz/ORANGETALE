@@ -89,7 +89,7 @@
       font-size: 18px;
       white-space: pre-line;
       background: rgba(0,0,0,0.8);
-      overflow: hidden;
+      overflow-y: auto;     /* allow scrolling if text is longer */
       display: none;
     }
 
@@ -108,7 +108,7 @@
       font-size: 18px;
       white-space: pre-line;
       display: none;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     /* Soul box */
@@ -415,8 +415,8 @@
   const BASE_CHAR_DELAY = 50;
   const COMMA_DELAY = 150;
   const DOT_DELAY = 1500;
-  const AUTO_ADVANCE_AFTER_END = 1500; // after text is fully typed AND ends with . or ?
-  const MIN_ADVANCE_DELAY = 500;       // 0.5s before Z is allowed
+  const AUTO_ADVANCE_AFTER_END = 1500; // after finished + ends with . or ?
+  const MIN_ADVANCE_DELAY = 500;       // earliest Z skip
 
   let playerTyping = null;
   let sansTyping = null;
@@ -466,6 +466,7 @@
     function markFinished() {
       const now = performance.now();
       const lastChar = fullText.trim().slice(-1);
+
       if (target === "player") {
         playerTyping = null;
         playerTextDone = true;
@@ -476,8 +477,8 @@
         sansTextFinishTime = now;
       }
 
-      // Auto-advance after 1.5s if last char is . or ?
       if (lastChar === "." || lastChar === "?") {
+        // only auto-advance if this dialogue is in "waiting" mode
         setTimeout(() => {
           if (!waitingForDialogueAdvance) return;
           if (onComplete) onComplete();
@@ -544,7 +545,7 @@
   }
 
   function beginDialogue(text, target, callback, allowAdvance) {
-    waitingForDialogueAdvance = allowAdvance;
+    waitingForDialogueAdvance = !!allowAdvance;
     dialogueAdvanceCallback = callback || null;
     dialogueLastTarget = target;
 
@@ -615,7 +616,10 @@
   }
 
   function restorePlayerStatusWithTypewriter() {
-    if (!currentPlayerStatusText) return;
+    if (!currentPlayerStatusText) {
+      hidePlayerDialogue();
+      return;
+    }
     showPlayerDialogue(currentPlayerStatusText, null, false, true);
   }
 
@@ -634,7 +638,6 @@
       uiBar.style.opacity = "1";
       uiBar.style.pointerEvents = "auto";
       phase = "PLAYER_TURN";
-      dialogueBox.style.display = "block";
       showPlayerDialogue("* sans looks relaxed.", null, false, true);
       return;
     }
@@ -785,7 +788,6 @@
     hideSansDialogue();
     hidePlayerDialogue();
 
-    // pure fight route -> phase2C
     if (!phase2CActive && pureAttackTurns >= 6 && !phase2AActive && !phase2BQueued) {
       phase2CActive = true;
       showSansDialogue(
@@ -797,7 +799,6 @@
       return;
     }
 
-    // blue attack intro
     if (!usedBlueIntro && turnCount === 1) {
       showSansDialogue(
         "i'll let ya have your turn first, kid.\n" +
@@ -838,7 +839,6 @@
       return;
     }
 
-    // phase 1 special
     if (!usedFinalAttackPhase1 && turnCount >= 5 && !phase2BQueued) {
       usedFinalAttackPhase1 = true;
       showSansDialogue(
@@ -869,7 +869,6 @@
       return;
     }
 
-    // normal phase 1 attacks
     enterSoulMode();
     canMoveSoul = true;
     const attacks = [
@@ -1596,6 +1595,7 @@
     fightPointerDir = 1;
     fightBarActive = true;
     damageText.textContent = "";
+    hidePlayerDialogue();
   }
 
   function stopFightBar() {
@@ -1708,7 +1708,9 @@
     });
 
     phase = "MENU_SUB";
-    dialogueBox.style.display = "block";
+    // clear status text so it doesn't sit behind choices
+    currentPlayerStatusText = "";
+    hidePlayerDialogue();
   }
 
   function closeSubMenu() {
@@ -1736,13 +1738,13 @@
 
   function handleActOption(id) {
     actCount++;
-    // fully close submenu before showing new text
     closeSubMenu();
     hideSansDialogue();
     hidePlayerDialogue();
 
     if (id === "CHECK") {
-      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, true);
+      // full check text now visible (scrollable box)
+      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, false);
     } else if (id === "JOKE") {
       showPlayerDialogue("* you tell sans a joke.", null, false, false);
       setTimeout(() => {
