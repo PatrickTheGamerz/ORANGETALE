@@ -75,25 +75,25 @@
       font-size: 14px;
     }
 
-    /* Player dialogue box */
+    /* Player dialogue box (resize upward, same bottom) */
     #dialogue-box {
       position: absolute;
-      bottom: 150px;
+      bottom: 150px; /* same bottom */
       left: 20px;
       right: 20px;
       min-height: 40px;
-      max-height: 200px;
+      max-height: 200px; /* taller upward */
       border: 4px solid white;
       padding: 10px;
       box-sizing: border-box;
       font-size: 18px;
       white-space: pre-line;
       background: rgba(0,0,0,0.8);
-      overflow-y: auto;     /* allow scrolling if text is longer */
+      overflow: hidden;
       display: none;
     }
 
-    /* Sans dialogue box */
+    /* Sans dialogue box (floating right of sprite) */
     #sans-dialogue-box {
       position: absolute;
       top: 60px;
@@ -108,7 +108,7 @@
       font-size: 18px;
       white-space: pre-line;
       display: none;
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     /* Soul box */
@@ -209,13 +209,12 @@
       bottom: 130px;
       left: 0;
       width: 100%;
-      height: 80px;
+      height: 100px;
       display: none;
       justify-content: center;
       align-items: center;
       gap: 20px;
       font-size: 18px;
-      pointer-events: auto;
     }
     .sub-option {
       border: 2px solid white;
@@ -368,6 +367,39 @@
   let phase2BQueued = false;
   let phase2CActive = false;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const dialogueBox = document.getElementById("dialogue-box");
   const sansDialogueBox = document.getElementById("sans-dialogue-box");
   const soulBox = document.getElementById("soul-box");
@@ -412,11 +444,10 @@
   ];
 
   // ========= DIALOGUE SYSTEM =========
-  const BASE_CHAR_DELAY = 50;
-  const COMMA_DELAY = 150;
-  const DOT_DELAY = 1500;
-  const AUTO_ADVANCE_AFTER_END = 1500; // after finished + ends with . or ?
-  const MIN_ADVANCE_DELAY = 500;       // earliest Z skip
+  const BASE_CHAR_DELAY = 50;  // 0.05s
+  const COMMA_DELAY = 150;     // 0.15s
+  const DOT_DELAY = 1500;      // 1.5s
+  const MIN_ADVANCE_DELAY = 1000;
 
   let playerTyping = null;
   let sansTyping = null;
@@ -424,14 +455,16 @@
   let sansTextFull = "";
   let playerTextDone = true;
   let sansTextDone = true;
-  let playerTextFinishTime = 0;
-  let sansTextFinishTime = 0;
+  let playerTextStartTime = 0;
+  let sansTextStartTime = 0;
 
   let waitingForDialogueAdvance = false;
   let dialogueAdvanceCallback = null;
   let dialogueLastTarget = null;
 
+  // persistent status line for idle state
   let currentPlayerStatusText = "";
+  let lastTextHadEndPause = false; // dot/question at end
 
   function clearTypewriter(target) {
     if (target === "player" && playerTyping) {
@@ -463,31 +496,6 @@
       sansTextDone = false;
     }
 
-    function markFinished() {
-      const now = performance.now();
-      const lastChar = fullText.trim().slice(-1);
-
-      if (target === "player") {
-        playerTyping = null;
-        playerTextDone = true;
-        playerTextFinishTime = now;
-      } else {
-        sansTyping = null;
-        sansTextDone = true;
-        sansTextFinishTime = now;
-      }
-
-      if (lastChar === "." || lastChar === "?") {
-        // only auto-advance if this dialogue is in "waiting" mode
-        setTimeout(() => {
-          if (!waitingForDialogueAdvance) return;
-          if (onComplete) onComplete();
-        }, AUTO_ADVANCE_AFTER_END);
-      } else {
-        if (onComplete) onComplete();
-      }
-    }
-
     function step() {
       if (target === "player" && playerTyping === null && i > 0) return;
       if (target === "sans" && sansTyping === null && i > 0) return;
@@ -498,7 +506,27 @@
       element.textContent = current;
 
       if (i === fullText.length) {
-        markFinished();
+        if (target === "player") {
+          playerTyping = null;
+          playerTextDone = true;
+          playerTextStartTime = performance.now();
+        } else {
+          sansTyping = null;
+          sansTextDone = true;
+          sansTextStartTime = performance.now();
+        }
+
+        // if last char is . or ?, pause DOT_DELAY before calling onComplete
+        const last = fullText.trim().slice(-1);
+        if (last === "." || last === "?") {
+          lastTextHadEndPause = true;
+          setTimeout(() => {
+            if (onComplete) onComplete();
+          }, DOT_DELAY);
+        } else {
+          lastTextHadEndPause = false;
+          if (onComplete) onComplete();
+        }
         return;
       }
 
@@ -523,30 +551,30 @@
       clearTypewriter("player");
       dialogueBox.textContent = playerTextFull;
       playerTextDone = true;
-      playerTextFinishTime = performance.now();
+      playerTextStartTime = performance.now();
     }
     if (target === "sans" && !sansTextDone) {
       clearTypewriter("sans");
       sansDialogueBox.textContent = sansTextFull;
       sansTextDone = true;
-      sansTextFinishTime = performance.now();
+      sansTextStartTime = performance.now();
     }
   }
 
   function canAdvance(target) {
     const now = performance.now();
     if (target === "player" && playerTextDone) {
-      return (now - playerTextFinishTime) >= MIN_ADVANCE_DELAY;
+      return (now - playerTextStartTime) >= MIN_ADVANCE_DELAY;
     }
     if (target === "sans" && sansTextDone) {
-      return (now - sansTextFinishTime) >= MIN_ADVANCE_DELAY;
+      return (now - sansTextStartTime) >= MIN_ADVANCE_DELAY;
     }
     return false;
   }
 
   function beginDialogue(text, target, callback, allowAdvance) {
-    waitingForDialogueAdvance = !!allowAdvance;
-    dialogueAdvanceCallback = callback || null;
+    waitingForDialogueAdvance = allowAdvance;
+    dialogueAdvanceCallback = callback;
     dialogueLastTarget = target;
 
     if (target === "player") {
@@ -588,7 +616,6 @@
 
   function showPlayerDialogue(text, callback, allowAdvance, isStatus) {
     if (isStatus) currentPlayerStatusText = text;
-    dialogueBox.style.display = "block";
     beginDialogue(text, "player", callback || null, !!allowAdvance);
   }
 
@@ -616,10 +643,7 @@
   }
 
   function restorePlayerStatusWithTypewriter() {
-    if (!currentPlayerStatusText) {
-      hidePlayerDialogue();
-      return;
-    }
+    if (!currentPlayerStatusText) return;
     showPlayerDialogue(currentPlayerStatusText, null, false, true);
   }
 
@@ -638,6 +662,7 @@
       uiBar.style.opacity = "1";
       uiBar.style.pointerEvents = "auto";
       phase = "PLAYER_TURN";
+      dialogueBox.style.display = "block";
       showPlayerDialogue("* sans looks relaxed.", null, false, true);
       return;
     }
@@ -656,6 +681,24 @@
     hideSansDialogue();
     playNextIntroLine();
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   function showDialogue(text) {
     showPlayerDialogue(text, null, false, true);
@@ -786,8 +829,9 @@
     updateDifficulty();
 
     hideSansDialogue();
-    hidePlayerDialogue();
+    hidePlayerDialogue(); // hide status during attacks
 
+    // pure fight route -> phase2C
     if (!phase2CActive && pureAttackTurns >= 6 && !phase2AActive && !phase2BQueued) {
       phase2CActive = true;
       showSansDialogue(
@@ -799,6 +843,7 @@
       return;
     }
 
+    // blue attack intro: 3s normal, then blue, floor after 1s
     if (!usedBlueIntro && turnCount === 1) {
       showSansDialogue(
         "i'll let ya have your turn first, kid.\n" +
@@ -818,11 +863,13 @@
                   setSoulColor("blue", true);
                   canMoveSoul = true;
                   setTimeout(() => {
+                    // BONE ZONE: first blue attack floor
                     blueAttackSequence(() => {
                       setSoulColor("red", false);
                       exitSoulMode();
                       showSansDialogue("what are you looking so blue for?", () => {
                         phase = "PLAYER_TURN";
+                        dialogueBox.style.display = "block";
                         showPlayerDialogue("* sans looks amused.", null, false, true);
                       }, true);
                     });
@@ -839,6 +886,7 @@
       return;
     }
 
+    // phase 1 special
     if (!usedFinalAttackPhase1 && turnCount >= 5 && !phase2BQueued) {
       usedFinalAttackPhase1 = true;
       showSansDialogue(
@@ -858,6 +906,7 @@
                 canSpare = true;
                 sansCanBeHit = true;
                 phase = "PLAYER_TURN";
+                dialogueBox.style.display = "block";
                 showPlayerDialogue("* sans looks pretty satisfied.", null, false, true);
               },
               true
@@ -869,6 +918,7 @@
       return;
     }
 
+    // normal phase 1 attacks
     enterSoulMode();
     canMoveSoul = true;
     const attacks = [
@@ -884,6 +934,7 @@
       if (playerHP > 0) {
         showSansDialogue("nice moves, kid.", () => {
           phase = "PLAYER_TURN";
+          dialogueBox.style.display = "block";
           showPlayerDialogue("* sans looks a bit more tired.", null, false, true);
         }, true);
       }
@@ -924,13 +975,43 @@
       if (playerHP > 0) {
         showSansDialogue("still up?\nnot bad.", () => {
           phase = "PLAYER_TURN";
+          dialogueBox.style.display = "block";
           showPlayerDialogue("* sans looks very tired.", null, false, true);
         }, true);
       }
     });
   }
 
-  // ========= PHASE 2C ATTACKS WRAPPER =========
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // ========= PHASE 2C ATTACKS =========
   function startSansAttackPhase2C() {
     phase = "PHASE2C_ATTACK";
     enterSoulMode();
@@ -946,6 +1027,7 @@
       if (playerHP > 0) {
         showSansDialogue("getting tired yet?", () => {
           phase = "PLAYER_TURN";
+          dialogueBox.style.display = "block";
           showPlayerDialogue("* sans is giving you a bad time.", null, false, true);
         }, true);
       }
@@ -1207,6 +1289,31 @@
     }
     requestAnimationFrame(loop);
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   function pacifistTopBottomAlternating(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
@@ -1496,6 +1603,32 @@
     requestAnimationFrame(loop);
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   function phase2CSlidersCross(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1595,7 +1728,6 @@
     fightPointerDir = 1;
     fightBarActive = true;
     damageText.textContent = "";
-    hidePlayerDialogue();
   }
 
   function stopFightBar() {
@@ -1698,7 +1830,6 @@
     subIndex = 0;
     subMenu.innerHTML = "";
     subMenu.style.display = "flex";
-
     options.forEach((opt, idx) => {
       const span = document.createElement("span");
       span.classList.add("sub-option");
@@ -1706,10 +1837,7 @@
       span.textContent = opt.label;
       subMenu.appendChild(span);
     });
-
     phase = "MENU_SUB";
-    // clear status text so it doesn't sit behind choices
-    currentPlayerStatusText = "";
     hidePlayerDialogue();
   }
 
@@ -1719,6 +1847,8 @@
     currentSubType = null;
     currentSubOptions = [];
     phase = "PLAYER_TURN";
+    dialogueBox.style.display = "block";
+    restorePlayerStatusWithTypewriter();
   }
 
   function setSubIndex(index) {
@@ -1738,13 +1868,10 @@
 
   function handleActOption(id) {
     actCount++;
-    closeSubMenu();
     hideSansDialogue();
     hidePlayerDialogue();
-
     if (id === "CHECK") {
-      // full check text now visible (scrollable box)
-      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, false);
+      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, true);
     } else if (id === "JOKE") {
       showPlayerDialogue("* you tell sans a joke.", null, false, false);
       setTimeout(() => {
@@ -1761,16 +1888,38 @@
         showSansDialogue("yeah.\nhe's really lookin' forward to you.", null, true);
       }, 900);
     }
-
+    closeSubMenu();
     setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   function handleItemOption(id) {
     const item = items.find(i => i.id === id);
-    closeSubMenu();
     hideSansDialogue();
     hidePlayerDialogue();
-
     if (!item) {
       showPlayerDialogue("* (you fumble with your pockets.)", null, false, false);
     } else {
@@ -1779,20 +1928,20 @@
       showPlayerDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.", null, false, false);
       items = items.filter(i => i.id !== id);
     }
+    closeSubMenu();
     setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
   }
 
   function handleMercyOption(id) {
-    closeSubMenu();
     hideSansDialogue();
     hidePlayerDialogue();
-
     if (id === "SPARE") {
       if (!canSpare || phase2AActive || phase2CActive) {
         showPlayerDialogue("* you reach for MERCY.", null, false, false);
         setTimeout(() => {
           showSansDialogue("sorry, pal.\nno mercy 'till you prove yourself.", null, true);
         }, 900);
+        closeSubMenu();
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1600);
         return;
       }
@@ -1807,7 +1956,7 @@
         );
       }, 900);
       phase2BQueued = true;
-
+      closeSubMenu();
       setTimeout(() => {
         phase = "PHASE2B_SPECIAL";
         enterSoulMode();
@@ -1819,6 +1968,7 @@
       }, 1600);
     } else if (id === "FLEE") {
       showPlayerDialogue("* you think about running away...\n* but your feet won't move.", null, false, false);
+      closeSubMenu();
       setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
     }
   }
