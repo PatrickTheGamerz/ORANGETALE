@@ -75,14 +75,14 @@
       font-size: 14px;
     }
 
-    /* Player dialogue box (resize upward, same bottom) */
+    /* Player dialogue box (resize upward, same general region) */
     #dialogue-box {
       position: absolute;
-      bottom: 150px; /* same bottom */
+      bottom: 150px;
       left: 20px;
       right: 20px;
       min-height: 40px;
-      max-height: 200px; /* taller upward */
+      max-height: 200px;
       border: 4px solid white;
       padding: 10px;
       box-sizing: border-box;
@@ -203,18 +203,19 @@
       width: 100%;
     }
 
-    /* Sub-menu */
+    /* Sub-menu (sits between dialogue and bottom UI) */
     #sub-menu {
       position: absolute;
       bottom: 130px;
       left: 0;
       width: 100%;
-      height: 100px;
+      height: 80px;
       display: none;
       justify-content: center;
       align-items: center;
       gap: 20px;
       font-size: 18px;
+      pointer-events: auto;
     }
     .sub-option {
       border: 2px solid white;
@@ -411,10 +412,10 @@
   ];
 
   // ========= DIALOGUE SYSTEM =========
-  const BASE_CHAR_DELAY = 50;  // 0.05s
-  const COMMA_DELAY = 150;     // 0.15s
-  const DOT_DELAY = 1500;      // 1.5s
-  const MIN_ADVANCE_DELAY = 1000;
+  const BASE_CHAR_DELAY = 50;   // 0.05s
+  const COMMA_DELAY = 150;      // 0.15s
+  const DOT_DELAY = 1500;       // 1.5s
+  const MIN_ADVANCE_DELAY = 500; // 0.5s for manual skip
 
   let playerTyping = null;
   let sansTyping = null;
@@ -463,6 +464,29 @@
       sansTextDone = false;
     }
 
+    function finishText() {
+      if (target === "player") {
+        playerTyping = null;
+        playerTextDone = true;
+        playerTextStartTime = performance.now();
+      } else {
+        sansTyping = null;
+        sansTextDone = true;
+        sansTextStartTime = performance.now();
+      }
+
+      const last = fullText.trim().slice(-1);
+      if (last === "." || last === "?") {
+        lastTextHadEndPause = true;
+        setTimeout(() => {
+          if (onComplete) onComplete();
+        }, DOT_DELAY);
+      } else {
+        lastTextHadEndPause = false;
+        if (onComplete) onComplete();
+      }
+    }
+
     function step() {
       if (target === "player" && playerTyping === null && i > 0) return;
       if (target === "sans" && sansTyping === null && i > 0) return;
@@ -473,27 +497,7 @@
       element.textContent = current;
 
       if (i === fullText.length) {
-        if (target === "player") {
-          playerTyping = null;
-          playerTextDone = true;
-          playerTextStartTime = performance.now();
-        } else {
-          sansTyping = null;
-          sansTextDone = true;
-          sansTextStartTime = performance.now();
-        }
-
-        // if last char is . or ?, pause DOT_DELAY before calling onComplete
-        const last = fullText.trim().slice(-1);
-        if (last === "." || last === "?") {
-          lastTextHadEndPause = true;
-          setTimeout(() => {
-            if (onComplete) onComplete();
-          }, DOT_DELAY);
-        } else {
-          lastTextHadEndPause = false;
-          if (onComplete) onComplete();
-        }
+        finishText();
         return;
       }
 
@@ -582,6 +586,8 @@
   }
 
   function showPlayerDialogue(text, callback, allowAdvance, isStatus) {
+    // keep dialogue visible even during submenus
+    dialogueBox.style.display = "block";
     if (isStatus) currentPlayerStatusText = text;
     beginDialogue(text, "player", callback || null, !!allowAdvance);
   }
@@ -931,7 +937,7 @@
     });
   }
 
-  // ========= PHASE 2C ATTACKS =========
+  // ========= PHASE 2C ATTACKS WRAPPER =========
   function startSansAttackPhase2C() {
     phase = "PHASE2C_ATTACK";
     enterSoulMode();
@@ -1699,6 +1705,7 @@
     subIndex = 0;
     subMenu.innerHTML = "";
     subMenu.style.display = "flex";
+
     options.forEach((opt, idx) => {
       const span = document.createElement("span");
       span.classList.add("sub-option");
@@ -1706,8 +1713,10 @@
       span.textContent = opt.label;
       subMenu.appendChild(span);
     });
+
+    // Keep dialogue box visible; just let it resize upward naturally
+    dialogueBox.style.display = "block";
     phase = "MENU_SUB";
-    hidePlayerDialogue();
   }
 
   function closeSubMenu() {
