@@ -35,7 +35,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      opacity: 1;            /* visible at start now */
+      opacity: 1;
       pointer-events: none;
     }
     #enemy-name {
@@ -91,14 +91,14 @@
       white-space: pre-line;
       background: rgba(0,0,0,0.8);
       overflow: hidden;
-      display: none;
+      display: block; /* always visible during battle states */
     }
 
     /* Sans dialogue box (floating right of sprite, auto height) */
     #sans-dialogue-box {
       position: absolute;
       top: 60px;
-      left: 360px; /* moved more to the left */
+      left: 480px; /* further to the right than before */
       min-height: 40px;
       max-height: 160px;
       border: 4px solid white;
@@ -298,7 +298,7 @@
     <div id="enemy-hp-text">HP: 1 / 1</div>
   </div>
 
-  <!-- Player dialogue (bottom) -->
+  <!-- Player dialogue (bottom, always visible in battle) -->
   <div id="dialogue-box"></div>
 
   <!-- Sans dialogue (floating right of sprite) -->
@@ -353,9 +353,7 @@
 
   let inSoulMode = false;
   let canMoveSoul = false;
-  let phase = "INTRO_SEQUENCE"; 
-  // INTRO_SEQUENCE, PLAYER_TURN, ENEMY_ATTACK, FIGHT_BAR, MENU_SUB,
-  // PHASE2A_ATTACK, PHASE2B_SPECIAL, PHASE2C_ATTACK, END
+  let phase = "INTRO_SEQUENCE";
 
   let turnCount = 0;
   let actCount = 0;
@@ -417,10 +415,13 @@
     { id: "BANDAGE", name: "Bandage", heal: 7 }
   ];
 
+  // player status line that should persist between actions
+  let currentPlayerStatusText = "";
+
   // ========= TYPEWRITER & DIALOGUE CONTROL =========
   const TYPE_SPEED = 50; // ms per char
-  const AUTO_ADVANCE_DELAY = 2000; // 2s after finished if no Z
-  const MIN_ADVANCE_DELAY = 1000; // 1s before manual advance allowed
+  const AUTO_ADVANCE_DELAY = 2000;
+  const MIN_ADVANCE_DELAY = 1000;
 
   let playerTyping = null;
   let sansTyping = null;
@@ -431,7 +432,6 @@
   let playerTextStartTime = 0;
   let sansTextStartTime = 0;
 
-  // generic dialogue flow state
   let waitingForDialogueAdvance = false;
   let dialogueAdvanceCallback = null;
   let dialogueLastTarget = null; // "player" or "sans"
@@ -534,21 +534,21 @@
     setTimeout(check, 100);
   }
 
-  function beginDialogue(text, target, callback) {
+  function beginDialogue(text, target, callback, autoAdvance = true) {
     waitingForDialogueAdvance = false;
     dialogueAdvanceCallback = callback;
     dialogueLastTarget = target;
     if (target === "player") {
-      dialogueBox.style.display = "block";
       typeText(dialogueBox, text, "player");
     } else {
       sansDialogueBox.style.display = "block";
       typeText(sansDialogueBox, text, "sans");
     }
-    // when text finishes, auto-advance check will use scheduleAutoAdvance, so call it slightly after
-    setTimeout(() => {
-      scheduleAutoAdvance(target);
-    }, 50);
+    if (autoAdvance) {
+      setTimeout(() => {
+        scheduleAutoAdvance(target);
+      }, 50);
+    }
   }
 
   function doDialogueAdvance() {
@@ -560,7 +560,6 @@
   }
 
   function handleDialogueZ() {
-    // priority: if typing, finish that first
     if (dialogueLastTarget === "sans" && !sansTextDone) {
       finishTextInstant("sans");
       return;
@@ -569,30 +568,27 @@
       finishTextInstant("player");
       return;
     }
-    // if done but too soon, ignore
     if (!canAdvance(dialogueLastTarget)) return;
-    // otherwise, advance
     doDialogueAdvance();
   }
 
-  function showPlayerDialogue(text, callback) {
+  function showPlayerDialogue(text, callback, autoAdvance = true) {
+    currentPlayerStatusText = text; // remember last status
     beginDialogue(text, "player", () => {
-      dialogueBox.style.display = "none";
       if (callback) callback();
-    });
+    }, autoAdvance);
   }
 
-  function showSansDialogue(text, callback) {
+  function showSansDialogue(text, callback, autoAdvance = true) {
     beginDialogue(text, "sans", () => {
       sansDialogueBox.style.display = "none";
       if (callback) callback();
-    });
+    }, autoAdvance);
   }
 
   function hidePlayerDialogue() {
     clearTypewriter("player");
     dialogueBox.textContent = "";
-    dialogueBox.style.display = "none";
     playerTextFull = "";
     playerTextDone = true;
   }
@@ -603,6 +599,16 @@
     sansDialogueBox.style.display = "none";
     sansTextFull = "";
     sansTextDone = true;
+  }
+
+  // show last known status line again (when you're back on menu/idle)
+  function restorePlayerStatus() {
+    if (currentPlayerStatusText) {
+      dialogueBox.textContent = currentPlayerStatusText;
+      playerTextFull = currentPlayerStatusText;
+      playerTextDone = true;
+      playerTextStartTime = performance.now();
+    }
   }
 
   // ========= INTRO DIALOGUE SEQUENCE =========
@@ -617,12 +623,10 @@
 
   function playNextIntroLine() {
     if (introIndex >= introLines.length) {
-      // intro done: reveal UI, switch to PLAYER_TURN
-      enemyArea.style.pointerEvents = "none";
       uiBar.style.opacity = "1";
       uiBar.style.pointerEvents = "auto";
       phase = "PLAYER_TURN";
-      showPlayerDialogue("* sans looks relaxed.", () => {});
+      showPlayerDialogue("* sans looks relaxed.", null, false);
       return;
     }
     const text = introLines[introIndex];
@@ -638,12 +642,13 @@
     introIndex = 0;
     hidePlayerDialogue();
     hideSansDialogue();
+    dialogueBox.textContent = "";
     playNextIntroLine();
   }
 
-  // compatibility wrapper for player box
+  // compatibility wrapper (player box)
   function showDialogue(text) {
-    showPlayerDialogue(text, () => {});
+    showPlayerDialogue(text, null, false);
   }
 
   function updatePlayerHP() {
@@ -770,7 +775,9 @@
     turnCount++;
     updateDifficulty();
 
-    hidePlayerDialogue();
+    // status text between attacks
+    restorePlayerStatus();
+
     hideSansDialogue();
 
     // pure fight route -> phase2C
@@ -779,12 +786,13 @@
       showSansDialogue(
         "ya haven't tried anything else, huh?\n" +
         "guess i'll have to get a bit more serious.",
-        () => {}
+        null,
+        true
       );
       return;
     }
 
-    // blue attack joke
+    // blue attack intro
     if (!usedBlueIntro && turnCount === 1) {
       showSansDialogue(
         "i'll let ya have your turn first, kid.\n" +
@@ -796,37 +804,30 @@
             "almost forgot about it, heh heh heh.",
             () => {
               showSansDialogue("ready?\n'cause here it comes.", () => {
-                // start attack AFTER his line finishes
+                // after his line finishes, start the first blue attack properly
                 setTimeout(() => {
                   enterSoulMode();
                   canMoveSoul = false;
                   setSoulColor("blue", true);
-                  // bone zone appears after 2s
-                  const attackStartTime = performance.now();
-                  const startAttack = () => {
-                    const elapsed = performance.now() - attackStartTime;
-                    if (elapsed >= 500) {
-                      // 0.5s into attack: we are already blue
-                      // 2s into attack: spawn floor
-                      setTimeout(() => {
-                        blueAttackSequence(() => {
-                          exitSoulMode();
-                          showSansDialogue("what are you looking so blue for?", () => {
-                            phase = "PLAYER_TURN";
-                            showPlayerDialogue("* sans looks amused.", () => {});
-                          });
-                        });
-                      }, 1500); // 0.5s already passed, +1.5s to get 2s total before floor starts
-                    } else {
-                      setTimeout(startAttack, 50);
-                    }
-                  };
-                  startAttack();
+
+                  // bone zone appears after 2 seconds
+                  setTimeout(() => {
+                    blueAttackSequence(() => {
+                      setSoulColor("red", false);
+                      exitSoulMode();
+                      showSansDialogue("what are you looking so blue for?", () => {
+                        phase = "PLAYER_TURN";
+                        showPlayerDialogue("* sans looks amused.", null, false);
+                      }, true);
+                    });
+                  }, 2000);
                 }, 0);
-              });
-            }
+              }, true);
+            },
+            true
           );
-        }
+        },
+        true
       );
       usedBlueIntro = true;
       return;
@@ -852,11 +853,13 @@
                 canSpare = true;
                 sansCanBeHit = true;
                 phase = "PLAYER_TURN";
-                showPlayerDialogue("* sans looks pretty satisfied.", () => {});
-              }
+                showPlayerDialogue("* sans looks pretty satisfied.", null, false);
+              },
+              true
             );
           });
-        }
+        },
+        true
       );
       return;
     }
@@ -877,8 +880,8 @@
       if (playerHP > 0) {
         showSansDialogue("nice moves, kid.", () => {
           phase = "PLAYER_TURN";
-          showPlayerDialogue("* sans looks a bit more tired.", () => {});
-        });
+          showPlayerDialogue("* sans looks a bit more tired.", null, false);
+        }, true);
       }
     });
   }
@@ -893,8 +896,6 @@
 
     if (phase2ATurns >= phase2ATurnTarget) {
       exitSoulMode();
-      hidePlayerDialogue();
-      hideSansDialogue();
       showSansDialogue(
         "heh. still standin', huh?\n" +
         "guess that's enough... for both of us.",
@@ -905,7 +906,8 @@
             exitSoulMode();
             endBattle(true, false, true);
           });
-        }
+        },
+        true
       );
       return;
     }
@@ -918,8 +920,8 @@
       if (playerHP > 0) {
         showSansDialogue("still up?\nnot bad.", () => {
           phase = "PLAYER_TURN";
-          showPlayerDialogue("* sans looks very tired.", () => {});
-        });
+          showPlayerDialogue("* sans looks very tired.", null, false);
+        }, true);
       }
     });
   }
@@ -940,8 +942,8 @@
       if (playerHP > 0) {
         showSansDialogue("getting tired yet?", () => {
           phase = "PLAYER_TURN";
-          showPlayerDialogue("* sans is giving you a bad time.", () => {});
-        });
+          showPlayerDialogue("* sans is giving you a bad time.", null, false);
+        }, true);
       }
     });
   }
@@ -1248,7 +1250,7 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= BLUE ATTACK SEQUENCE =========
+  // ========= BLUE ATTACK SEQUENCE (floor only, no soul movement until enabled) =========
   function blueAttackSequence(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1262,13 +1264,11 @@
     function loop(t) {
       if (!inSoulMode) {
         bone.remove();
-        setSoulColor("red", false);
         onEnd();
         return;
       }
       if (t - startTime > duration) {
         bone.remove();
-        setSoulColor("red", false);
         onEnd();
         return;
       }
@@ -1617,22 +1617,21 @@
       hitStrength = 0;
     }
 
-    hidePlayerDialogue();
     hideSansDialogue();
 
     if (phase2AActive) {
       damageText.textContent = "9999";
-      showPlayerDialogue("* you strike with everything you have.\n* it doesn't change anything.", () => {});
+      showPlayerDialogue("* you strike with everything you have.\n* it doesn't change anything.", null, false);
     } else if (!sansCanBeHit) {
       damageText.textContent = quality + " (sans dodged)";
-      showSansDialogue("heh.\nclose.\n\nbut not that close.", () => {});
+      showSansDialogue("heh.\nclose.\n\nbut not that close.", null, true);
     } else {
       const damage = Math.max(1, Math.floor(hitStrength * 10));
       enemyHP -= damage;
       if (enemyHP <= 0) enemyHP = 1; 
       updateEnemyHP();
       damageText.textContent = quality + " - " + damage;
-      showPlayerDialogue("* you land a hit.\n* something feels... wrong.", () => {});
+      showPlayerDialogue("* you land a hit.\n* something feels... wrong.", null, false);
 
       if (!phase2AActive && canSpare) {
         startPhase2A();
@@ -1654,7 +1653,7 @@
       const barWidth = fightBar.clientWidth;
       const pointerWidth = fightPointer.clientWidth;
       const max = (barWidth - pointerWidth) / barWidth;
-      const speed = 0.013 + pureAttackTurns * 0.002;
+      const speed = 0.02 + pureAttackTurns * 0.003; // a bit faster
       fightPointerPos += fightPointerDir * speed;
       if (fightPointerPos <= 0) {
         fightPointerPos = 0;
@@ -1673,7 +1672,6 @@
   function startPhase2A() {
     phase2AActive = true;
     phase2ATurns = 0;
-    hidePlayerDialogue();
     hideSansDialogue();
     showSansDialogue(
       "your blow lands awkwardly.\n" +
@@ -1681,7 +1679,8 @@
       "heh. guess that one went a little deep.\n" +
       "don't worry.\n" +
       "i've got... 0.0001 hp left.",
-      () => {}
+      null,
+      true
     );
   }
 
@@ -1700,6 +1699,8 @@
       subMenu.appendChild(span);
     });
     phase = "MENU_SUB";
+    // hide status text while choosing
+    hidePlayerDialogue();
   }
 
   function closeSubMenu() {
@@ -1708,6 +1709,8 @@
     currentSubType = null;
     currentSubOptions = [];
     phase = "PLAYER_TURN";
+    // restore last status text
+    restorePlayerStatus();
   }
 
   function setSubIndex(index) {
@@ -1727,66 +1730,64 @@
 
   function handleActOption(id) {
     actCount++;
-    hidePlayerDialogue();
     hideSansDialogue();
     if (id === "CHECK") {
-      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", () => {});
+      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false);
     } else if (id === "JOKE") {
-      showPlayerDialogue("* you tell sans a joke.", () => {});
+      showPlayerDialogue("* you tell sans a joke.", null, false);
       setTimeout(() => {
-        showSansDialogue("heh.\nnot bad, kid.", () => {});
+        showSansDialogue("heh.\nnot bad, kid.", null, true);
       }, 900);
     } else if (id === "FLIRT") {
-      showPlayerDialogue("* you try to flirt.", () => {});
+      showPlayerDialogue("* you try to flirt.", null, false);
       setTimeout(() => {
-        showSansDialogue("you know i'm not the tall one, right?", () => {});
+        showSansDialogue("you know i'm not the tall one, right?", null, true);
       }, 900);
     } else if (id === "TALK") {
-      showPlayerDialogue("* you talk about paps.", () => {});
+      showPlayerDialogue("* you talk about paps.", null, false);
       setTimeout(() => {
-        showSansDialogue("yeah.\nhe's really lookin' forward to you.", () => {});
+        showSansDialogue("yeah.\nhe's really lookin' forward to you.", null, true);
       }, 900);
     }
     closeSubMenu();
-    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1200);
+    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1400);
   }
 
   function handleItemOption(id) {
     const item = items.find(i => i.id === id);
-    hidePlayerDialogue();
     hideSansDialogue();
     if (!item) {
-      showPlayerDialogue("* (you fumble with your pockets.)", () => {});
+      showPlayerDialogue("* (you fumble with your pockets.)", null, false);
     } else {
       playerHP = Math.min(playerMaxHP, playerHP + item.heal);
       updatePlayerHP();
-      showPlayerDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.", () => {});
+      showPlayerDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.", null, false);
       items = items.filter(i => i.id !== id);
     }
     closeSubMenu();
-    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1200);
+    setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1400);
   }
 
   function handleMercyOption(id) {
-    hidePlayerDialogue();
     hideSansDialogue();
     if (id === "SPARE") {
       if (!canSpare || phase2AActive || phase2CActive) {
-        showPlayerDialogue("* you reach for MERCY.", () => {});
+        showPlayerDialogue("* you reach for MERCY.", null, false);
         setTimeout(() => {
-          showSansDialogue("sorry, pal.\nno mercy 'till you prove yourself.", () => {});
+          showSansDialogue("sorry, pal.\nno mercy 'till you prove yourself.", null, true);
         }, 900);
         closeSubMenu();
-        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1400);
+        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
         return;
       }
 
-      showPlayerDialogue("* you lower your hands.", () => {});
+      showPlayerDialogue("* you lower your hands.", null, false);
       setTimeout(() => {
         showSansDialogue(
           "heh.\nnot bad.\n" +
           "how 'bout one last test,\nthen we both move on?",
-          () => {}
+          null,
+          true
         );
       }, 900);
       phase2BQueued = true;
@@ -1799,11 +1800,11 @@
           exitSoulMode();
           endBattle(true, true, false);
         });
-      }, 1400);
+      }, 1500);
     } else if (id === "FLEE") {
-      showPlayerDialogue("* you think about running away...\n* but your feet won't move.", () => {});
+      showPlayerDialogue("* you think about running away...\n* but your feet won't move.", null, false);
       closeSubMenu();
-      setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1200);
+      setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1400);
     }
   }
 
@@ -1889,16 +1890,13 @@
     if (sansDialogueBox.style.display === "block") return; // can't act while Sans is talking
     const action = menuItems[menuIndex];
 
-    hidePlayerDialogue();
     hideSansDialogue();
 
     if (action === "FIGHT") {
       pureAttackTurns++;
-      showPlayerDialogue("* you get ready to attack.", () => {});
-      setTimeout(() => {
-        hidePlayerDialogue();
-        startFightBar();
-      }, 700);
+      showPlayerDialogue("* you get ready to attack.", () => {
+        startFightBar(); // fight bar appears right after text finishes
+      }, true);
     } else if (action === "ACT") {
       openSubMenu("ACT", [
         { id: "CHECK", label: "Check" },
@@ -1908,8 +1906,8 @@
       ]);
     } else if (action === "ITEM") {
       if (items.length === 0) {
-        showPlayerDialogue("* (you don’t have any items.)", () => {});
-        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1200);
+        showPlayerDialogue("* (you don’t have any items.)", null, true);
+        setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1400);
       } else {
         openSubMenu("ITEM", items.map(it => ({ id: it.id, label: it.name })));
       }
@@ -1928,7 +1926,7 @@
     if (phase === "END") return;
 
     if (e.key === "z" || e.key === "Z") {
-      // if any dialogue is currently in control
+      // if any dialogue is currently running / waiting
       if (waitingForDialogueAdvance || !sansTextDone || !playerTextDone) {
         handleDialogueZ();
         return;
