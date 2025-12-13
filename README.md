@@ -75,14 +75,14 @@
       font-size: 14px;
     }
 
-    /* Player dialogue box (resize upward, same bottom) */
+    /* Player dialogue box */
     #dialogue-box {
       position: absolute;
-      bottom: 150px; /* same bottom */
+      bottom: 150px;
       left: 20px;
       right: 20px;
       min-height: 40px;
-      max-height: 200px; /* taller upward */
+      max-height: 200px;
       border: 4px solid white;
       padding: 10px;
       box-sizing: border-box;
@@ -93,7 +93,7 @@
       display: none;
     }
 
-    /* Sans dialogue box (floating right of sprite) */
+    /* Sans dialogue box */
     #sans-dialogue-box {
       position: absolute;
       top: 60px;
@@ -410,6 +410,10 @@
     { id: "BANDAGE", name: "Bandage", heal: 7 }
   ];
 
+  // prevent spamming actions
+  let lastActionTime = 0;
+  const ACTION_COOLDOWN = 1000; // 1 second
+
   // ========= DIALOGUE SYSTEM =========
   const BASE_CHAR_DELAY = 50;  // 0.05s
   const COMMA_DELAY = 150;     // 0.15s
@@ -429,12 +433,10 @@
   let dialogueAdvanceCallback = null;
   let dialogueLastTarget = null;
 
-  // persistent status line for idle state
   let currentPlayerStatusText = "";
-  let lastTextHadEndPause = false; // for punctuation at end
-  let playerIsStatus = false;      // B) status texts: typewriter, no Z advance
+  let lastTextHadEndPause = false;
+  let playerIsStatus = false;
 
-  // auto-advance timer for Sans dialogue (Option B)
   let sansAutoAdvanceTimer = null;
 
   function clearSansAutoAdvanceTimer() {
@@ -495,23 +497,19 @@
           sansTextStartTime = now;
         }
 
-        // only if last char is . ? !, apply punctuation pause
         const trimmed = fullText.trim();
         const last = trimmed.slice(-1);
         const hasEndPunct = (last === "." || last === "?" || last === "!");
         const punctDelay = hasEndPunct ? DOT_DELAY : 0;
-
         lastTextHadEndPause = hasEndPunct;
 
-        // call onComplete after punctDelay
         setTimeout(() => {
           if (onComplete) onComplete();
         }, punctDelay);
 
-        // set up auto-advance timer for Sans dialogue (Option B)
         if (target === "sans") {
-          const baseDelayForAuto = MIN_ADVANCE_DELAY + (hasEndPunct ? DOT_DELAY : 0);
-          const autoDelay = baseDelayForAuto + 1000; // extra 1s → total ~2s
+          const baseDelayForAuto = MIN_ADVANCE_DELAY + punctDelay;
+          const autoDelay = baseDelayForAuto + 1000; // extra 1s
           sansAutoAdvanceTimer = setTimeout(() => {
             if (waitingForDialogueAdvance && sansTextDone && phase !== "END") {
               doDialogueAdvance();
@@ -547,18 +545,15 @@
     }
     if (target === "sans" && !sansTextDone) {
       clearTypewriter("sans");
-      clearSansAutoAdvanceTimer();
       sansDialogueBox.textContent = sansTextFull;
       sansTextDone = true;
       sansTextStartTime = performance.now();
-      // When skipping, we still respect punctuation: but our auto-advance timer
-      // is already handled in typeText when length is reached,
-      // so we don't need to do anything extra here.
+      // we do NOT clear the auto-advance timer here,
+      // because typeText sets it when full length is reached
     }
   }
 
   function canAdvance(target) {
-    // status lines (playerIsStatus) should NEVER be advanced by Z
     if (target === "player" && playerIsStatus) return false;
 
     const now = performance.now();
@@ -631,6 +626,7 @@
   function hidePlayerDialogue() {
     clearTypewriter("player");
     dialogueBox.textContent = "";
+    // keep box available, just hide content if needed
     dialogueBox.style.display = "none";
     playerTextFull = "";
     playerTextDone = true;
@@ -712,7 +708,6 @@
     });
   }
 
-  // Deselect all top menu items (used when opening submenus)
   function clearMenuSelection() {
     menuElements.forEach(el => el.classList.remove("selected"));
   }
@@ -820,9 +815,8 @@
     updateDifficulty();
 
     hideSansDialogue();
-    hidePlayerDialogue(); // hide status during attacks
+    hidePlayerDialogue();
 
-    // pure fight route -> phase2C
     if (!phase2CActive && pureAttackTurns >= 6 && !phase2AActive && !phase2BQueued) {
       phase2CActive = true;
       showSansDialogue(
@@ -834,7 +828,6 @@
       return;
     }
 
-    // blue attack intro: 3s normal, then blue, floor after 1s
     if (!usedBlueIntro && turnCount === 1) {
       showSansDialogue(
         "i'll let ya have your turn first, kid.\n" +
@@ -854,7 +847,6 @@
                   setSoulColor("blue", true);
                   canMoveSoul = true;
                   setTimeout(() => {
-                    // BONE ZONE: first blue attack floor
                     blueAttackSequence(() => {
                       setSoulColor("red", false);
                       exitSoulMode();
@@ -877,7 +869,6 @@
       return;
     }
 
-    // phase 1 special
     if (!usedFinalAttackPhase1 && turnCount >= 5 && !phase2BQueued) {
       usedFinalAttackPhase1 = true;
       showSansDialogue(
@@ -909,7 +900,6 @@
       return;
     }
 
-    // normal phase 1 attacks
     enterSoulMode();
     canMoveSoul = true;
     const attacks = [
@@ -1298,7 +1288,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= BLUE ATTACK FLOOR =========
   function blueAttackSequence(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1330,7 +1319,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= SPECIAL ATTACK PHASE 1 =========
   function specialAttackPhase1(onEnd) {
     setSoulColor("red", false);
     const boxRect = soulBox.getBoundingClientRect();
@@ -1381,7 +1369,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= PHASE 2A TARGETING + BLASTERS =========
   function phase2ATargetingBonesAndXYBlasters(count, onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1447,7 +1434,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= SPIRAL GASTER FINAL =========
   function spiralGasterFinal(onEnd) {
     setSoulColor("blue", true);
     const boxRect = soulBox.getBoundingClientRect();
@@ -1500,7 +1486,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= PHASE 2C ATTACKS =========
   function phase2CBoneFlood(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1631,10 +1616,8 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= FIGHT BAR =========
   function startFightBar() {
     phase = "FIGHT_BAR";
-    // hide status text while in FIGHT bar
     hidePlayerDialogue();
     fightBarContainer.style.display = "flex";
     fightPointerPos = 0;
@@ -1719,7 +1702,6 @@
     requestAnimationFrame(fightBarLoop);
   }
 
-  // ========= PHASE 2A START =========
   function startPhase2A() {
     phase2AActive = true;
     phase2ATurns = 0;
@@ -1736,7 +1718,6 @@
     );
   }
 
-  // ========= SUB MENUS =========
   function openSubMenu(type, options) {
     currentSubType = type;
     currentSubOptions = options;
@@ -1752,10 +1733,7 @@
     });
     phase = "MENU_SUB";
 
-    // hide status text while in sub-menu
     hidePlayerDialogue();
-
-    // deselect main menu visually while submenu is open
     clearMenuSelection();
   }
 
@@ -1766,10 +1744,8 @@
     currentSubOptions = [];
     phase = "PLAYER_TURN";
 
-    // restore main menu selection when returning
     setMenuIndex(menuIndex);
 
-    // restore status text after returning from submenu
     if (currentPlayerStatusText) {
       dialogueBox.style.display = "block";
       restorePlayerStatusWithTypewriter();
@@ -1797,7 +1773,6 @@
     actCount++;
     hideSansDialogue();
     hidePlayerDialogue();
-    // ACT text should be normal (not status) so Z can advance if needed
     if (id === "CHECK") {
       dialogueBox.style.display = "block";
       showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, false);
@@ -1883,7 +1858,6 @@
     }
   }
 
-  // ========= PHASE 2B FINAL TEST =========
   function phase2BFinalTest(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1939,7 +1913,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ========= ENDING =========
   function endBattle(playerWon, spared = false, killedSans = false) {
     endScreen.style.display = "flex";
     if (!playerWon) {
@@ -1964,10 +1937,13 @@
     if (phase !== "PLAYER_TURN") return;
     if (sansDialogueBox.style.display === "block") return;
 
+    const now = performance.now();
+    if (now - lastActionTime < ACTION_COOLDOWN) return;
+    lastActionTime = now;
+
     const action = menuItems[menuIndex];
     hideSansDialogue();
 
-    // hide status text when entering any of the action flows
     if (action === "FIGHT") {
       hidePlayerDialogue();
       pureAttackTurns++;
@@ -1998,7 +1974,6 @@
     }
   }
 
-  // ========= INPUT =========
   document.addEventListener("keydown", (e) => {
     keys[e.key] = true;
     if (phase === "END") return;
@@ -2036,7 +2011,6 @@
     keys[e.key] = false;
   });
 
-  // ========= INIT =========
   function initIntro() {
     phase = "INTRO_SEQUENCE";
     startIntroSequence();
