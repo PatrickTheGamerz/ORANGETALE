@@ -212,16 +212,14 @@
       height: 100px;
       display: none;
       justify-content: center;
-      align-items: flex-start; /* keep top-aligned */
+      align-items: center;
       gap: 20px;
       font-size: 18px;
-      pointer-events: auto;
     }
     .sub-option {
       border: 2px solid white;
       padding: 6px 12px;
       cursor: pointer;
-      background: rgba(0,0,0,0.9);
     }
     .sub-option.selected {
       color: yellow;
@@ -369,270 +367,338 @@
   let phase2BQueued = false;
   let phase2CActive = false;
 
-  // soul movement
-  let soulX = 0;
-  let soulY = 0;
-  let soulSpeed = 3;
-  const baseSoulSpeed = 3;
-  let gravityEnabled = false;
-  let yVelocity = 0;
-  const gravity = 0.18;
-  let soulColor = "red";
 
-  // fight bar
-  let fightBarActive = false;
-  let fightPointerPos = 0;
-  let fightPointerDir = 1;
 
-  // dialogue / typewriter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const dialogueBox = document.getElementById("dialogue-box");
   const sansDialogueBox = document.getElementById("sans-dialogue-box");
-  let playerTypeInterval = null;
-  let sansTypeInterval = null;
-  let waitingForDialogueAdvance = false;
-  let playerTextDone = true;
-  let sansTextDone = true;
-  let currentPlayerCallback = null;
-  let currentSansCallback = null;
-
-  // timing control
-  let playerEarliestSkipTime = 0;
-  let playerAutoAdvanceTime = Infinity;
-  let sansEarliestSkipTime = 0;
-  let sansAutoAdvanceTime = Infinity;
-
-  // submenu state
-  const subMenu = document.getElementById("sub-menu");
-  let currentSubType = null;
-  let currentSubOptions = [];
-  let subIndex = 0;
-
-  // hp / ui
+  const soulBox = document.getElementById("soul-box");
+  const soul = document.getElementById("soul");
   const hpFill = document.getElementById("hp-fill");
   const hpText = document.getElementById("hp-text");
   const enemyHPBar = document.getElementById("enemy-hp-bar");
   const enemyHPText = document.getElementById("enemy-hp-text");
+  const subMenu = document.getElementById("sub-menu");
   const fightBarContainer = document.getElementById("fight-bar-container");
   const fightBar = document.getElementById("fight-bar");
-  const fightZone = document.getElementById("fight-zone");
   const fightPointer = document.getElementById("fight-pointer");
+  const fightZone = document.getElementById("fight-zone");
   const damageText = document.getElementById("damage-text");
-  const soulBox = document.getElementById("soul-box");
-  const soul = document.getElementById("soul");
   const endScreen = document.getElementById("end-screen");
   const endText = document.getElementById("end-text");
   const uiBar = document.getElementById("ui-bar");
 
+  // ========= SOUL STATE =========
+  let soulX = 0;
+  let soulY = 0;
+  let soulColor = "red";
+  let gravityEnabled = false;
+  let gravity = 0.12;
+  let yVelocity = 0;
+  let baseSoulSpeed = 3.5;
+  let soulSpeed = baseSoulSpeed;
+
   const keys = {};
+  let currentSubType = null;
+  let currentSubOptions = [];
+  let subIndex = 0;
+
+  let fightPointerPos = 0;
+  let fightPointerDir = 1;
+  let fightBarActive = false;
 
   let items = [
-    { id: "MONSTER_CANDY", name: "Monster Candy", heal: 5 },
-    { id: "SPAGHETTI", name: "Spaghetti", heal: 10 }
+    { id: "PIE", name: "Butterscotch Pie", heal: 20 },
+    { id: "CREAM", name: "Nice Cream", heal: 12 },
+    { id: "BANDAGE", name: "Bandage", heal: 7 }
   ];
 
-  // ========= DIALOGUE (TYPEWRITER + TIMING) =========
-  function resetPlayerDialogueState() {
-    waitingForDialogueAdvance = false;
-    playerTextDone = false;
-    currentPlayerCallback = null;
-    playerEarliestSkipTime = 0;
-    playerAutoAdvanceTime = Infinity;
-  }
+  // ========= DIALOGUE SYSTEM =========
+  const BASE_CHAR_DELAY = 50;  // 0.05s
+  const COMMA_DELAY = 150;     // 0.15s
+  const DOT_DELAY = 1500;      // 1.5s
+  const MIN_ADVANCE_DELAY = 1000;
 
-  function resetSansDialogueState() {
-    waitingForDialogueAdvance = false;
-    sansTextDone = false;
-    currentSansCallback = null;
-    sansEarliestSkipTime = 0;
-    sansAutoAdvanceTime = Infinity;
-  }
+  let playerTyping = null;
+  let sansTyping = null;
+  let playerTextFull = "";
+  let sansTextFull = "";
+  let playerTextDone = true;
+  let sansTextDone = true;
+  let playerTextStartTime = 0;
+  let sansTextStartTime = 0;
 
-  function isTerminalLine(text) {
-    const trimmed = text.trim();
-    if (!trimmed.length) return false;
-    const last = trimmed[trimmed.length - 1];
-    return last === "." || last === "?";
-  }
+  let waitingForDialogueAdvance = false;
+  let dialogueAdvanceCallback = null;
+  let dialogueLastTarget = null;
 
-  function setupTimingForPlayer(text, callback, instant) {
-    const now = performance.now();
-    if (instant) {
-      playerEarliestSkipTime = now;
-      playerAutoAdvanceTime = Infinity;
-    } else if (isTerminalLine(text)) {
-      playerEarliestSkipTime = now + 500;
-      playerAutoAdvanceTime = now + 1500;
-    } else {
-      playerEarliestSkipTime = now + 500;
-      playerAutoAdvanceTime = Infinity;
+  // persistent status line for idle state
+  let currentPlayerStatusText = "";
+  let lastTextHadEndPause = false; // dot/question at end
+
+  function clearTypewriter(target) {
+    if (target === "player" && playerTyping) {
+      clearTimeout(playerTyping);
+      playerTyping = null;
     }
-    currentPlayerCallback = callback || null;
-  }
-
-  function setupTimingForSans(text, callback, instant) {
-    const now = performance.now();
-    if (instant) {
-      sansEarliestSkipTime = now;
-      sansAutoAdvanceTime = Infinity;
-    } else if (isTerminalLine(text)) {
-      sansEarliestSkipTime = now + 500;
-      sansAutoAdvanceTime = now + 1500;
-    } else {
-      sansEarliestSkipTime = now + 500;
-      sansAutoAdvanceTime = Infinity;
+    if (target === "sans" && sansTyping) {
+      clearTimeout(sansTyping);
+      sansTyping = null;
     }
-    currentSansCallback = callback || null;
   }
 
-  function showPlayerDialogue(text, callback = null, instant = false, keepBox = true) {
-    if (!keepBox) {
-      dialogueBox.style.display = "block";
+  function charDelay(ch) {
+    if (ch === "." || ch === "?") return DOT_DELAY;
+    if (ch === ",") return COMMA_DELAY;
+    return BASE_CHAR_DELAY;
+  }
+
+  function typeText(element, fullText, target, onComplete) {
+    clearTypewriter(target);
+    element.textContent = "";
+    let i = 0;
+
+    if (target === "player") {
+      playerTextFull = fullText;
+      playerTextDone = false;
     } else {
-      dialogueBox.style.display = "block";
+      sansTextFull = fullText;
+      sansTextDone = false;
     }
 
-    if (playerTypeInterval) clearInterval(playerTypeInterval);
-    dialogueBox.textContent = "";
+    function step() {
+      if (target === "player" && playerTyping === null && i > 0) return;
+      if (target === "sans" && sansTyping === null && i > 0) return;
 
-    resetPlayerDialogueState();
-    setupTimingForPlayer(text, callback, instant);
+      if (i > fullText.length) return;
 
-    if (instant) {
-      dialogueBox.textContent = text;
+      const current = fullText.slice(0, i);
+      element.textContent = current;
+
+      if (i === fullText.length) {
+        if (target === "player") {
+          playerTyping = null;
+          playerTextDone = true;
+          playerTextStartTime = performance.now();
+        } else {
+          sansTyping = null;
+          sansTextDone = true;
+          sansTextStartTime = performance.now();
+        }
+
+        // if last char is . or ?, pause DOT_DELAY before calling onComplete
+        const last = fullText.trim().slice(-1);
+        if (last === "." || last === "?") {
+          lastTextHadEndPause = true;
+          setTimeout(() => {
+            if (onComplete) onComplete();
+          }, DOT_DELAY);
+        } else {
+          lastTextHadEndPause = false;
+          if (onComplete) onComplete();
+        }
+        return;
+      }
+
+      const prevChar = fullText.charAt(i - 1) || "";
+      const delay = charDelay(prevChar);
+
+      i++;
+      const id = setTimeout(step, delay);
+      if (target === "player") playerTyping = id;
+      else sansTyping = id;
+    }
+
+    i = 1;
+    const firstDelay = charDelay(fullText.charAt(0) || "");
+    const id = setTimeout(step, firstDelay);
+    if (target === "player") playerTyping = id;
+    else sansTyping = id;
+  }
+
+  function finishTextInstant(target) {
+    if (target === "player" && !playerTextDone) {
+      clearTypewriter("player");
+      dialogueBox.textContent = playerTextFull;
       playerTextDone = true;
-      waitingForDialogueAdvance = true;
-      return;
+      playerTextStartTime = performance.now();
     }
-
-    let idx = 0;
-    const chars = text.split("");
-    playerTypeInterval = setInterval(() => {
-      if (idx >= chars.length) {
-        clearInterval(playerTypeInterval);
-        playerTextDone = true;
-        waitingForDialogueAdvance = true;
-      } else {
-        dialogueBox.textContent += chars[idx];
-        idx++;
-      }
-    }, 20);
+    if (target === "sans" && !sansTextDone) {
+      clearTypewriter("sans");
+      sansDialogueBox.textContent = sansTextFull;
+      sansTextDone = true;
+      sansTextStartTime = performance.now();
+    }
   }
 
-  function showSansDialogue(text, callback = null, instant = false) {
-    sansDialogueBox.style.display = "block";
-    if (sansTypeInterval) clearInterval(sansTypeInterval);
-    sansDialogueBox.textContent = "";
+  function canAdvance(target) {
+    const now = performance.now();
+    if (target === "player" && playerTextDone) {
+      return (now - playerTextStartTime) >= MIN_ADVANCE_DELAY;
+    }
+    if (target === "sans" && sansTextDone) {
+      return (now - sansTextStartTime) >= MIN_ADVANCE_DELAY;
+    }
+    return false;
+  }
 
-    resetSansDialogueState();
-    setupTimingForSans(text, callback, instant);
+  function beginDialogue(text, target, callback, allowAdvance) {
+    waitingForDialogueAdvance = allowAdvance;
+    dialogueAdvanceCallback = callback;
+    dialogueLastTarget = target;
 
-    if (instant) {
-      sansDialogueBox.textContent = text;
-      sansTextDone = true;
-      waitingForDialogueAdvance = true;
+    if (target === "player") {
+      dialogueBox.style.display = "block";
+      typeText(dialogueBox, text, "player", () => {
+        if (!allowAdvance && callback) callback();
+      });
+    } else {
+      sansDialogueBox.style.display = "block";
+      typeText(sansDialogueBox, text, "sans", () => {
+        if (!allowAdvance && callback) {
+          sansDialogueBox.style.display = "none";
+          callback();
+        }
+      });
+    }
+  }
+
+  function doDialogueAdvance() {
+    if (!waitingForDialogueAdvance) return;
+    waitingForDialogueAdvance = false;
+    const cb = dialogueAdvanceCallback;
+    dialogueAdvanceCallback = null;
+    if (cb) cb();
+  }
+
+  function handleDialogueZ() {
+    if (dialogueLastTarget === "sans" && !sansTextDone) {
+      finishTextInstant("sans");
       return;
     }
+    if (dialogueLastTarget === "player" && !playerTextDone) {
+      finishTextInstant("player");
+      return;
+    }
+    if (!canAdvance(dialogueLastTarget)) return;
+    doDialogueAdvance();
+  }
 
-    let idx = 0;
-    const chars = text.split("");
-    sansTypeInterval = setInterval(() => {
-      if (idx >= chars.length) {
-        clearInterval(sansTypeInterval);
-        sansTextDone = true;
-        waitingForDialogueAdvance = true;
-      } else {
-        sansDialogueBox.textContent += chars[idx];
-        idx++;
-      }
-    }, 20);
+  function showPlayerDialogue(text, callback, allowAdvance, isStatus) {
+    if (isStatus) currentPlayerStatusText = text;
+    beginDialogue(text, "player", callback || null, !!allowAdvance);
+  }
+
+  function showSansDialogue(text, callback, allowAdvance) {
+    beginDialogue(text, "sans", () => {
+      sansDialogueBox.style.display = "none";
+      if (callback) callback();
+    }, !!allowAdvance);
   }
 
   function hidePlayerDialogue() {
-    if (playerTypeInterval) clearInterval(playerTypeInterval);
-    dialogueBox.style.display = "none";
+    clearTypewriter("player");
     dialogueBox.textContent = "";
+    dialogueBox.style.display = "none";
+    playerTextFull = "";
     playerTextDone = true;
   }
 
   function hideSansDialogue() {
-    if (sansTypeInterval) clearInterval(sansTypeInterval);
-    sansDialogueBox.style.display = "none";
+    clearTypewriter("sans");
     sansDialogueBox.textContent = "";
+    sansDialogueBox.style.display = "none";
+    sansTextFull = "";
     sansTextDone = true;
   }
 
   function restorePlayerStatusWithTypewriter() {
-    showPlayerDialogue("* sans is waiting for your move.", null, false, true);
+    if (!currentPlayerStatusText) return;
+    showPlayerDialogue(currentPlayerStatusText, null, false, true);
   }
 
-  function handleDialogueZ() {
-    const now = performance.now();
+  // ========= INTRO SEQUENCE =========
+  const introLines = [
+    "heya.",
+    "so.\nwe're really doin' this, huh?",
+    "paps is busy messin' with his \"special attack\".",
+    "so i figured i'd give you a little test of my own.",
+    "nothing too crazy.\njust enough to see what you're made of."
+  ];
+  let introIndex = 0;
 
-    // auto-advance if time reached
-    if (!playerTextDone && dialogueBox.style.display === "block") {
-      if (now >= playerEarliestSkipTime) {
-        // skip typing and show full text instantly
-        if (playerTypeInterval) clearInterval(playerTypeInterval);
-        // nothing stored, so no full text reconstruction available,
-        // but in this implementation we only skip once nearly done.
-        // We'll just let it complete normally or keep as is.
-      }
+  function playNextIntroLine() {
+    if (introIndex >= introLines.length) {
+      uiBar.style.opacity = "1";
+      uiBar.style.pointerEvents = "auto";
+      phase = "PLAYER_TURN";
+      dialogueBox.style.display = "block";
+      showPlayerDialogue("* sans looks relaxed.", null, false, true);
       return;
     }
-    if (!sansTextDone && sansDialogueBox.style.display === "block") {
-      if (now >= sansEarliestSkipTime) {
-        if (sansTypeInterval) clearInterval(sansTypeInterval);
-      }
-      return;
-    }
-
-    // decide whose dialogue to advance
-    if (sansDialogueBox.style.display === "block" && sansTextDone) {
-      if (now < sansEarliestSkipTime) return;
-      hideSansDialogue();
-      if (currentSansCallback) {
-        const cb = currentSansCallback;
-        currentSansCallback = null;
-        cb();
-      }
-      waitingForDialogueAdvance = false;
-    } else if (dialogueBox.style.display === "block" && playerTextDone) {
-      if (now < playerEarliestSkipTime) return;
-      hidePlayerDialogue();
-      if (currentPlayerCallback) {
-        const cb = currentPlayerCallback;
-        currentPlayerCallback = null;
-        cb();
-      }
-      waitingForDialogueAdvance = false;
-    }
+    const text = introLines[introIndex];
+    introIndex++;
+    showSansDialogue(text, () => {
+      playNextIntroLine();
+    }, true);
   }
 
-  function dialogueAutoAdvanceLoop(t) {
-    const now = performance.now();
-
-    if (sansDialogueBox.style.display === "block" && sansTextDone && now >= sansAutoAdvanceTime) {
-      hideSansDialogue();
-      if (currentSansCallback) {
-        const cb = currentSansCallback;
-        currentSansCallback = null;
-        cb();
-      }
-      waitingForDialogueAdvance = false;
-    }
-
-    if (dialogueBox.style.display === "block" && playerTextDone && now >= playerAutoAdvanceTime) {
-      hidePlayerDialogue();
-      if (currentPlayerCallback) {
-        const cb = currentPlayerCallback;
-        currentPlayerCallback = null;
-        cb();
-      }
-      waitingForDialogueAdvance = false;
-    }
-
-    requestAnimationFrame(dialogueAutoAdvanceLoop);
+  function startIntroSequence() {
+    uiBar.style.opacity = "0";
+    uiBar.style.pointerEvents = "none";
+    introIndex = 0;
+    hidePlayerDialogue();
+    hideSansDialogue();
+    playNextIntroLine();
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   function showDialogue(text) {
     showPlayerDialogue(text, null, false, true);
@@ -916,6 +982,35 @@
     });
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // ========= PHASE 2C ATTACKS =========
   function startSansAttackPhase2C() {
     phase = "PHASE2C_ATTACK";
@@ -1194,6 +1289,31 @@
     }
     requestAnimationFrame(loop);
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   function pacifistTopBottomAlternating(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
@@ -1483,6 +1603,32 @@
     requestAnimationFrame(loop);
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   function phase2CSlidersCross(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1692,9 +1838,7 @@
       subMenu.appendChild(span);
     });
     phase = "MENU_SUB";
-
-    // keep dialogue visible; status box stays where it is
-    dialogueBox.style.display = "block";
+    hidePlayerDialogue();
   }
 
   function closeSubMenu() {
@@ -1725,7 +1869,7 @@
   function handleActOption(id) {
     actCount++;
     hideSansDialogue();
-    // keep dialogue box visible
+    hidePlayerDialogue();
     if (id === "CHECK") {
       showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, true);
     } else if (id === "JOKE") {
@@ -1748,10 +1892,34 @@
     setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   function handleItemOption(id) {
     const item = items.find(i => i.id === id);
     hideSansDialogue();
-    // keep dialogue box visible
+    hidePlayerDialogue();
     if (!item) {
       showPlayerDialogue("* (you fumble with your pockets.)", null, false, false);
     } else {
@@ -1766,7 +1934,7 @@
 
   function handleMercyOption(id) {
     hideSansDialogue();
-    // keep dialogue box visible
+    hidePlayerDialogue();
     if (id === "SPARE") {
       if (!canSpare || phase2AActive || phase2CActive) {
         showPlayerDialogue("* you reach for MERCY.", null, false, false);
@@ -1904,6 +2072,7 @@
       ]);
     } else if (action === "ITEM") {
       if (items.length === 0) {
+        hidePlayerDialogue();
         showPlayerDialogue("* (you don’t have any items.)", null, false, false);
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
       } else {
@@ -1955,28 +2124,18 @@
     keys[e.key] = false;
   });
 
-  // ========= INTRO =========
-  function startIntroSequence() {
-    uiBar.style.opacity = 1;
-    uiBar.style.pointerEvents = "auto";
-    phase = "PLAYER_TURN";
-    dialogueBox.style.display = "block";
-    showPlayerDialogue("* sans is waiting for your move.", null, false, true);
-  }
-
+  // ========= INIT =========
   function initIntro() {
     phase = "INTRO_SEQUENCE";
     startIntroSequence();
   }
 
-  // ========= INIT =========
   updatePlayerHP();
   updateEnemyHP();
   setMenuIndex(0);
   initIntro();
   requestAnimationFrame(soulMovementLoop);
   requestAnimationFrame(fightBarLoop);
-  requestAnimationFrame(dialogueAutoAdvanceLoop);
 </script>
 </body>
 </html>
