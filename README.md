@@ -413,8 +413,8 @@
   // ========= DIALOGUE SYSTEM =========
   const BASE_CHAR_DELAY = 50;  // 0.05s
   const COMMA_DELAY = 150;     // 0.15s
-  const DOT_DELAY = 1000;      // 1.0s final pause
-  const MIN_ADVANCE_DELAY = 1000;
+  const DOT_DELAY = 1000;      // 1.0s punctuation pause
+  const MIN_ADVANCE_DELAY = 1000; // 1.0s before Z advance / auto-advance
 
   let playerTyping = null;
   let sansTyping = null;
@@ -431,8 +431,18 @@
 
   // persistent status line for idle state
   let currentPlayerStatusText = "";
-  let lastTextHadEndPause = false; // dot/question/exclamation at end
+  let lastTextHadEndPause = false; // for punctuation at end
   let playerIsStatus = false;      // B) status texts: typewriter, no Z advance
+
+  // auto-advance timer for Sans dialogue (Option B)
+  let sansAutoAdvanceTimer = null;
+
+  function clearSansAutoAdvanceTimer() {
+    if (sansAutoAdvanceTimer != null) {
+      clearTimeout(sansAutoAdvanceTimer);
+      sansAutoAdvanceTimer = null;
+    }
+  }
 
   function clearTypewriter(target) {
     if (target === "player" && playerTyping) {
@@ -452,6 +462,7 @@
 
   function typeText(element, fullText, target, onComplete) {
     clearTypewriter(target);
+    if (target === "sans") clearSansAutoAdvanceTimer();
     element.textContent = "";
     let i = 0;
 
@@ -473,28 +484,41 @@
       element.textContent = current;
 
       if (i === fullText.length) {
+        const now = performance.now();
         if (target === "player") {
           playerTyping = null;
           playerTextDone = true;
-          playerTextStartTime = performance.now();
+          playerTextStartTime = now;
         } else {
           sansTyping = null;
           sansTextDone = true;
-          sansTextStartTime = performance.now();
+          sansTextStartTime = now;
         }
 
-        // only if last char is . ? !, apply final pause
+        // only if last char is . ? !, apply punctuation pause
         const trimmed = fullText.trim();
         const last = trimmed.slice(-1);
-        if (last === "." || last === "?" || last === "!") {
-          lastTextHadEndPause = true;
-          setTimeout(() => {
-            if (onComplete) onComplete();
-          }, DOT_DELAY);
-        } else {
-          lastTextHadEndPause = false;
+        const hasEndPunct = (last === "." || last === "?" || last === "!");
+        const punctDelay = hasEndPunct ? DOT_DELAY : 0;
+
+        lastTextHadEndPause = hasEndPunct;
+
+        // call onComplete after punctDelay
+        setTimeout(() => {
           if (onComplete) onComplete();
+        }, punctDelay);
+
+        // set up auto-advance timer for Sans dialogue (Option B)
+        if (target === "sans") {
+          const baseDelayForAuto = MIN_ADVANCE_DELAY + (hasEndPunct ? DOT_DELAY : 0);
+          const autoDelay = baseDelayForAuto + 1000; // extra 1s → total ~2s
+          sansAutoAdvanceTimer = setTimeout(() => {
+            if (waitingForDialogueAdvance && sansTextDone && phase !== "END") {
+              doDialogueAdvance();
+            }
+          }, autoDelay);
         }
+
         return;
       }
 
@@ -523,9 +547,13 @@
     }
     if (target === "sans" && !sansTextDone) {
       clearTypewriter("sans");
+      clearSansAutoAdvanceTimer();
       sansDialogueBox.textContent = sansTextFull;
       sansTextDone = true;
       sansTextStartTime = performance.now();
+      // When skipping, we still respect punctuation: but our auto-advance timer
+      // is already handled in typeText when length is reached,
+      // so we don't need to do anything extra here.
     }
   }
 
@@ -552,24 +580,24 @@
       playerIsStatus = !!isStatus;
       dialogueBox.style.display = "block";
       typeText(dialogueBox, text, "player", () => {
-        // for status messages, we still call callback if provided,
-        // but canAdvance() will always return false so Z won't skip them
         if (!allowAdvance && callback) callback();
       });
     } else {
+      clearSansAutoAdvanceTimer();
+      sansDialogueBox.style.display = "block";
       typeText(sansDialogueBox, text, "sans", () => {
         if (!allowAdvance && callback) {
           sansDialogueBox.style.display = "none";
           callback();
         }
       });
-      sansDialogueBox.style.display = "block";
     }
   }
 
   function doDialogueAdvance() {
     if (!waitingForDialogueAdvance) return;
     waitingForDialogueAdvance = false;
+    clearSansAutoAdvanceTimer();
     const cb = dialogueAdvanceCallback;
     dialogueAdvanceCallback = null;
     if (cb) cb();
@@ -611,6 +639,7 @@
 
   function hideSansDialogue() {
     clearTypewriter("sans");
+    clearSansAutoAdvanceTimer();
     sansDialogueBox.textContent = "";
     sansDialogueBox.style.display = "none";
     sansTextFull = "";
@@ -681,6 +710,11 @@
     menuElements.forEach((el, i) => {
       el.classList.toggle("selected", i === menuIndex);
     });
+  }
+
+  // Deselect all top menu items (used when opening submenus)
+  function clearMenuSelection() {
+    menuElements.forEach(el => el.classList.remove("selected"));
   }
 
   function enterSoulMode() {
@@ -1600,6 +1634,8 @@
   // ========= FIGHT BAR =========
   function startFightBar() {
     phase = "FIGHT_BAR";
+    // hide status text while in FIGHT bar
+    hidePlayerDialogue();
     fightBarContainer.style.display = "flex";
     fightPointerPos = 0;
     fightPointerDir = 1;
@@ -1715,7 +1751,12 @@
       subMenu.appendChild(span);
     });
     phase = "MENU_SUB";
-    // keep the player box visible while menu is open, don't hide it
+
+    // hide status text while in sub-menu
+    hidePlayerDialogue();
+
+    // deselect main menu visually while submenu is open
+    clearMenuSelection();
   }
 
   function closeSubMenu() {
@@ -1724,8 +1765,17 @@
     currentSubType = null;
     currentSubOptions = [];
     phase = "PLAYER_TURN";
-    dialogueBox.style.display = "block";
-    restorePlayerStatusWithTypewriter();
+
+    // restore main menu selection when returning
+    setMenuIndex(menuIndex);
+
+    // restore status text after returning from submenu
+    if (currentPlayerStatusText) {
+      dialogueBox.style.display = "block";
+      restorePlayerStatusWithTypewriter();
+    } else {
+      hidePlayerDialogue();
+    }
   }
 
   function setSubIndex(index) {
@@ -1750,9 +1800,7 @@
     // ACT text should be normal (not status) so Z can advance if needed
     if (id === "CHECK") {
       dialogueBox.style.display = "block";
-      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", () => {
-        // after CHECK text fully finishes, no extra behavior needed
-      }, true, false);
+      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, false);
     } else if (id === "JOKE") {
       dialogueBox.style.display = "block";
       showPlayerDialogue("* you tell sans a joke.", () => {
@@ -1919,6 +1967,7 @@
     const action = menuItems[menuIndex];
     hideSansDialogue();
 
+    // hide status text when entering any of the action flows
     if (action === "FIGHT") {
       hidePlayerDialogue();
       pureAttackTurns++;
