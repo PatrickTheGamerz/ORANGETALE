@@ -367,39 +367,6 @@
   let phase2BQueued = false;
   let phase2CActive = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   const dialogueBox = document.getElementById("dialogue-box");
   const sansDialogueBox = document.getElementById("sans-dialogue-box");
   const soulBox = document.getElementById("soul-box");
@@ -446,7 +413,7 @@
   // ========= DIALOGUE SYSTEM =========
   const BASE_CHAR_DELAY = 50;  // 0.05s
   const COMMA_DELAY = 150;     // 0.15s
-  const DOT_DELAY = 1500;      // 1.5s
+  const DOT_DELAY = 1000;      // 1.0s final pause
   const MIN_ADVANCE_DELAY = 1000;
 
   let playerTyping = null;
@@ -464,7 +431,8 @@
 
   // persistent status line for idle state
   let currentPlayerStatusText = "";
-  let lastTextHadEndPause = false; // dot/question at end
+  let lastTextHadEndPause = false; // dot/question/exclamation at end
+  let playerIsStatus = false;      // B) status texts: typewriter, no Z advance
 
   function clearTypewriter(target) {
     if (target === "player" && playerTyping) {
@@ -478,7 +446,6 @@
   }
 
   function charDelay(ch) {
-    if (ch === "." || ch === "?") return DOT_DELAY;
     if (ch === ",") return COMMA_DELAY;
     return BASE_CHAR_DELAY;
   }
@@ -516,9 +483,10 @@
           sansTextStartTime = performance.now();
         }
 
-        // if last char is . or ?, pause DOT_DELAY before calling onComplete
-        const last = fullText.trim().slice(-1);
-        if (last === "." || last === "?") {
+        // only if last char is . ? !, apply final pause
+        const trimmed = fullText.trim();
+        const last = trimmed.slice(-1);
+        if (last === "." || last === "?" || last === "!") {
           lastTextHadEndPause = true;
           setTimeout(() => {
             if (onComplete) onComplete();
@@ -562,6 +530,9 @@
   }
 
   function canAdvance(target) {
+    // status lines (playerIsStatus) should NEVER be advanced by Z
+    if (target === "player" && playerIsStatus) return false;
+
     const now = performance.now();
     if (target === "player" && playerTextDone) {
       return (now - playerTextStartTime) >= MIN_ADVANCE_DELAY;
@@ -572,24 +543,27 @@
     return false;
   }
 
-  function beginDialogue(text, target, callback, allowAdvance) {
+  function beginDialogue(text, target, callback, allowAdvance, isStatus) {
     waitingForDialogueAdvance = allowAdvance;
     dialogueAdvanceCallback = callback;
     dialogueLastTarget = target;
 
     if (target === "player") {
+      playerIsStatus = !!isStatus;
       dialogueBox.style.display = "block";
       typeText(dialogueBox, text, "player", () => {
+        // for status messages, we still call callback if provided,
+        // but canAdvance() will always return false so Z won't skip them
         if (!allowAdvance && callback) callback();
       });
     } else {
-      sansDialogueBox.style.display = "block";
       typeText(sansDialogueBox, text, "sans", () => {
         if (!allowAdvance && callback) {
           sansDialogueBox.style.display = "none";
           callback();
         }
       });
+      sansDialogueBox.style.display = "block";
     }
   }
 
@@ -616,14 +590,14 @@
 
   function showPlayerDialogue(text, callback, allowAdvance, isStatus) {
     if (isStatus) currentPlayerStatusText = text;
-    beginDialogue(text, "player", callback || null, !!allowAdvance);
+    beginDialogue(text, "player", callback || null, !!allowAdvance, !!isStatus);
   }
 
   function showSansDialogue(text, callback, allowAdvance) {
     beginDialogue(text, "sans", () => {
       sansDialogueBox.style.display = "none";
       if (callback) callback();
-    }, !!allowAdvance);
+    }, !!allowAdvance, false);
   }
 
   function hidePlayerDialogue() {
@@ -632,6 +606,7 @@
     dialogueBox.style.display = "none";
     playerTextFull = "";
     playerTextDone = true;
+    playerIsStatus = false;
   }
 
   function hideSansDialogue() {
@@ -681,24 +656,6 @@
     hideSansDialogue();
     playNextIntroLine();
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   function showDialogue(text) {
     showPlayerDialogue(text, null, false, true);
@@ -982,35 +939,6 @@
     });
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // ========= PHASE 2C ATTACKS =========
   function startSansAttackPhase2C() {
     phase = "PHASE2C_ATTACK";
@@ -1289,31 +1217,6 @@
     }
     requestAnimationFrame(loop);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   function pacifistTopBottomAlternating(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
@@ -1603,32 +1506,6 @@
     requestAnimationFrame(loop);
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   function phase2CSlidersCross(onEnd) {
     const boxRect = soulBox.getBoundingClientRect();
     const width = boxRect.width;
@@ -1838,7 +1715,7 @@
       subMenu.appendChild(span);
     });
     phase = "MENU_SUB";
-    hidePlayerDialogue();
+    // keep the player box visible while menu is open, don't hide it
   }
 
   function closeSubMenu() {
@@ -1870,62 +1747,48 @@
     actCount++;
     hideSansDialogue();
     hidePlayerDialogue();
+    // ACT text should be normal (not status) so Z can advance if needed
     if (id === "CHECK") {
-      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", null, false, true);
+      dialogueBox.style.display = "block";
+      showPlayerDialogue("* sans - atk 1 def 1.\n* the second skeleton brother stands firm.", () => {
+        // after CHECK text fully finishes, no extra behavior needed
+      }, true, false);
     } else if (id === "JOKE") {
-      showPlayerDialogue("* you tell sans a joke.", null, false, false);
-      setTimeout(() => {
+      dialogueBox.style.display = "block";
+      showPlayerDialogue("* you tell sans a joke.", () => {
         showSansDialogue("heh.\nnot bad, kid.", null, true);
-      }, 900);
+      }, true, false);
     } else if (id === "FLIRT") {
-      showPlayerDialogue("* you try to flirt.", null, false, false);
-      setTimeout(() => {
+      dialogueBox.style.display = "block";
+      showPlayerDialogue("* you try to flirt.", () => {
         showSansDialogue("you know i'm not the tall one, right?", null, true);
-      }, 900);
+      }, true, false);
     } else if (id === "TALK") {
-      showPlayerDialogue("* you talk about paps.", null, false, false);
-      setTimeout(() => {
+      dialogueBox.style.display = "block";
+      showPlayerDialogue("* you talk about paps.", () => {
         showSansDialogue("yeah.\nhe's really lookin' forward to you.", null, true);
-      }, 900);
+      }, true, false);
     }
     closeSubMenu();
     setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   function handleItemOption(id) {
     const item = items.find(i => i.id === id);
     hideSansDialogue();
     hidePlayerDialogue();
+    dialogueBox.style.display = "block";
     if (!item) {
       showPlayerDialogue("* (you fumble with your pockets.)", null, false, false);
     } else {
       playerHP = Math.min(playerMaxHP, playerHP + item.heal);
       updatePlayerHP();
-      showPlayerDialogue("* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.", null, false, false);
+      showPlayerDialogue(
+        "* you eat the " + item.name.toLowerCase() + ".\n* you recovered " + item.heal + " hp.",
+        null,
+        false,
+        false
+      );
       items = items.filter(i => i.id !== id);
     }
     closeSubMenu();
@@ -1935,26 +1798,25 @@
   function handleMercyOption(id) {
     hideSansDialogue();
     hidePlayerDialogue();
+    dialogueBox.style.display = "block";
     if (id === "SPARE") {
       if (!canSpare || phase2AActive || phase2CActive) {
-        showPlayerDialogue("* you reach for MERCY.", null, false, false);
-        setTimeout(() => {
+        showPlayerDialogue("* you reach for MERCY.", () => {
           showSansDialogue("sorry, pal.\nno mercy 'till you prove yourself.", null, true);
-        }, 900);
+        }, true, false);
         closeSubMenu();
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1600);
         return;
       }
 
-      showPlayerDialogue("* you lower your hands.", null, false, false);
-      setTimeout(() => {
+      showPlayerDialogue("* you lower your hands.", () => {
         showSansDialogue(
           "heh.\nnot bad.\n" +
           "how 'bout one last test,\nthen we both move on?",
           null,
           true
         );
-      }, 900);
+      }, true, false);
       phase2BQueued = true;
       closeSubMenu();
       setTimeout(() => {
@@ -2073,6 +1935,7 @@
     } else if (action === "ITEM") {
       if (items.length === 0) {
         hidePlayerDialogue();
+        dialogueBox.style.display = "block";
         showPlayerDialogue("* (you don’t have any items.)", null, false, false);
         setTimeout(() => { if (playerHP > 0) startSansAttack(); }, 1500);
       } else {
