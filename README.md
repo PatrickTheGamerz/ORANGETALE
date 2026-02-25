@@ -2,98 +2,106 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UTD: ABSOLUTE CORRUPTION</title>
+    <title>UTD: MIMICRY OF THE FALLEN</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        :root { --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --purple: #d946ef; --corrupt: #4ade80; }
+        :root { --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --purple: #d946ef; --green: #22c55e; --blue: #3b82f6; }
         
         body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
         
-        #layout { display: grid; grid-template-columns: 850px 320px; grid-template-rows: 70px 450px 240px; gap: 10px; padding: 10px; border: 4px double white; position: relative; }
+        #layout { display: grid; grid-template-columns: 850px 320px; grid-template-rows: 70px 450px 260px; gap: 10px; padding: 10px; border: 4px double white; position: relative; }
         
         header { grid-column: 1 / 3; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid #fff; }
-        canvas { grid-column: 1; grid-row: 2; background: #050505; border: 1px solid #222; }
+        canvas { grid-column: 1; grid-row: 2; background: #050505; border: 1px solid #333; cursor: crosshair; }
         
-        #sidebar { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #0a0a0a; position: relative; }
-        .tower-card { border: 2px solid white; padding: 10px; text-align: center; cursor: pointer; font-size: 0.8rem; transition: 0.1s; }
-        .tower-card.active { border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
+        #sidebar { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #0a0a0a; }
+        .tower-card { border: 2px solid white; padding: 10px; text-align: center; cursor: pointer; font-size: 0.8rem; }
+        .tower-card.active { border-color: var(--gold); background: #1a1a1a; }
 
-        #dashboard { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; background: #000; overflow: hidden; }
+        #dashboard { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; background: #000; }
         
-        /* CORRUPTION UI */
-        #frisk-core { width: 440px; border-right: 2px solid white; padding-right: 15px; position: relative; }
-        .stat-line { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px; }
-        .meter-bg { width: 100%; height: 6px; background: #222; border: 1px solid #444; margin-bottom: 5px; }
-        .meter-fill { height: 100%; transition: width 0.4s ease-out; }
+        /* TRINITY & MIMICRY UI */
+        #soul-nexus { width: 450px; border-right: 2px solid white; padding-right: 15px; }
+        .bar-container { width: 100%; height: 8px; background: #111; border: 1px solid #444; margin: 4px 0; overflow: hidden; }
+        .bar-fill { height: 100%; transition: width 0.5s; }
 
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; }
-        .cmd-btn { background: #000; border: 2px solid #fff; color: #fff; padding: 10px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 1rem; position: relative; }
-        .cmd-btn:hover:not(:disabled) { background: #fff; color: #000; }
+        .cmd-btn { background: #000; border: 2px solid #fff; color: #fff; padding: 10px; cursor: pointer; font-family: inherit; font-weight: bold; position: relative; }
+        .cmd-btn:disabled { opacity: 0.2; border-color: #444; color: #444; cursor: not-allowed; }
         
-        #log-box { flex: 1; font-size: 1.1rem; line-height: 1.2; position: relative; }
+        #dialogue { flex: 1; font-size: 1rem; position: relative; }
+        
+        /* CHARA'S GHOST CURSOR */
+        #chara-cursor { position: fixed; width: 24px; height: 24px; border: 2px solid var(--red); pointer-events: none; z-index: 10000; display: none; background: rgba(255,0,0,0.2); }
+        #chara-cursor::after { content: 'LV 20'; position: absolute; top: -15px; left: 0; font-size: 8px; color: var(--red); font-weight: bold; }
 
-        .glitch-heavy { animation: glitch 0.1s infinite; color: var(--red); filter: contrast(200%); }
-        @keyframes glitch { 0% { transform: translate(3px, -2px); opacity: 0.8; } 50% { transform: translate(-3px, 2px); opacity: 1; } 100% { transform: translate(0); } }
-        
-        #soulless-overlay { position: fixed; inset: 0; background: red; z-index: 10000; display: none; align-items: center; justify-content: center; color: black; font-size: 3rem; font-weight: bold; text-align: center; }
+        .glitch-anim { animation: glitch 0.1s infinite; }
+        @keyframes glitch { 0%{transform: translate(2px)} 50%{transform: translate(-2px)} }
     </style>
 </head>
-<body id="b">
+<body id="body-main">
 
-    <div id="soulless-overlay">ERASING...</div>
+    <div id="chara-cursor"></div>
 
     <div id="layout">
-        <header id="main-header">
+        <header>
             <div>DT: <span id="hp" style="color:var(--red)">999</span></div>
             <div>GOLD: <span id="gold" style="color:var(--gold)">600</span></div>
-            <div>LV: <span id="lv">1</span></div>
-            <button id="btn-fight" class="cmd-btn" style="width:120px; padding:2px">FIGHT</button>
+            <div>LV: <span id="lv-val">1</span></div>
+            <button id="wave-btn" class="cmd-btn" style="width:100px; padding:2px">FIGHT</button>
         </header>
 
         <canvas id="canvas"></canvas>
 
         <div id="sidebar">
-            <h4 style="text-align:center; margin:0;">THE VOID</h4>
+            <h4 style="text-align:center; margin:0; color:var(--red);">SOULLESS SHOP</h4>
             <div id="shop"></div>
-            <div id="corruption-warning" style="color:var(--red); font-size:0.6rem; text-align:center; position:absolute; bottom:5px;"></div>
+            <div id="mimicry-status" style="font-size:0.6rem; color:var(--gold); text-align:center; margin-top:10px;">MIMICRY: RECORDING...</div>
         </div>
 
         <div id="dashboard">
-            <div id="frisk-core">
-                <div class="stat-line"><b>FRISK</b> <span id="status-text">PLAYER CONTROL: 95%</span></div>
-                <div class="meter-bg"><div id="player-bar" class="meter-fill" style="background:var(--cyan); width:95%"></div></div>
-                <div class="stat-line"><span style="color:var(--red)">CHARA INFLUENCE</span> <span id="chara-val">5%</span></div>
-                <div class="meter-bg"><div id="chara-bar" class="meter-fill" style="background:var(--red); width:5%"></div></div>
-                
-                <div class="btn-grid" id="controls">
-                    <button class="cmd-btn" id="btn-f" onclick="cmd('FIGHT')">FIGHT</button>
-                    <button class="cmd-btn" id="btn-a" onclick="cmd('ACT')">ACT</button>
-                    <button class="cmd-btn" id="btn-i" onclick="cmd('ITEM')">ITEM</button>
-                    <button class="cmd-btn" id="btn-m" onclick="cmd('MERCY')">SPARE</button>
+            <div id="soul-nexus">
+                <div style="display:flex; justify-content:space-between; font-size: 0.65rem;">
+                    <span>PLAYER/FRISK</span><span id="p-inf">99%</span>
                 </div>
-                <button id="reset-btn" class="cmd-btn" style="width:100%; margin-top:10px; border-color:var(--red); color:var(--red); display:none;">ERASE TIMELINE (100G)</button>
+                <div class="bar-container"><div id="p-bar" class="bar-fill" style="background:var(--blue); width:99%"></div></div>
+                
+                <div style="display:flex; justify-content:space-between; font-size: 0.65rem;">
+                    <span style="color:var(--red)">CHARA AI</span><span id="c-inf">1%</span>
+                </div>
+                <div class="bar-container"><div id="c-bar" class="bar-fill" style="background:var(--red); width:1%"></div></div>
+
+                <div class="btn-grid" id="button-field">
+                    <button class="cmd-btn" id="b-fight" onclick="executeCmd('FIGHT')">FIGHT</button>
+                    <button class="cmd-btn" id="b-act" onclick="executeCmd('ACT')">ACT</button>
+                    <button class="cmd-btn" id="b-item" onclick="executeCmd('ITEM')">ITEM</button>
+                    <button class="cmd-btn" id="b-spare" onclick="executeCmd('SPARE')">MERCY</button>
+                </div>
             </div>
-            <div id="log-box">
-                <span style="color:red">❤</span> <span id="log">* Chara is watching you.</span>
+            <div id="dialogue">
+                <span style="color:red">❤</span> <span id="log-text">* I'm watching how you handle things, partner.</span>
             </div>
         </div>
     </div>
 
 <script>
-/** ⚙️ THE CORRUPTION ENGINE **/
-let state = {
-    gold: 600, hp: 999, lv: 1, 
-    playerInfluence: 95, charaInfluence: 5, friskPower: 0,
-    soulless: false, wave: 0,
+/** ⚙️ SYSTEM STATE **/
+let sys = {
+    gold: 600, lv: 1, resetCount: 0,
+    player: 99, chara: 1, 
+    isSoulless: false,
+    history: [], // Stores {tx, ty, id}
+    charaThinking: false,
+    charaTargetX: 0, charaTargetY: 0,
     mouse: { tx: 0, ty: 0 }
 };
 
-const TOWERS = {
-    frisk: { n: "Frisk", c: 200, col: "#ff00ff" },
-    sans:  { n: "Sans",  c: 600, col: "#008cff" },
-    papy:  { n: "Papyrus", c: 150, col: "#fff" },
-    undy:  { n: "Undyne", c: 400, col: "#00ffff" },
-    void:  { n: "Void",   c: 500, col: "#555" }
+const TOWERS_DB = {
+    frisk: { name: "Protagonist", cost: 200, col: "#ff00ff" },
+    sans:  { name: "Sans", cost: 600, col: "#008cff" },
+    papy:  { name: "Papyrus", cost: 150, col: "#fff" },
+    undy:  { name: "Undyne", cost: 350, col: "#00ffff" },
+    void:  { name: "Void", cost: 500, col: "#555" }
 };
 
 const canvas = document.getElementById('canvas');
@@ -101,175 +109,175 @@ const ctx = canvas.getContext('2d');
 const TILE = 50;
 canvas.width = 850; canvas.height = 450;
 
-let units = [], enemies = [], path = [], bullets = [], effects = [];
-let placement = null, selected = null;
+let units = [], enemies = [], path = [], bullets = [];
+let placement = null, activeUnit = null;
 
 /** ⚔️ CORE LOGIC **/
 function init() {
     const shop = document.getElementById('shop');
-    Object.keys(TOWERS).forEach(k => {
-        const div = document.createElement('div');
-        div.className = 'tower-card';
-        div.innerHTML = `<b>${TOWERS[k].n}</b><br>$${TOWERS[k].c}`;
-        div.onclick = () => {
-            placement = { ...TOWERS[k], id: k };
-            document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('active'));
-            div.classList.add('active');
+    Object.keys(TOWERS_DB).forEach(k => {
+        const d = document.createElement('div');
+        d.className = 'tower-card';
+        d.innerHTML = `<b>${TOWERS_DB[k].name}</b><br>$${TOWERS_DB[k].cost}`;
+        d.onclick = () => {
+            if(sys.chara > 85) return; // Disable shop for player
+            placement = { ...TOWERS_DB[k], id: k };
         };
-        shop.appendChild(div);
+        shop.appendChild(d);
     });
     genPath();
     loop();
 }
 
 function genPath() {
-    let x = 0, y = 4;
+    path = []; let x = 0, y = 4;
     while(x < 17) {
         path.push({x, y});
         if(Math.random() < 0.2 && y > 1) y--; else if(Math.random() < 0.2 && y < 7) y++; else x++;
     }
 }
 
-/** 🛡️ GUARDIAN REFACTOR **/
+/** 🛡️ GUARDIAN **/
 class Guardian {
     constructor(id, tx, ty) {
         this.id = id; this.tx = tx; this.ty = ty;
         this.x = tx*TILE+TILE/2; this.y = ty*TILE+TILE/2;
-        this.lv = (id==='frisk')?state.lv:1;
-        this.stamina = 100; this.dodge = 100;
+        this.lv = (id==='frisk') ? sys.lv : 1;
         this.cd = 0;
     }
     update() {
         if(this.cd > 0) this.cd--;
-        
-        let range = (this.id === 'frisk') ? 140 : 350;
+        let range = 150;
         this.target = enemies.find(e => Math.hypot(e.x-this.x, e.y-this.y) < range);
 
-        // AUTO-CORRUPTION (Chara taking control)
-        if(this.id === 'frisk') {
-            this.lv = state.lv;
-            if(state.charaInfluence > 30 && this.target && this.cd <= 0) {
-                if(Math.random()*100 < state.charaInfluence) {
-                    this.strike(this.target, true);
-                    this.cd = 30;
-                }
+        // Chara Auto-Attacking
+        if(this.id === 'frisk' && sys.chara > 10 && this.target && this.cd <= 0) {
+            if(Math.random()*100 < sys.chara) {
+                this.attack(this.target, true);
+                this.cd = 20;
             }
         } else if(this.target && this.cd <= 0) {
-            this.strike(this.target);
-            this.cd = (this.id==='sans')?5:60;
+            this.attack(this.target);
+            this.cd = 60;
         }
     }
-    strike(t, charaControlled = false) {
-        let dmg = (this.id==='frisk') ? this.lv*80 : 50;
-        if(this.id === 'sans') { t.kr = 100; dmg = 1; }
-        if(charaControlled) dmg *= 2;
-
-        t.hp -= dmg;
-        bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:5, col:charaControlled?'#f00':'#fff'});
+    attack(t, isChara = false) {
+        t.hp -= isChara ? (sys.lv * 150) : 50;
+        bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:5, col:isChara?'#f00':'#fff'});
     }
     draw() {
-        let c = TOWERS[this.id].col;
-        if(this.id === 'frisk' && state.charaInfluence > 50) c = "#f00";
-        if(selected === this) { ctx.shadowBlur = 10; ctx.shadowColor = 'gold'; }
-        ctx.fillStyle = c;
+        ctx.fillStyle = (this.id === 'frisk' && sys.chara > 50) ? "#f00" : TOWERS_DB[this.id].col;
         ctx.fillRect(this.tx*TILE+5, this.ty*TILE+5, TILE-10, TILE-10);
-        ctx.shadowBlur = 0;
-        ctx.fillStyle='#000'; ctx.font='10px Arial'; ctx.fillText("LV"+this.lv, this.x-10, this.y+5);
+        ctx.fillStyle='#000'; ctx.font='bold 10px Arial'; ctx.fillText("LV"+this.lv, this.x-13, this.y+5);
     }
 }
 
-/** 🕹️ COMMAND ENGINE **/
-function cmd(type) {
-    if(!selected || selected.id !== 'frisk') return;
-    
-    // Meta-Corruption Check
-    if(Math.random()*100 < state.charaInfluence) {
+/** 🕹️ COMMANDS & TRINITY **/
+function executeCmd(type) {
+    if(!activeUnit || activeUnit.id !== 'frisk' || sys.chara > 90) return;
+
+    let roll = Math.random() * 100;
+    if(roll < sys.chara) {
         type = "FIGHT";
-        logIt("* CHARA: Do not hesitate.");
+        logIt("* Chara: Why SPARE when you can LOVE?");
     }
 
-    if(!selected.target) return logIt("* But nobody was there.");
-    let t = selected.target;
+    if(!activeUnit.target && type !== "ITEM") return;
+    let t = activeUnit.target;
 
     if(type === 'FIGHT') {
-        t.hp -= state.lv * 150;
-        state.lv++; 
-        logIt(`* You dealt ${state.lv*150} damage.`);
-    } else if(type === 'ACT') {
-        t.spd *= 0.5;
-        logIt("* You calmed the soul.");
-    } else if(type === 'MERCY') {
-        if(t.hp < 100) {
-            state.gold += 300;
-            enemies = enemies.filter(e => e !== t);
-            logIt("* SPARED. Gained 300G.");
-        } else logIt("* Not weak enough.");
+        t.hp -= sys.lv * 100;
+        sys.lv++;
+        updateTrinity();
+    } else if(type === 'SPARE') {
+        if(t.hp < 100) { sys.gold += 300; enemies = enemies.filter(e => e !== t); }
     }
-    
-    updateSchism();
 }
 
-function updateSchism() {
-    if(!state.soulless) {
-        state.charaInfluence = Math.min(90, (state.lv * 4.5));
-        state.playerInfluence = 100 - state.charaInfluence;
+function updateTrinity() {
+    if(!sys.isSoulless) {
+        if(sys.lv >= 19) { sys.chara = 95; sys.player = 5; }
+        else { sys.chara = Math.min(90, sys.lv * 5); sys.player = 100 - sys.chara; }
     } else {
-        // Reincarnated State: 60 Player, 30 Chara base
-        state.charaInfluence = 30 + (state.lv * 3);
-        state.playerInfluence = 100 - state.charaInfluence;
+        sys.chara = Math.min(99, 90 + (sys.lv * 0.5));
+        sys.player = 100 - sys.chara;
     }
 
-    if(state.lv >= 20) {
-        document.getElementById('reset-btn').style.display = 'block';
-    }
-
-    // Visual Glitches based on Corruption
-    if(state.charaInfluence > 70) {
-        document.getElementById('dashboard').classList.add('glitch-heavy');
-        document.getElementById('corruption-warning').innerText = "SYSTEM FAILURE: CHARA DETECTED";
+    if(sys.chara > 90 && !sys.isSoulless) {
+        document.getElementById('dialogue').innerHTML = `<button class="cmd-btn glitch-anim" style="color:red; border-color:red; width:100%" onclick="soullessReset()">ERASE THE TIMELINE</button>`;
     }
 }
 
-document.getElementById('reset-btn').onclick = () => {
-    if(state.gold >= 100) {
-        state.gold -= 100;
-        state.soulless = true;
-        document.getElementById('soulless-overlay').style.display = 'flex';
-        setTimeout(() => {
-            document.getElementById('soulless-overlay').style.display = 'none';
-            state.lv = 1;
-            state.playerInfluence = 60;
-            state.charaInfluence = 30;
-            state.friskPower = 10;
-            units = units.filter(u => u.id === 'frisk'); // Keep only Frisk
-            logIt("* You brought her back. Why?");
-            document.getElementById('reset-btn').style.display = 'none';
-            updateSchism();
-        }, 1500);
+function soullessReset() {
+    sys.isSoulless = true;
+    sys.lv = 1; sys.gold = 500;
+    sys.chara = 90; sys.player = 10;
+    units = [];
+    document.getElementById('body-main').style.background = "#300";
+    setTimeout(() => { document.getElementById('body-main').style.background = "#000"; }, 1000);
+    logIt("* You reset. But I remember everything.");
+}
+
+/** 🤖 CHARA AI MIMICRY **/
+function charaThink() {
+    if(sys.chara < 40 || sys.charaThinking) return;
+    
+    // Check if she can afford anything
+    let affordable = Object.keys(TOWERS_DB).filter(k => TOWERS_DB[k].cost <= sys.gold);
+    if(affordable.length === 0) return;
+
+    sys.charaThinking = true;
+    document.getElementById('chara-cursor').style.display = 'block';
+
+    // Learning Logic: Look at player history
+    let targetMove;
+    if(sys.history.length > 0 && Math.random() > (1 - sys.chara/100)) {
+        // High level Chara copies player
+        targetMove = sys.history[Math.floor(Math.random()*sys.history.length)];
+    } else {
+        // Low level Chara places randomly
+        targetMove = { tx: Math.floor(Math.random()*17), ty: Math.floor(Math.random()*9), id: affordable[0] };
     }
-};
+
+    // Move red cursor
+    let rect = canvas.getBoundingClientRect();
+    sys.charaTargetX = rect.left + targetMove.tx * TILE + 25;
+    sys.charaTargetY = rect.top + targetMove.ty * TILE + 25;
+
+    setTimeout(() => {
+        const cur = document.getElementById('chara-cursor');
+        cur.style.left = sys.charaTargetX + 'px';
+        cur.style.top = sys.charaTargetY + 'px';
+        
+        setTimeout(() => {
+            // Place tower
+            let occ = units.find(u => u.tx === targetMove.tx && u.ty === targetMove.ty);
+            if(!occ && sys.gold >= TOWERS_DB[targetMove.id].cost) {
+                sys.gold -= TOWERS_DB[targetMove.id].cost;
+                units.push(new Guardian(targetMove.id, targetMove.tx, targetMove.ty));
+                logIt(`* Chara placed a ${TOWERS_DB[targetMove.id].name}.`);
+            }
+            sys.charaThinking = false;
+        }, 1000);
+    }, 500);
+}
 
 /** 🔁 LOOP **/
 function loop() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     path.forEach(p => { ctx.fillStyle = '#111'; ctx.fillRect(p.x*TILE, p.y*TILE, TILE, TILE); });
 
-    units.forEach(u => { u.update(); u.draw(); });
+    units.forEach(u => u.update());
+    units.forEach(u => u.draw());
 
     for(let i=enemies.length-1; i>=0; i--) {
         let e = enemies[i];
-        let s = (e.spd || 1);
         let target = path[e.pIdx];
-        if(!target) { alert("TIMELINE ERASED."); location.reload(); return; }
-        
-        let tx = target.x*TILE+TILE/2, ty = target.y*TILE+TILE/2;
-        let d = Math.hypot(tx-e.x, ty-e.y);
-        if(d < s) e.pIdx++; else { e.x += ((tx-e.x)/d)*s; e.y += ((ty-e.y)/d)*s; }
-
-        if(e.hp <= 0) { state.gold += 40; enemies.splice(i,1); }
-        else {
-            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x, e.y, 10, 0, Math.PI*2); ctx.fill();
-        }
+        if(!target) { alert("CORE BREACHED. RESETTING..."); location.reload(); return; }
+        let d = Math.hypot(target.x*TILE+25-e.x, target.y*TILE+25-e.y);
+        if(d < 2) e.pIdx++; else { e.x += ((target.x*TILE+25-e.x)/d)*1.5; e.y += ((target.y*TILE+25-e.y)/d)*1.5; }
+        if(e.hp <= 0) { sys.gold += 30; enemies.splice(i,1); }
+        else { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x, e.y, 10, 0, Math.PI*2); ctx.fill(); }
     }
 
     bullets.forEach((b,i) => {
@@ -278,52 +286,51 @@ function loop() {
         b.life--; if(b.life <= 0) bullets.splice(i,1);
     });
 
-    // Dashboard HUD
-    document.getElementById('hp').innerText = state.hp;
-    document.getElementById('gold').innerText = state.gold;
-    document.getElementById('lv').innerText = state.lv;
-    document.getElementById('player-bar').style.width = state.playerInfluence + "%";
-    document.getElementById('chara-bar').style.width = state.charaInfluence + "%";
-    document.getElementById('status-text').innerText = `PLAYER CONTROL: ${Math.floor(state.playerInfluence)}%`;
-    document.getElementById('chara-val').innerText = `${Math.floor(state.charaInfluence)}%`;
+    if(sys.chara > 10) charaThink();
+
+    document.getElementById('gold').innerText = Math.floor(sys.gold);
+    document.getElementById('lv-val').innerText = sys.lv;
+    document.getElementById('p-inf').innerText = Math.floor(sys.player) + "%";
+    document.getElementById('c-inf').innerText = Math.floor(sys.chara) + "%";
+    document.getElementById('p-bar').style.width = sys.player + "%";
+    document.getElementById('c-bar').style.width = sys.chara + "%";
 
     requestAnimationFrame(loop);
 }
 
 /** 🖱️ INPUT **/
 canvas.onmousedown = () => {
-    let tx = state.mouse.tx, ty = state.mouse.ty;
-    let u = units.find(x => x.tx === tx && x.ty === ty);
-    
+    let u = units.find(x => x.tx === sys.mouse.tx && x.ty === sys.mouse.ty);
     if(u) {
-        selected = u;
-        document.getElementById('frisk-core').style.opacity = (u.id === 'frisk') ? "1" : "0.3";
-    } else if(placement) {
-        if(state.gold >= placement.c) {
-            state.gold -= placement.c;
-            units.push(new Guardian(placement.id, tx, ty));
+        activeUnit = u;
+        document.getElementById('soul-nexus').style.opacity = (u.id === 'frisk') ? "1" : "0.3";
+    } else if(placement && sys.chara < 90) {
+        if(sys.gold >= placement.cost) {
+            sys.gold -= placement.cost;
+            units.push(new Guardian(placement.id, sys.mouse.tx, sys.mouse.ty));
+            // Record player history for Chara to mimic
+            sys.history.push({ tx: sys.mouse.tx, ty: sys.mouse.ty, id: placement.id });
             placement = null;
-            document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('active'));
         }
     }
 };
 
 canvas.onmousemove = (e) => {
     let r = canvas.getBoundingClientRect();
-    state.mouse.tx = Math.floor((e.clientX - r.left)/TILE);
-    state.mouse.ty = Math.floor((e.clientY - r.top)/TILE);
+    sys.mouse.tx = Math.floor((e.clientX - r.left)/TILE);
+    sys.mouse.ty = Math.floor((e.clientY - r.top)/TILE);
 };
 
-document.getElementById('btn-fight').onclick = () => {
-    state.wave++;
-    for(let i=0; i<3+state.wave; i++) {
+document.getElementById('wave-btn').onclick = () => {
+    sys.wave++;
+    for(let i=0; i<3+sys.wave; i++) {
         setTimeout(() => {
-            enemies.push({ x: path[0].x*TILE+TILE/2, y: path[0].y*TILE+TILE/2, pIdx: 0, hp: 200*(1+state.wave*0.5), spd: 1.2 });
+            enemies.push({ x: path[0].x*TILE+25, y: path[0].y*TILE+25, pIdx: 0, hp: 300*(1+sys.wave*0.7) });
         }, i * 1500);
     }
 };
 
-function logIt(t) { document.getElementById('log').innerText = t; }
+function logIt(t) { document.getElementById('log-text').innerText = t; }
 init();
 </script>
 </body>
