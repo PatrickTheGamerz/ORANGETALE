@@ -2,215 +2,155 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UTD: MULTIVERSE BREACH - ADVANCED</title>
+    <title>UTD: MULTIVERSE BREACH - ABSOLUTE EDITION</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        :root { --red: #ff0000; --gold: #ffcc00; --blue: #008cff; --white: #ffffff; }
+        body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        #layout { display: grid; grid-template-columns: 850px 250px; grid-template-rows: 60px 450px 180px; gap: 10px; padding: 10px; border: 4px double white; background: #000; }
+        
+        header { grid-column: 1 / 3; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid #fff; }
+        canvas { grid-column: 1; grid-row: 2; border: 1px solid #333; background: #050505; cursor: crosshair; }
+        
+        #shop { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .shop-card { border: 2px solid white; padding: 8px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .shop-card:hover { background: #222; color: var(--gold); }
+        .shop-card.active { border-color: var(--gold); background: #111; color: var(--gold); }
 
-        :root {
-            --ut-red: #ff0000;
-            --ut-white: #ffffff;
-            --ut-gold: #ffcc00;
-            --ut-bg: #000000;
-            --ut-border: #ffffff;
-        }
+        #bottom { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; }
+        #upgrade-panel { width: 320px; border-right: 2px solid white; padding-right: 15px; display: none; }
+        #dialogue { flex: 1; font-size: 1.1rem; line-height: 1.4; }
 
-        body {
-            background: var(--ut-bg);
-            color: var(--ut-white);
-            font-family: 'Courier Prime', monospace;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
-        }
+        .btn { background: #000; border: 2px solid #fff; color: #fff; padding: 8px; cursor: pointer; font-family: inherit; width: 100%; text-transform: uppercase; }
+        .btn:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+        .btn:disabled { opacity: 0.3; }
+        
+        .choice-row { display: flex; gap: 5px; margin: 5px 0; }
+        .choice-btn { font-size: 0.7rem; padding: 4px; border: 1px solid var(--gold); color: var(--gold); background: #000; cursor: pointer; flex: 1; }
 
-        #game-wrapper {
-            display: grid;
-            grid-template-columns: 800px 300px;
-            grid-template-rows: auto 180px;
-            gap: 15px;
-            padding: 20px;
-            border: 4px double white;
-            background: black;
-            position: relative;
-        }
-
-        canvas {
-            grid-column: 1;
-            grid-row: 1;
-            border: 2px solid #333;
-            background: #050505;
-        }
-
-        /* SIDEBAR / SHOP */
-        #sidebar {
-            grid-column: 2;
-            grid-row: 1 / 3;
-            border: 4px double white;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .shop-btn {
-            border: 2px solid white;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            background: black;
-            color: white;
-            font-size: 0.9rem;
-        }
-        .shop-btn:hover { background: white; color: black; }
-        .shop-btn.active { border-color: var(--ut-gold); color: var(--ut-gold); }
-
-        /* BOTTOM BOX */
-        #bottom-panel {
-            grid-column: 1;
-            grid-row: 2;
-            border: 4px double white;
-            padding: 20px;
-            display: flex;
-            gap: 30px;
-            position: relative;
-        }
-
-        #upgrade-view { width: 350px; border-right: 2px solid white; padding-right: 20px; display: none; }
-        #dialogue-box { flex: 1; font-size: 1.2rem; }
-
-        .choice-btn {
-            background: black;
-            border: 2px solid var(--ut-gold);
-            color: var(--ut-gold);
-            padding: 5px 10px;
-            margin: 5px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-
-        /* SCREEN EFFECTS */
-        .glitch { animation: glitchAnim 0.1s infinite; filter: hue-rotate(90deg) invert(1); }
-        @keyframes glitchAnim {
-            0% { transform: translate(0); }
-            20% { transform: translate(-5px, 5px); }
-            40% { transform: translate(-5px, -5px); }
-            60% { transform: translate(5px, 5px); }
-            80% { transform: translate(5px, -5px); }
-            100% { transform: translate(0); }
-        }
-
-        #menu-overlay {
-            position: fixed; inset: 0; background: black; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        .hud-val { color: var(--ut-gold); }
+        .glitch { animation: gAnim 0.15s infinite; filter: invert(1) hue-rotate(180deg); }
+        @keyframes gAnim { 0% { transform: translate(0); } 25% { transform: translate(-4px, 2px); } 75% { transform: translate(4px, -2px); } }
+        
+        #menu { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .stat-val { color: var(--gold); font-weight: bold; }
     </style>
 </head>
-<body id="body-tag">
+<body id="main-body">
 
-    <div id="menu-overlay">
-        <h1 style="font-size: 3rem; letter-spacing: 5px;">UTD: MULTIVERSE</h1>
-        <p>SELECT 4 GUARDIANS</p>
-        <div id="starter-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin:20px;"></div>
-        <button id="btn-init" class="shop-btn" style="width:200px" disabled>INITIALIZE</button>
+    <div id="menu">
+        <h1 style="font-size: 3rem; color: var(--gold);">UTD: MULTIVERSE</h1>
+        <p>SELECT 4 GUARDIANS TO PROTECT THE TIMELINE</p>
+        <div id="select-grid" style="display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin:20px;"></div>
+        <button id="start-init" class="btn" style="width:200px" disabled>START BATTLE</button>
     </div>
 
-    <div id="game-wrapper">
+    <div id="layout">
+        <header>
+            <div>HP: <span id="hp-val" class="stat-val">20</span></div>
+            <div>GOLD: <span id="g-val" class="stat-val">600</span></div>
+            <div>WAVE: <span id="w-val" class="stat-val">0</span></div>
+            <button id="wave-btn" class="btn" style="width:120px; border-color:var(--red)">BATTLE</button>
+        </header>
+
         <canvas id="gameCanvas"></canvas>
 
-        <div id="sidebar">
-            <div style="text-align:center; border-bottom:2px solid white; padding-bottom:5px; margin-bottom:10px;">
-                HP: <span id="hp-val" class="hud-val">20</span> | G: <span id="g-val" class="hud-val">600</span><br>
-                WAVE: <span id="wave-val" class="hud-val">0</span>
-            </div>
+        <div id="shop">
+            <h4 style="margin:0; text-align:center;">GUARDIANS</h4>
             <div id="shop-list"></div>
-            <button id="btn-wave" class="shop-btn" style="margin-top:auto; border-color:var(--ut-red)">FIGHT</button>
         </div>
 
-        <div id="bottom-panel">
-            <div id="upgrade-view">
-                <b id="up-name">Name</b> <span id="up-item" style="font-size:0.7rem; color:#888;">Stick</span>
-                <div id="up-stats" style="font-size:0.8rem; margin:5px 0;">LV: 1 | DMG: 10</div>
-                <div id="branch-options" style="margin-bottom:10px;"></div>
-                <button id="btn-upgrade" class="shop-btn" style="width:100%">LEVEL UP</button>
+        <div id="bottom">
+            <div id="upgrade-panel">
+                <div style="display:flex; justify-content:space-between">
+                    <b id="up-name">NAME</b>
+                    <span id="up-item" style="color:var(--gold); font-size:0.7rem">Stick</span>
+                </div>
+                <div id="up-stats" style="font-size:0.8rem; margin:5px 0; color:#aaa;"></div>
+                <div id="evolution-box"></div>
+                <button id="up-btn" class="btn">LEVEL UP</button>
             </div>
-            <div id="dialogue-box">
-                <span style="color:red">❤</span> <span id="diag-text">Pick a tower to view its soul path.</span>
+            <div id="dialogue">
+                <span style="color:red">❤</span> <span id="diag-text">Stay determined. Select a guardian to view their path.</span>
             </div>
         </div>
     </div>
 
 <script>
-/** * DATA & CONFIGURATION 
+/** * WEAPON & ENEMY DATA
  */
 const WEAPONS = [
-    { lv: 1, name: "Stick" }, { lv: 3, name: "Toy Knife" }, { lv: 7, name: "Tough Glove" },
-    { lv: 10, name: "Ballet Shoes" }, { lv: 12, name: "Torn Notebook" }, { lv: 15, name: "Empty Gun" },
-    { lv: 19, name: "True Knife" }
+    { lv: 1, name: "Stick", type: "melee", range: 60, dmg: 25 },
+    { lv: 4, name: "Toy Knife", type: "melee", range: 70, dmg: 45 },
+    { lv: 7, name: "Tough Glove", type: "rapid", range: 100, dmg: 15 },
+    { lv: 10, name: "Notebook", type: "utility", range: 150, dmg: 10 },
+    { lv: 13, name: "Burnt Pan", type: "splash", range: 120, dmg: 60 },
+    { lv: 16, name: "Empty Gun", type: "ranged", range: 250, dmg: 100 },
+    { lv: 19, name: "True Knife", type: "melee", range: 90, dmg: 999 }
 ];
 
-const TOWERS_BASE = [
-    { id: 'frisk', name: 'Frisk', cost: 200, range: 140, dmg: 15, rate: 40, color: '#ff00ff' },
-    { id: 'sans', name: 'Sans', cost: 500, range: 300, dmg: 5, rate: 2, color: '#008cff' },
-    { id: 'void', name: 'Void', cost: 400, range: 250, dmg: 20, rate: 100, color: '#fff' },
-    { id: 'undyne', name: 'Undyne', cost: 300, range: 200, dmg: 40, rate: 50, color: '#00ffff' },
-    { id: 'papyrus', name: 'Papyrus', cost: 150, range: 130, dmg: 20, rate: 45, color: '#fff' },
-    { id: 'toriel', name: 'Toriel', cost: 250, range: 180, dmg: 55, rate: 90, color: '#a020f0' }
+const TOWERS_CFG = [
+    { id:'frisk', name:'Frisk', cost:200, color:'#ff00ff' },
+    { id:'sans', name:'Sans', cost:500, color:'#008cff' },
+    { id:'void', name:'Void', cost:400, color:'#ffffff' },
+    { id:'undyne', name:'Undyne', cost:300, color:'#00ffff' },
+    { id:'papyrus', name:'Papyrus', cost:150, color:'#ffffff' },
+    { id:'asgore', name:'Asgore', cost:450, color:'#ffa500' }
 ];
 
-const LOST_SOULS = [
-    { name: 'Soul: Toriel', hp: 200, speed: 0.8, color: '#a020f0' },
-    { name: 'Soul: Papyrus', hp: 120, speed: 1.6, color: '#fff' },
-    { name: 'Soul: Sans', hp: 50, speed: 2.5, color: '#008cff' },
-    { name: 'GASTER', hp: 5000, speed: 0.4, color: '#000', boss: true }
+const ENEMY_TYPES = [
+    { id:'patience', name:'Patience Soul', hp:60, speed:0.8, color:'#00ffff', perk:'slow' },
+    { id:'bravery', name:'Bravery Soul', hp:40, speed:2.5, color:'#ffa500', perk:'fast' },
+    { id:'kindness', name:'Kindness Soul', hp:150, speed:1.0, color:'#00ff00', perk:'tank' },
+    { id:'justice', name:'Justice Soul', hp:80, speed:1.4, color:'#ffff00', perk:'stun' },
+    { id:'det', name:'Determination Soul', hp:100, speed:1.2, color:'#ff0000', perk:'revive' },
+    { id:'sans_ls', name:'Sans Lost Soul', hp:1, speed:2.0, color:'#008cff', perk:'dodge' },
+    { id:'undyne_ls', name:'Undyne Lost Soul', hp:400, speed:1.1, color:'#00ffff', perk:'phase2' },
+    { id:'gaster', name:'GASTER', hp:8000, speed:0.5, color:'#000', perk:'glitch' }
 ];
 
-/** ENGINE **/
+/** ENGINE SETUP **/
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const TILE = 50, COLS = 16, ROWS = 9;
-canvas.width = 800; canvas.height = 450;
+const TILE = 50;
+const COLS = 17, ROWS = 9;
+canvas.width = 850; canvas.height = 450;
 
 let money = 600, hp = 20, wave = 0;
-let towers = [], enemies = [], path = [], projectiles = [], puppets = [];
-let selectedStarterIds = [], activeShopTower = null, selectedInst = null, waveActive = false;
-let mouse = { x:0, y:0, tx:0, ty:0 };
+let towers = [], enemies = [], path = [], bullets = [], puppets = [], vfx = [];
+let selectedGuardians = [], activeSummon = null, selectedInst = null, waveActive = false;
+let mouse = { tx:0, ty:0 };
 
-// Menu Setup
-const starterGrid = document.getElementById('starter-grid');
-TOWERS_BASE.forEach(t => {
+// Character Select
+const grid = document.getElementById('select-grid');
+TOWERS_CFG.forEach(t => {
     const d = document.createElement('div');
-    d.className = 'shop-btn';
+    d.className = 'shop-card';
     d.innerHTML = `<b>${t.name}</b><br>$${t.cost}`;
     d.onclick = () => {
-        if(selectedStarterIds.includes(t.id)) {
-            selectedStarterIds = selectedStarterIds.filter(i => i !== t.id);
+        if(selectedGuardians.includes(t.id)) {
+            selectedGuardians = selectedGuardians.filter(i=>i!==t.id);
             d.style.borderColor = 'white';
-        } else if(selectedStarterIds.length < 4) {
-            selectedStarterIds.push(t.id);
-            d.style.borderColor = 'var(--ut-gold)';
+        } else if(selectedGuardians.length < 4) {
+            selectedGuardians.push(t.id);
+            d.style.borderColor = 'var(--gold)';
         }
-        document.getElementById('btn-init').disabled = selectedStarterIds.length !== 4;
+        document.getElementById('start-init').disabled = selectedGuardians.length !== 4;
     };
-    starterGrid.appendChild(d);
+    grid.appendChild(d);
 });
 
-document.getElementById('btn-init').onclick = () => {
-    document.getElementById('menu-overlay').style.display = 'none';
+document.getElementById('start-init').onclick = () => {
+    document.getElementById('menu').style.display = 'none';
     const list = document.getElementById('shop-list');
-    selectedStarterIds.forEach(id => {
-        const t = TOWERS_BASE.find(x => x.id === id);
+    selectedGuardians.forEach(id => {
+        const t = TOWERS_CFG.find(x=>x.id===id);
         const b = document.createElement('div');
-        b.className = 'shop-btn';
-        b.innerHTML = `<b>${t.name}</b> $${t.cost}`;
+        b.className = 'shop-card';
+        b.innerHTML = `<b>${t.name}</b><br>$${t.cost}`;
         b.onclick = () => {
-            activeShopTower = t;
-            document.querySelectorAll('.shop-btn').forEach(x => x.classList.remove('active'));
+            activeSummon = t;
+            document.querySelectorAll('.shop-card').forEach(x=>x.classList.remove('active'));
             b.classList.add('active');
         };
         list.appendChild(b);
@@ -233,132 +173,168 @@ class Tower {
     constructor(cfg, tx, ty) {
         this.id = cfg.id; this.name = cfg.name; this.tx = tx; this.ty = ty;
         this.x = tx*TILE+TILE/2; this.y = ty*TILE+TILE/2;
-        this.lv = 1; this.cd = 0; this.dmg = cfg.dmg; this.range = cfg.range; this.rate = cfg.rate;
+        this.lv = 1; this.cd = 0; this.stun = 0;
         this.variant = 'base';
-        this.weapon = "Stick";
+        this.updateStats();
+    }
+    updateStats() {
+        const w = [...WEAPONS].reverse().find(wi => this.lv >= wi.lv) || WEAPONS[0];
+        this.weapon = w;
+        this.dmg = w.dmg; this.range = w.range; this.rate = 40;
+        
+        if(this.id === 'sans') { this.range = 300; this.rate = 5; }
+        if(this.variant === 'bad_time') this.rate = 2;
+        if(this.variant === 'chara') this.dmg = 999;
     }
     update() {
+        if(this.stun > 0) { this.stun--; return; }
         if(this.cd > 0) this.cd--;
-        
-        // Weapon Logic (Frisk/Chara/Sans)
-        const w = [...WEAPONS].reverse().find(wi => this.lv >= wi.lv);
-        this.weapon = w ? w.name : "Stick";
 
-        // Puppet Logic
         if(this.id === 'void' && this.variant !== 'base' && this.cd <= 0) {
-            this.spawnPuppet();
-            this.cd = this.rate;
+            this.spawnPuppet(); this.cd = 120;
         }
 
         let target = enemies.find(e => Math.hypot(e.x-this.x, e.y-this.y) < this.range);
         if(target && this.cd <= 0 && this.id !== 'void') {
-            this.fire(target);
+            this.attack(target);
             this.cd = this.rate;
         }
     }
     spawnPuppet() {
         puppets.push({
-            pIdx: path.length - 1,
-            x: path[path.length-1].x*TILE+TILE/2,
-            y: path[path.length-1].y*TILE+TILE/2,
-            color: this.variant === 'error' ? '#00f' : '#fff',
-            hp: 5 + this.lv,
-            dmg: this.dmg
+            pIdx: path.length-1, x: path[path.length-1].x*TILE+TILE/2, y: path[path.length-1].y*TILE+TILE/2,
+            hp: 10 + this.lv, color: this.variant === 'error' ? '#00f' : '#fff'
         });
     }
-    fire(t) {
-        projectiles.push({x:this.x, y:this.y, tx:t.x, ty:t.y, color:this.variant === 'dust' ? '#f0f' : '#fff', life:5});
+    attack(t) {
+        if(t.perk === 'dodge' && t.stamina > 0 && Math.random() < 0.5) {
+            t.stamina--; 
+            vfx.push({x:t.x, y:t.y-20, txt:'MISS', life:30, color:'#fff'});
+            return;
+        }
+        
+        if(this.weapon.type === 'melee') {
+            bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:5, color:'#fff', wide:4});
+        } else {
+            bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:10, color:this.id==='sans'?'#0cf':'#f0f', wide:2});
+        }
+        
         t.hp -= this.dmg;
+        if(t.perk === 'stun' && Math.random() < 0.1) this.stun = 60;
     }
     draw() {
-        ctx.fillStyle = (this.variant === 'chara' || this.variant === 'something_new') ? 'red' : (this.variant === 'base' ? '#555' : 'white');
+        ctx.fillStyle = this.stun > 0 ? '#555' : (this.variant==='chara'?'#f00':'#fff');
         ctx.fillRect(this.tx*TILE+5, this.ty*TILE+5, TILE-10, TILE-10);
-        ctx.fillStyle = 'white'; ctx.font = '10px Courier';
-        ctx.fillText("LV"+this.lv, this.x-10, this.y+5);
+        ctx.fillStyle = 'black'; ctx.font = '10px Courier';
+        ctx.fillText("LV"+this.lv, this.x-12, this.y+5);
     }
 }
 
 /** ENEMY CLASS **/
 class Enemy {
     constructor(data, wave) {
-        this.data = data;
-        this.pIdx = 0;
+        this.data = data; this.pIdx = 0;
         this.x = path[0].x*TILE+TILE/2; this.y = path[0].y*TILE+TILE/2;
-        this.maxHp = data.hp * (1 + wave*0.5); this.hp = this.maxHp;
-        this.speed = data.speed;
-        if(data.boss) document.getElementById('body-tag').classList.add('glitch');
+        this.maxHp = data.hp * (1 + wave*0.4); this.hp = this.maxHp;
+        this.speed = data.speed; this.perk = data.perk;
+        this.lives = (data.perk === 'revive') ? 2 : 1;
+        this.stamina = (data.perk === 'dodge') ? 5 : 0;
     }
     update() {
         let t = path[this.pIdx];
         if(!t) return 'leak';
         let tx = t.x*TILE+TILE/2, ty = t.y*TILE+TILE/2;
         let d = Math.hypot(tx-this.x, ty-this.y);
-        if(d < this.speed) this.pIdx++;
-        else { this.x += ((tx-this.x)/d)*this.speed; this.y += ((ty-this.y)/d)*this.speed; }
-        return this.hp <= 0 ? 'die' : null;
+        
+        let curSpeed = this.speed;
+        if(this.perk === 'dodge' && this.stamina <= 0) curSpeed *= 0.5;
+
+        if(d < curSpeed) this.pIdx++;
+        else { this.x += ((tx-this.x)/d)*curSpeed; this.y += ((ty-this.y)/d)*curSpeed; }
+
+        if(this.hp <= 0) {
+            this.lives--;
+            if(this.lives > 0) { this.hp = this.maxHp; return null; }
+            if(this.perk === 'phase2') {
+                this.perk = 'none'; this.data.name = "Undying"; this.hp = this.maxHp*2; this.speed *= 1.5;
+                vfx.push({x:this.x, y:this.y, txt:'UNDYING', life:60, color:'#0ff'});
+                return null;
+            }
+            return 'die';
+        }
+        return null;
     }
     draw() {
         ctx.fillStyle = this.data.color;
         ctx.beginPath(); ctx.arc(this.x, this.y, 12, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = 'white'; ctx.stroke();
-        ctx.fillStyle = 'red'; ctx.fillRect(this.x-15, this.y-20, 30, 4);
-        ctx.fillStyle = 'lime'; ctx.fillRect(this.x-15, this.y-20, 30*(this.hp/this.maxHp), 4);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        
+        ctx.fillStyle = 'red'; ctx.fillRect(this.x-15, this.y-22, 30, 4);
+        ctx.fillStyle = '#0f0'; ctx.fillRect(this.x-15, this.y-22, 30*(this.hp/this.maxHp), 4);
     }
 }
 
-/** MAIN LOOP **/
+/** LOOP **/
 function loop() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     
-    // Draw Path
+    // Road
     ctx.fillStyle = '#111';
     path.forEach(p => ctx.fillRect(p.x*TILE, p.y*TILE, TILE, TILE));
 
     towers.forEach(t => { t.update(); t.draw(); });
 
-    // Puppet Logic
+    // Puppets
     for(let i=puppets.length-1; i>=0; i--) {
         let p = puppets[i];
         let target = path[p.pIdx];
         if(!target) { puppets.splice(i,1); continue; }
         let tx = target.x*TILE+TILE/2, ty = target.y*TILE+TILE/2;
         let d = Math.hypot(tx-p.x, ty-p.y);
-        if(d < 3) p.pIdx--;
-        else { p.x += ((tx-p.x)/d)*3; p.y += ((ty-p.y)/d)*3; }
-        
+        if(d < 3) p.pIdx--; else { p.x += ((tx-p.x)/d)*3; p.y += ((ty-p.y)/d)*3; }
         ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
-        
-        enemies.forEach(e => {
-            if(Math.hypot(e.x-p.x, e.y-p.y) < 20) { e.hp -= p.dmg; p.hp--; }
-        });
+        enemies.forEach(e => { if(Math.hypot(e.x-p.x, e.y-p.y)<20) { e.hp -= 2; p.hp--; } });
         if(p.hp <= 0) puppets.splice(i,1);
     }
 
+    // Enemies
     for(let i=enemies.length-1; i>=0; i--) {
         let res = enemies[i].update();
         if(res === 'leak') { hp--; enemies.splice(i,1); }
-        else if(res === 'die') { 
-            money += 40; 
-            if(enemies[i].data.boss) document.getElementById('body-tag').classList.remove('glitch');
+        else if(res === 'die') { money += 40; 
+            if(enemies[i].perk === 'glitch') document.getElementById('main-body').classList.remove('glitch');
             enemies.splice(i,1); 
         }
         else enemies[i].draw();
     }
 
-    // Beams
-    for(let i=projectiles.length-1; i>=0; i--) {
-        let p = projectiles[i];
-        ctx.strokeStyle = p.color; ctx.lineWidth = p.life;
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.tx, p.ty); ctx.stroke();
-        p.life--; if(p.life <= 0) projectiles.splice(i,1);
+    // Bullets & VFX
+    ctx.lineCap = 'round';
+    for(let i=bullets.length-1; i>=0; i--) {
+        let b = bullets[i]; ctx.strokeStyle = b.color; ctx.lineWidth = b.wide;
+        ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+        b.life--; if(b.life <= 0) bullets.splice(i,1);
+    }
+
+    vfx.forEach((v,i) => {
+        ctx.fillStyle = v.color; ctx.font = 'bold 14px Courier'; ctx.fillText(v.txt, v.x-20, v.y);
+        v.y--; v.life--; if(v.life <= 0) vfx.splice(i,1);
+    });
+
+    // Placement
+    if(activeSummon) {
+        let occ = towers.find(t=>t.tx===mouse.tx && t.ty===mouse.ty) || path.find(p=>p.x===mouse.tx && p.y===mouse.ty);
+        ctx.globalAlpha = 0.4; ctx.fillStyle = occ ? 'red' : activeSummon.color;
+        ctx.fillRect(mouse.tx*TILE, mouse.ty*TILE, TILE, TILE);
+        ctx.globalAlpha = 1;
     }
 
     updateUI();
     if(hp > 0) requestAnimationFrame(loop);
-    else alert("THE TIMELINE COLLAPSED.");
+    else alert("GAME OVER. THE TIMELINE WAS ERASED.");
 }
 
-/** INTERACTION & EVOLUTION **/
+/** INTERACTION & UPGRADES **/
 canvas.onmousemove = (e) => {
     let r = canvas.getBoundingClientRect();
     mouse.tx = Math.floor((e.clientX - r.left)/TILE);
@@ -366,104 +342,82 @@ canvas.onmousemove = (e) => {
 };
 
 canvas.onmousedown = () => {
-    if(activeShopTower) {
-        if(money >= activeShopTower.cost) {
-            money -= activeShopTower.cost;
-            towers.push(new Tower(activeShopTower, mouse.tx, mouse.ty));
-            activeShopTower = null;
-            document.querySelectorAll('.shop-btn').forEach(x => x.classList.remove('active'));
+    if(activeSummon) {
+        let occ = towers.find(t=>t.tx===mouse.tx && t.ty===mouse.ty) || path.find(p=>p.x===mouse.tx && p.y===mouse.ty);
+        if(!occ && money >= activeSummon.cost) {
+            money -= activeSummon.cost; towers.push(new Tower(activeSummon, mouse.tx, mouse.ty));
+            activeSummon = null; document.querySelectorAll('.shop-card').forEach(x=>x.classList.remove('active'));
         }
     } else {
-        let t = towers.find(x => x.tx === mouse.tx && x.ty === mouse.ty);
+        let t = towers.find(x=>x.tx===mouse.tx && x.ty===mouse.ty);
         if(t) { selectedInst = t; showUpgrade(t); }
     }
 };
 
 function showUpgrade(t) {
-    const view = document.getElementById('upgrade-view');
-    view.style.display = 'block';
+    const p = document.getElementById('upgrade-panel'); p.style.display = 'block';
+    t.updateStats();
     document.getElementById('up-name').innerText = t.name;
-    document.getElementById('up-item').innerText = `[${t.weapon}]`;
-    document.getElementById('up-stats').innerText = `LV: ${t.lv} | DMG: ${Math.floor(t.dmg)} | RNG: ${t.range}`;
+    document.getElementById('up-item').innerText = t.weapon.name;
+    document.getElementById('up-stats').innerText = `LV: ${t.lv} | DMG: ${t.dmg} | RNG: ${t.range}`;
     
-    const branch = document.getElementById('branch-options');
-    branch.innerHTML = "";
-    
-    // Evolution Choices
-    if(t.id === 'sans' && t.lv === 5 && t.variant === 'base') {
-        createBranchBtn("Bad Time", () => { t.variant = 'bad_time'; t.rate = 1; t.range += 100; });
-        createBranchBtn("Dust", () => { t.variant = 'dust'; t.dmg *= 3; });
-        createBranchBtn("Last Breath", () => { t.variant = 'last_breath'; t.rate = 5; t.dmg *= 5; });
-        if(towers.find(x => x.variant === 'chara')) {
-            createBranchBtn("Killer", () => { 
-                t.variant = 'something_new'; t.dmg *= 10; 
-                let chara = towers.find(x => x.variant === 'chara');
-                towers = towers.filter(x => x !== chara);
-            });
+    const ev = document.getElementById('evolution-box'); ev.innerHTML = "";
+    if(t.lv >= 5 && t.variant === 'base') {
+        const row = document.createElement('div'); row.className = 'choice-row';
+        if(t.id === 'sans') {
+            row.appendChild(createEvoBtn("Bad Time", () => { t.variant='bad_time'; t.rate=2; }));
+            row.appendChild(createEvoBtn("Dust", () => { t.variant='dust'; t.dmg*=3; }));
+            row.appendChild(createEvoBtn("Last Breath", () => { t.variant='lb'; t.rate=15; t.dmg*=10; }));
         }
-    }
-    
-    if(t.id === 'frisk' && t.lv === 20 && t.variant === 'base') {
-        createBranchBtn("True Pacifist", () => { t.variant = 'pacifist'; t.dmg = 0; t.range = 500; });
-        createBranchBtn("Chara", () => { t.variant = 'chara'; t.dmg = 999; t.rate = 100; });
-    }
-
-    if(t.id === 'void' && t.lv === 1 && t.variant === 'base') {
-        createBranchBtn("Error", () => { t.variant = 'error'; t.rate = 80; });
-        createBranchBtn("Ink", () => { t.variant = 'ink'; t.rate = 120; });
-    }
-
-    const upBtn = document.getElementById('btn-upgrade');
-    const upCost = 50 * t.lv;
-    upBtn.innerText = `LEVEL UP ($${upCost})`;
-    
-    // Max Level Check
-    let isMax = false;
-    if(t.variant === 'bad_time' && t.lv >= 10) isMax = true;
-    if(t.variant === 'last_breath' && t.lv >= 15) isMax = true;
-    if(t.lv >= 20) isMax = true;
-
-    upBtn.disabled = isMax || money < upCost;
-    upBtn.onclick = () => {
-        if(money >= upCost) {
-            money -= upCost; t.lv++; t.dmg *= 1.25; t.range += 5;
-            showUpgrade(t);
+        if(t.id === 'frisk' && t.lv >= 19) {
+            row.appendChild(createEvoBtn("Pacifist", () => { t.variant='pacifist'; t.dmg=0; t.range=500; }));
+            row.appendChild(createEvoBtn("Chara", () => { t.variant='chara'; }));
         }
-    };
+        if(t.id === 'void') {
+            row.appendChild(createEvoBtn("Error", () => { t.variant='error'; }));
+            row.appendChild(createEvoBtn("Ink", () => { t.variant='ink'; }));
+        }
+        ev.appendChild(row);
+    }
+
+    const upBtn = document.getElementById('up-btn');
+    const cost = 80 * t.lv;
+    upBtn.innerText = `LEVEL UP ($${cost})`;
+    upBtn.disabled = money < cost || t.lv >= 20;
+    upBtn.onclick = () => { if(money>=cost) { money -= cost; t.lv++; showUpgrade(t); } };
 }
 
-function createBranchBtn(label, cb) {
-    const b = document.createElement('button');
-    b.className = 'choice-btn'; b.innerText = label;
-    b.onclick = () => { cb(); showUpgrade(selectedInst); };
-    document.getElementById('branch-options').appendChild(b);
+function createEvoBtn(txt, cb) {
+    const b = document.createElement('button'); b.className = 'choice-btn'; b.innerText = txt;
+    b.onclick = () => { cb(); showUpgrade(selectedInst); }; return b;
 }
 
-document.getElementById('btn-wave').onclick = () => {
+document.getElementById('wave-btn').onclick = () => {
     if(waveActive) return;
     wave++; waveActive = true;
-    let count = 5 + wave * 2;
-    document.getElementById('diag-text').innerText = `* Wave ${wave} - Lost Souls are emerging.`;
+    let count = 6 + wave * 2;
+    document.getElementById('diag-text').innerText = `* Wave ${wave} - The Lost Souls have noticed you.`;
     for(let i=0; i<count; i++) {
         setTimeout(() => {
-            let type = LOST_SOULS[Math.floor(Math.random()*3)];
-            if(wave % 10 === 0 && i === 0) type = LOST_SOULS[3];
+            let pool = ENEMY_TYPES.slice(0, Math.min(wave, 6));
+            if(wave % 10 === 0 && i === 0) pool = [ENEMY_TYPES[7]];
+            let type = pool[Math.floor(Math.random()*pool.length)];
+            if(type.perk === 'glitch') document.getElementById('main-body').classList.add('glitch');
             enemies.push(new Enemy(type, wave));
             if(i === count-1) {
                 let c = setInterval(() => {
                     if(enemies.length === 0) { waveActive = false; clearInterval(c); }
                 }, 500);
             }
-        }, i * 800);
+        }, i * 900);
     }
 };
 
 function updateUI() {
     document.getElementById('hp-val').innerText = hp;
     document.getElementById('g-val').innerText = money;
-    document.getElementById('wave-val').innerText = wave;
+    document.getElementById('w-val').innerText = wave;
 }
-
 </script>
 </body>
 </html>
