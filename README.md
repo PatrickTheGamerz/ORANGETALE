@@ -2,340 +2,308 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UTD: JUDGMENT EDITION</title>
+    <title>UTD: TRUE MULTIVERSE OVERHAUL</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        :root { --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --orange: #ffa500; --blue: #0000ff; --green: #00ff00; --yellow: #ffff00; --purple: #a020f0; }
-        
+        :root { 
+            --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --orange: #ffa500; 
+            --blue: #0000ff; --green: #00ff00; --yellow: #ffff00; --purple: #a020f0; 
+        }
         body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
         
-        #game-container { display: grid; grid-template-columns: 850px 250px; grid-template-rows: 60px 450px 180px; gap: 10px; padding: 10px; border: 5px double white; background: #000; }
+        #game-ui { display: grid; grid-template-columns: 850px 300px; grid-template-rows: 60px 450px 180px; gap: 10px; padding: 10px; border: 4px double white; }
         
-        header { grid-column: 1 / 3; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid #fff; }
-        canvas { grid-column: 1; grid-row: 2; background: #050505; border: 1px solid #222; image-rendering: pixelated; }
+        header { grid-column: 1 / 3; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid #fff; font-size: 1.2rem; }
+        canvas { grid-column: 1; grid-row: 2; background: #050505; border: 1px solid #333; }
         
-        #shop { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-        .shop-card { border: 2px solid white; padding: 12px; text-align: center; cursor: pointer; transition: 0.1s; font-size: 0.9rem; }
-        .shop-card:hover { background: #fff; color: #000; }
-        .shop-card.active { border-color: var(--gold); background: #1a1a1a; color: var(--gold); }
+        #shop { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #0a0a0a; }
+        .tower-btn { border: 2px solid white; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; position: relative; }
+        .tower-btn:hover { background: #fff; color: #000; }
+        .tower-btn.active { border-color: var(--gold); box-shadow: 0 0 10px var(--gold); color: var(--gold); }
 
-        #bottom-ui { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; }
-        #upgrade-panel { width: 350px; border-right: 2px solid white; padding-right: 20px; display: none; }
-        #dialogue { flex: 1; font-size: 1.2rem; line-height: 1.4; color: #fff; }
+        #footer { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; }
+        #upgrade-box { width: 350px; border-right: 2px solid white; padding-right: 15px; }
+        #console { flex: 1; font-size: 1.1rem; color: #fff; overflow-y: auto; }
 
-        .btn { background: #000; border: 2px solid #fff; color: #fff; padding: 10px; cursor: pointer; font-family: inherit; width: 100%; text-transform: uppercase; font-weight: bold; }
-        .btn:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
-        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        .glitch-fx { animation: glitch 0.1s infinite; filter: invert(1) hue-rotate(180deg); }
-        @keyframes glitch { 0% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 100% { transform: translate(0); } }
+        .btn { background: #000; border: 2px solid #fff; color: #fff; padding: 8px; cursor: pointer; font-family: inherit; width: 100%; margin-top: 5px; font-weight: bold; }
+        .btn:hover:not(:disabled) { background: #fff; color: #000; }
         
-        #overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 10px double white; margin: 15px; }
-        .stat-val { color: var(--gold); font-weight: bold; }
+        .soul-icon { width: 20px; height: 20px; display: inline-block; clip-path: path('M10,3.2C8.3,0.8,4,0.8,2.2,3.2c-1.1,1.5-1.1,3.6,0.1,5.1l7.7,8.5l7.7-8.5c1.2-1.5,1.2-3.6,0.1-5.1C16,0.8,11.7,0.8,10,3.2z'); }
+
+        #intro { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 15px double white; margin: 10px; }
+        .glitch { animation: glitch 0.1s infinite; filter: invert(1); }
+        @keyframes glitch { 0% { transform: translate(2px); } 50% { transform: translate(-2px); } }
     </style>
 </head>
-<body id="main-body">
+<body id="b">
 
-    <div id="overlay">
-        <h1 style="font-size: 4rem; color: var(--red); margin: 0; letter-spacing: 10px;">UTD</h1>
-        <p>CORE DEFENSE: THE TIMELINE HANGS BY A THREAD</p>
-        <div id="select-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin: 30px;"></div>
-        <button id="btn-start" class="btn" style="width: 280px;" disabled>INITIATE DEFENSE</button>
+    <div id="intro">
+        <h1 style="font-size: 5rem; color: var(--red); margin: 0;">UTD: REVAMPED</h1>
+        <p>SELECT YOUR 4 GUARDIANS</p>
+        <div id="setup-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin: 30px;"></div>
+        <button id="start-btn" class="btn" style="width: 250px; font-size: 1.5rem;" disabled>START</button>
     </div>
 
-    <div id="game-container">
+    <div id="game-ui">
         <header>
-            <div>DETERMINATION: <span id="hp-val" style="color:var(--red);">999</span></div>
-            <div>GOLD: <span id="g-val" class="stat-val">600</span></div>
-            <div>WAVE: <span id="w-val" class="stat-val">0</span></div>
-            <button id="btn-next-wave" class="btn" style="width:140px; margin:0; border-color:var(--red);">FIGHT</button>
+            <div>DT: <span id="hp" style="color:var(--red)">999</span></div>
+            <div>GOLD: <span id="gold" style="color:var(--gold)">600</span></div>
+            <div>WAVE: <span id="wave">0</span></div>
+            <button id="wave-start" class="btn" style="width:100px; margin:0">FIGHT</button>
         </header>
 
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="canvas"></canvas>
 
         <div id="shop">
-            <h3 style="margin:0; text-align:center; color:var(--gold);">SUMMON</h3>
-            <div id="shop-list"></div>
+            <div id="shop-items"></div>
         </div>
 
-        <div id="bottom-ui">
-            <div id="upgrade-panel">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b id="up-name">NAME</b>
-                    <span id="up-weapon" style="color:var(--cyan); font-size:0.8rem;">Stick</span>
-                </div>
-                <div id="up-stats" style="font-size:0.8rem; margin:8px 0; color:#aaa;">LV: 1 | DMG: 150</div>
-                <div id="evo-container"></div>
-                <button id="btn-upgrade" class="btn">EXP + LEVEL UP</button>
+        <div id="footer">
+            <div id="upgrade-box" style="display:none">
+                <b id="up-name">TOWER</b> <span id="up-lv" style="float:right">LV 1</span>
+                <p id="up-desc" style="font-size:0.8rem; height:40px; margin:5px 0;"></p>
+                <div id="evo-btns"></div>
+                <button id="up-go" class="btn">UPGRADE ($100)</button>
             </div>
-            <div id="dialogue">
-                <span style="color:red">❤</span> <span id="diag-text">If a single Soul reaches the end, the world ends. Stay focused.</span>
+            <div id="console">
+                <span style="color:red">❤</span> <span id="log">The timeline is resetting...</span>
             </div>
         </div>
     </div>
 
 <script>
-/** ⚔ DATA ARRAYS
+/** * TOWER & WEAPON DATA 
  */
-const FRISK_ITEMS = [
-    { lv: 1,  name: "Stick",        dmg: 250, range: 70,  type: "melee" },
-    { lv: 4,  name: "Toy Knife",    dmg: 450, range: 90,  type: "melee" },
-    { lv: 7,  name: "Tough Glove",  dmg: 80,  range: 130, type: "rapid" },
-    { lv: 10, name: "Notebook",     dmg: 40,  range: 160, type: "utility" },
-    { lv: 13, name: "Burnt Pan",    dmg: 200, range: 140, type: "splash" },
-    { lv: 16, name: "Empty Gun",    dmg: 500, range: 350, type: "sniper" },
-    { lv: 19, name: "True Knife",   dmg: 9999,range: 110, type: "god" }
-];
-
-const GUARDIANS = [
-    { id: 'frisk', name: 'Frisk', cost: 200, color: '#ff00ff' },
-    { id: 'sans',  name: 'Sans',  cost: 500, color: '#008cff' },
-    { id: 'void',  name: 'Void',  cost: 400, color: '#ffffff' },
-    { id: 'undyne',name: 'Undyne',cost: 350, color: '#00ffff' },
-    { id: 'asgore',name: 'Asgore',cost: 450, color: '#ffa500' },
-    { id: 'papy',  name: 'Papyrus',cost: 150, color: '#ffffff' }
-];
+const T_DATA = {
+    frisk: { name: "Frisk", cost: 200, color: "#ff00ff", weapons: [
+        { lv: 1,  n: "Stick", dmg: 350, rng: 70,  type: "stun" },
+        { lv: 5,  n: "Toy Knife", dmg: 600, rng: 90, type: "melee" },
+        { lv: 10, n: "Notebook", dmg: 100, rng: 150, type: "inv" },
+        { lv: 15, n: "Empty Gun", dmg: 1200, rng: 300, type: "ranged" },
+        { lv: 20, n: "True Knife", dmg: 9999, rng: 120, type: "god" }
+    ]},
+    sans: { name: "Sans", cost: 500, color: "#008cff", desc: "Applies KR (Poison). Blasters pierce line." },
+    undyne: { name: "Undyne", cost: 300, color: "#00ffff", desc: "Spears target highest HP enemy." },
+    papy: { name: "Papyrus", cost: 150, color: "#ffffff", desc: "Blue Bones slow enemies by 60%." },
+    asgore: { name: "Asgore", cost: 450, color: "#ffa500", desc: "Orange/Blue Trident AOE." },
+    void: { name: "Void", cost: 400, color: "#fff", desc: "LV 1 choice: Error or Ink Sans." }
+};
 
 const SOULS = [
-    { name: 'Patience', hp: 80,  speed: 0.6, color: 'var(--cyan)',   perk: 'cyan' },
-    { name: 'Bravery',  hp: 60,  speed: 1.8, color: 'var(--orange)', perk: 'orange' },
-    { name: 'Integrity',hp: 90,  speed: 1.2, color: 'var(--blue)',   perk: 'blue' },
-    { name: 'Kindness', hp: 200, speed: 0.7, color: 'var(--green)',  perk: 'green' },
-    { name: 'Justice',  hp: 120, speed: 1.3, color: 'var(--yellow)', perk: 'yellow' },
-    { name: 'Determination', hp: 250, speed: 1.4, color: 'var(--red)', perk: 'red' },
-    { name: 'GASTER',   hp: 12000,speed: 0.5, color: '#000', perk: 'glitch' }
+    { n: 'Patience',  hp: 100, spd: 0.8, c: 'var(--cyan)',   p: 'cyan' },
+    { n: 'Bravery',   hp: 80,  spd: 2.0, c: 'var(--orange)', p: 'orange' },
+    { n: 'Integrity', hp: 120, spd: 1.2, c: 'var(--blue)',   p: 'blue' },
+    { n: 'Kindness',  hp: 250, spd: 0.7, c: 'var(--green)',  p: 'green' },
+    { n: 'Justice',   hp: 150, spd: 1.4, c: 'var(--yellow)', p: 'yellow' },
+    { n: 'Sans Soul', hp: 1,   spd: 2.5, c: 'var(--blue)',   p: 'dodge' },
+    { n: 'GASTER',    hp: 15000,spd: 0.5, c: '#000', p: 'glitch' }
 ];
 
-/** ENGINE SETUP **/
-const canvas = document.getElementById('gameCanvas');
+/** ENGINE **/
+const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const TILE = 50, COLS = 17, ROWS = 9;
+const TILE = 50;
 canvas.width = 850; canvas.height = 450;
 
-let money = 600, coreHP = 999, wave = 0;
-let towers = [], enemies = [], path = [], bullets = [], puppets = [], vfx = [];
-let myLoadout = [], activeSummon = null, selectedInst = null, waveActive = false;
+let gold = 600, hp = 999, wave = 0;
+let towers = [], enemies = [], path = [], bullets = [], effects = [];
+let loadout = [], active = null, selection = null, waveOn = false;
 let mouse = { tx: 0, ty: 0 };
 
-// Character Selection Logic
-const grid = document.getElementById('select-grid');
-GUARDIANS.forEach(g => {
-    const d = document.createElement('div');
-    d.className = 'shop-card';
-    d.innerHTML = `<b>${g.name}</b><br>$${g.cost}`;
-    d.onclick = () => {
-        if(myLoadout.includes(g.id)) {
-            myLoadout = myLoadout.filter(i => i !== g.id);
-            d.style.borderColor = 'white';
-        } else if(myLoadout.length < 4) {
-            myLoadout.push(g.id);
-            d.style.borderColor = 'var(--gold)';
-        }
-        document.getElementById('btn-start').disabled = myLoadout.length !== 4;
+// Setup Menu
+const setup = document.getElementById('setup-grid');
+Object.keys(T_DATA).forEach(k => {
+    const div = document.createElement('div');
+    div.className = 'tower-btn';
+    div.innerHTML = `<b>${T_DATA[k].name}</b><br>$${T_DATA[k].cost}`;
+    div.onclick = () => {
+        if(loadout.includes(k)) loadout = loadout.filter(i => i!==k);
+        else if(loadout.length < 4) loadout.push(k);
+        div.classList.toggle('active', loadout.includes(k));
+        document.getElementById('start-btn').disabled = loadout.length < 4;
     };
-    grid.appendChild(d);
+    setup.appendChild(div);
 });
 
-document.getElementById('btn-start').onclick = () => {
-    document.getElementById('overlay').style.display = 'none';
-    const list = document.getElementById('shop-list');
-    myLoadout.forEach(id => {
-        const g = GUARDIANS.find(x => x.id === id);
-        const b = document.createElement('div');
-        b.className = 'shop-card';
-        b.innerHTML = `<b>${g.name}</b><br>$${g.cost}`;
-        b.onclick = () => {
-            activeSummon = g;
-            document.querySelectorAll('.shop-card').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
+document.getElementById('start-btn').onclick = () => {
+    document.getElementById('intro').style.display = 'none';
+    const shopList = document.getElementById('shop-items');
+    loadout.forEach(k => {
+        const btn = document.createElement('div');
+        btn.className = 'tower-btn';
+        btn.innerHTML = `<b>${T_DATA[k].name}</b><br>$${T_DATA[k].cost}`;
+        btn.onclick = () => {
+            active = k;
+            document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         };
-        list.appendChild(b);
+        shopList.appendChild(btn);
     });
-    generateMap();
+    genMap();
     requestAnimationFrame(loop);
 };
 
-function generateMap() {
+function genMap() {
     path = []; let x = 0, y = 4;
-    while(x < COLS) {
+    while(x < 17) {
         path.push({x, y});
-        let r = Math.random();
-        if(r < 0.2 && y > 1) y--; else if(r < 0.4 && y < ROWS-2) y++; else x++;
+        if(Math.random() < 0.3 && y > 1) y--;
+        else if(Math.random() < 0.3 && y < 7) y++;
+        else x++;
     }
 }
 
-/** CLASSES **/
+/** TOWER CLASS **/
 class Tower {
-    constructor(cfg, tx, ty) {
-        this.id = cfg.id; this.name = cfg.name; this.tx = tx; this.ty = ty;
+    constructor(k, tx, ty) {
+        this.k = k; this.tx = tx; this.ty = ty;
         this.x = tx*TILE+TILE/2; this.y = ty*TILE+TILE/2;
         this.lv = 1; this.cd = 0; this.stun = 0;
         this.variant = 'base';
-        this.updateStats();
+        this.refresh();
     }
-    updateStats() {
-        if(this.id === 'frisk') {
-            const w = [...FRISK_ITEMS].reverse().find(wi => this.lv >= wi.lv);
-            this.weapon = w;
-            this.dmg = w.dmg; this.range = w.range; this.rate = (w.type === 'rapid') ? 8 : 45;
+    refresh() {
+        const d = T_DATA[this.k];
+        if(this.k === 'frisk') {
+            const w = [...d.weapons].reverse().find(wi => this.lv >= wi.lv);
+            this.dmg = w.dmg; this.rng = w.rng; this.rate = w.type === 'rapid' ? 10 : 40;
+            this.wName = w.n;
         } else {
-            this.weapon = { name: "Magic", type: "magic" };
-            this.dmg = 60 + (this.lv * 30);
-            this.range = (this.id === 'sans') ? 350 : 200;
-            this.rate = (this.id === 'sans') ? 3 : 50;
+            this.dmg = 50 + (this.lv * 20);
+            this.rng = (this.k === 'sans' || this.k === 'undyne') ? 300 : 150;
+            this.rate = (this.k === 'sans') ? 8 : 45;
+            this.wName = "Magic";
         }
         if(this.variant === 'chara') this.dmg *= 5;
     }
     update() {
         if(this.stun > 0) { this.stun--; return; }
         if(this.cd > 0) this.cd--;
-
-        if(this.id === 'void' && this.variant !== 'base' && this.cd <= 0) {
-            this.spawnPuppet(); this.cd = 90;
-        }
-
-        let target = enemies.find(e => Math.hypot(e.x-this.x, e.y-this.y) < this.range);
-        if(target && this.cd <= 0 && this.id !== 'void') {
+        let target = enemies.find(e => Math.hypot(e.x-this.x, e.y-this.y) < this.rng);
+        if(target && this.cd <= 0) {
             this.attack(target);
             this.cd = this.rate;
         }
     }
-    spawnPuppet() {
-        puppets.push({
-            pIdx: path.length-1, x: path[path.length-1].x*TILE+TILE/2, y: path[path.length-1].y*TILE+TILE/2,
-            hp: 25 + this.lv * 10, color: (this.variant==='error')?'#00f':'#fff', dmg: 5 + this.lv
-        });
-    }
     attack(t) {
-        let beamColor = this.id === 'sans' ? '#0cf' : (this.id === 'undyne' ? '#0ff' : '#fff');
-        if(this.id === 'frisk' && this.variant === 'chara') beamColor = '#f00';
+        if(t.p === 'dodge' && Math.random() < 0.7) {
+            effects.push({x:t.x, y:t.y-20, txt:'MISS', life:30, c:'#fff'});
+            return;
+        }
+        // Logic Revamp: Cyan patience
+        if(t.p === 'cyan' && !t.waiting) return; 
 
-        bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:6, color:beamColor, wide: (this.weapon.type==='god'?10:3)});
-        t.hp -= this.dmg;
+        let c = this.k === 'sans' ? '#0cf' : (this.k==='frisk' && this.variant==='chara'?'#f00':'#fff');
+        bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:5, c:c, w: (this.variant==='chara'?8:2)});
         
-        // Justice Soul Stun
-        if(t.perk === 'yellow' && Math.random() < 0.15) this.stun = 90;
+        t.hp -= this.dmg;
+        if(this.k === 'sans') t.kr = 100; // Karma
+        if(this.k === 'papy') t.blue = 60; // Blue slow
+
+        if(t.p === 'yellow' && Math.random() < 0.1) this.stun = 100; // Justice stun
     }
     draw() {
-        ctx.fillStyle = this.stun > 0 ? '#333' : (this.variant==='chara'?'#f00':'#fff');
-        ctx.fillRect(this.tx*TILE+5, this.ty*TILE+5, TILE-10, TILE-10);
-        ctx.fillStyle = '#000'; ctx.font = 'bold 12px Courier';
-        ctx.fillText("LV"+this.lv, this.x-14, this.y+5);
+        ctx.fillStyle = this.stun > 0 ? '#333' : (this.variant==='chara'?'#f00':T_DATA[this.k].color);
+        ctx.beginPath();
+        ctx.roundRect(this.tx*TILE+5, this.ty*TILE+5, TILE-10, TILE-10, 5);
+        ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 10px Courier';
+        ctx.fillText("LV"+this.lv, this.x-12, this.y+5);
     }
 }
 
+/** ENEMY CLASS **/
 class Enemy {
-    constructor(data, wave) {
-        this.data = data; this.pIdx = 0;
+    constructor(d, wave) {
+        this.d = d; this.pIdx = 0;
         this.x = path[0].x*TILE+TILE/2; this.y = path[0].y*TILE+TILE/2;
-        this.maxHp = data.hp * (1 + wave * 0.5); this.hp = this.maxHp;
-        this.speed = data.speed; this.perk = data.perk;
-        this.timer = 0; this.revived = false;
+        this.hp = d.hp * (1 + wave * 0.6); this.max = this.hp;
+        this.spd = d.spd; this.p = d.p;
+        this.timer = 0; this.kr = 0; this.blue = 0; this.shield = (d.p === 'green' ? 5 : 0);
     }
     update() {
         this.timer++;
-        let curSpeed = this.speed;
+        if(this.kr > 0) { this.hp -= 0.5; this.kr--; }
+        let s = this.blue > 0 ? this.spd * 0.4 : this.spd;
+        if(this.blue > 0) this.blue--;
 
-        // Soul Perks
-        if(this.perk === 'cyan' && this.timer % 140 === 0) this.wait = 30;
-        if(this.wait > 0) { this.wait--; curSpeed = 0; }
-        
-        if(this.perk === 'orange' && this.timer % 100 > 85) curSpeed *= 2.5;
-
-        if(this.perk === 'blue' && this.timer % 130 === 0) {
-            this.x += (path[this.pIdx+1]?.x - path[this.pIdx]?.x) * TILE;
-            this.y += (path[this.pIdx+1]?.y - path[this.pIdx]?.y) * TILE;
-            this.pIdx++;
+        // 1:1 Lore Ability: Patience
+        if(this.p === 'cyan') {
+            this.waiting = (this.timer % 150 > 100);
+            if(this.waiting) s = 0;
         }
+        // Bravery: Fast if not slowed
+        if(this.p === 'orange' && this.blue === 0) s *= 1.8;
 
-        if(this.perk === 'green') {
-            enemies.forEach(e => {
-                if(e !== this && Math.hypot(e.x-this.x, e.y-this.y) < 70) e.hp = Math.min(e.maxHp, e.hp + 0.2);
-            });
+        // Integrity: Jump
+        if(this.p === 'blue' && this.timer % 120 === 0) {
+            this.pIdx = Math.min(path.length-1, this.pIdx + 2);
+            this.x = path[this.pIdx].x*TILE+TILE/2; this.y = path[pIdx].y*TILE+TILE/2;
         }
 
         let target = path[this.pIdx];
         if(!target) return 'leak';
         let tx = target.x*TILE+TILE/2, ty = target.y*TILE+TILE/2;
-        let d = Math.hypot(tx-this.x, ty-this.y);
-        if(d < curSpeed) this.pIdx++;
-        else { this.x += ((tx-this.x)/d)*curSpeed; this.y += ((ty-this.y)/d)*curSpeed; }
+        let dist = Math.hypot(tx-this.x, ty-this.y);
+        if(dist < s) this.pIdx++;
+        else { this.x += ((tx-this.x)/dist)*s; this.y += ((ty-this.y)/dist)*s; }
 
-        if(this.hp <= 0) {
-            if(this.perk === 'red' && !this.revived) {
-                this.hp = this.maxHp; this.revived = true;
-                vfx.push({x:this.x, y:this.y, txt:'REFUSE', life:40, color:'#f00'});
-                return null;
-            }
-            return 'die';
-        }
-        return null;
+        return this.hp <= 0 ? 'die' : null;
     }
     draw() {
-        ctx.fillStyle = this.data.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 14, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = 'red'; ctx.fillRect(this.x-15, this.y-24, 30, 4);
-        ctx.fillStyle = '#0f0'; ctx.fillRect(this.x-15, this.y-24, 30*(this.hp/this.maxHp), 4);
+        ctx.fillStyle = this.d.c;
+        ctx.beginPath();
+        // Soul Shape
+        ctx.moveTo(this.x, this.y + 10);
+        ctx.bezierCurveTo(this.x - 15, this.y - 15, this.x - 20, this.y + 5, this.x, this.y + 15);
+        ctx.bezierCurveTo(this.x + 20, this.y + 5, this.x + 15, this.y - 15, this.x, this.y + 10);
+        ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        
+        // HP
+        ctx.fillStyle = 'red'; ctx.fillRect(this.x-15, this.y-25, 30, 4);
+        ctx.fillStyle = '#0f0'; ctx.fillRect(this.x-15, this.y-25, 30*(this.hp/this.max), 4);
     }
 }
 
 /** LOOP **/
 function loop() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    
-    // Draw Path
-    ctx.fillStyle = '#111';
-    path.forEach(p => ctx.fillRect(p.x*TILE, p.y*TILE, TILE, TILE));
+    path.forEach(p => { ctx.fillStyle = '#111'; ctx.fillRect(p.x*TILE, p.y*TILE, TILE, TILE); });
 
     towers.forEach(t => { t.update(); t.draw(); });
 
-    // Puppets (Backwards Pathing)
-    for(let i=puppets.length-1; i>=0; i--) {
-        let p = puppets[i];
-        let target = path[p.pIdx];
-        if(!target) { puppets.splice(i,1); continue; }
-        let tx = target.x*TILE+TILE/2, ty = target.y*TILE+TILE/2;
-        let d = Math.hypot(tx-p.x, ty-p.y);
-        if(d < 4) p.pIdx--; else { p.x += ((tx-p.x)/d)*4; p.y += ((ty-p.y)/d)*4; }
-        ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
-        enemies.forEach(e => { if(Math.hypot(e.x-p.x, e.y-p.y)<30) { e.hp -= p.dmg; p.hp -= 0.3; } });
-        if(p.hp <= 0) puppets.splice(i,1);
-    }
-
-    // Enemies
     for(let i=enemies.length-1; i>=0; i--) {
         let res = enemies[i].update();
-        if(res === 'leak') { 
-            coreHP = 0; // INSTANT DEATH
-            document.getElementById('hp-val').innerText = 0;
-            alert("SUDDEN DEATH: A Soul breached the Core. Timeline Erased.");
-            location.reload();
-            return;
-        }
-        else if(res === 'die') { money += 60; 
-            if(enemies[i].perk === 'glitch') document.getElementById('main-body').classList.remove('glitch-fx');
-            enemies.splice(i,1); 
-        }
+        if(res === 'leak') { alert("TIMELINE ERASED."); location.reload(); return; }
+        if(res === 'die') { gold += 50; enemies.splice(i,1); if(enemies.length === 0 && waveOn) waveOn = false; }
         else enemies[i].draw();
     }
 
-    // Visuals
-    for(let i=bullets.length-1; i>=0; i--) {
-        let b = bullets[i]; ctx.strokeStyle = b.color; ctx.lineWidth = b.wide;
+    bullets.forEach((b,i) => {
+        ctx.strokeStyle = b.c; ctx.lineWidth = b.w;
         ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
         b.life--; if(b.life <= 0) bullets.splice(i,1);
-    }
-    vfx.forEach((v,i) => {
-        ctx.fillStyle = v.color; ctx.font = 'bold 16px Courier'; ctx.fillText(v.txt, v.x-25, v.y);
-        v.y--; v.life--; if(v.life <= 0) vfx.splice(i,1);
     });
 
-    updateUI();
-    if(coreHP > 0) requestAnimationFrame(loop);
+    effects.forEach((e,i) => {
+        ctx.fillStyle = e.c; ctx.font = 'bold 16px Courier'; ctx.fillText(e.txt, e.x-10, e.y);
+        e.y--; e.life--; if(e.life <= 0) effects.splice(i,1);
+    });
+
+    if(active) {
+        ctx.globalAlpha = 0.3; ctx.fillStyle = T_DATA[active].color;
+        ctx.fillRect(mouse.tx*TILE, mouse.ty*TILE, TILE, TILE);
+        ctx.globalAlpha = 1;
+    }
+
+    document.getElementById('hp').innerText = hp;
+    document.getElementById('gold').innerText = gold;
+    document.getElementById('wave').innerText = wave;
+    requestAnimationFrame(loop);
 }
 
-/** INTERACTION **/
+/** UI **/
 canvas.onmousemove = (e) => {
     let r = canvas.getBoundingClientRect();
     mouse.tx = Math.floor((e.clientX - r.left)/TILE);
@@ -343,83 +311,50 @@ canvas.onmousemove = (e) => {
 };
 
 canvas.onmousedown = () => {
-    if(activeSummon) {
-        let occ = towers.find(t=>t.tx===mouse.tx && t.ty===mouse.ty) || path.find(p=>p.x===mouse.tx && p.y===mouse.ty);
-        if(!occ && money >= activeSummon.cost) {
-            money -= activeSummon.cost; towers.push(new Tower(activeSummon, mouse.tx, mouse.ty));
-            activeSummon = null; document.querySelectorAll('.shop-card').forEach(x => x.classList.remove('active'));
+    if(active) {
+        let occ = towers.find(t=>t.tx===mouse.tx && t.ty===mouse.ty) || !path.every(p => p.x!==mouse.tx || p.y!==mouse.ty);
+        if(!occ && gold >= T_DATA[active].cost) {
+            gold -= T_DATA[active].cost; towers.push(new Tower(active, mouse.tx, mouse.ty));
+            active = null; document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('active'));
         }
     } else {
         let t = towers.find(x => x.tx === mouse.tx && x.ty === mouse.ty);
-        if(t) { selectedInst = t; showUpgrade(t); }
+        if(t) { selection = t; showUp(t); }
+        else { selection = null; document.getElementById('upgrade-box').style.display='none'; }
     }
 };
 
-function showUpgrade(t) {
-    const p = document.getElementById('upgrade-panel'); p.style.display = 'block';
-    t.updateStats();
-    document.getElementById('up-name').innerText = t.name;
-    document.getElementById('up-weapon').innerText = t.weapon.name;
-    document.getElementById('up-stats').innerText = `LV: ${t.lv} | DMG: ${t.dmg} | RNG: ${t.range}`;
+function showUp(t) {
+    document.getElementById('upgrade-box').style.display='block';
+    document.getElementById('up-name').innerText = T_DATA[t.k].name;
+    document.getElementById('up-lv').innerText = "LV " + t.lv;
+    document.getElementById('up-desc').innerText = `Weapon: ${t.wName}\nDMG: ${Math.floor(t.dmg)} | RNG: ${t.rng}`;
     
-    const ev = document.getElementById('evo-container'); ev.innerHTML = "";
-    if(t.lv >= 5 && t.variant === 'base') {
-        const d = document.createElement('div'); d.style.display='flex'; d.style.gap='5px';
-        if(t.id === 'sans') {
-            d.appendChild(createEvoBtn("BAD TIME", () => t.variant='bad_time'));
-            d.appendChild(createEvoBtn("LAST BREATH", () => { t.variant='lb'; t.dmg*=4; t.rate=15; }));
-        }
-        if(t.id === 'void') {
-            d.appendChild(createEvoBtn("ERROR", () => t.variant='error'));
-            d.appendChild(createEvoBtn("INK", () => t.variant='ink'));
-        }
-        ev.appendChild(d);
-    }
-    if(t.id === 'frisk' && t.lv >= 19 && t.variant === 'base') {
-        const d = document.createElement('div'); d.style.display='flex'; d.style.gap='5px';
-        d.appendChild(createEvoBtn("CHARA", () => { t.variant='chara'; t.updateStats(); }));
-        ev.appendChild(d);
+    const evo = document.getElementById('evo-btns'); evo.innerHTML = "";
+    if(t.k === 'frisk' && t.lv >= 19 && t.variant === 'base') {
+        const b = document.createElement('button'); b.className='btn'; b.innerText="GENOCIDE (CHARA)";
+        b.onclick = () => { t.variant = 'chara'; t.refresh(); showUp(t); };
+        evo.appendChild(b);
     }
 
-    const upBtn = document.getElementById('btn-upgrade');
-    const cost = 120 * t.lv;
-    upBtn.innerText = `LEVEL UP ($${cost})`;
-    upBtn.disabled = money < cost || t.lv >= 20;
-    upBtn.onclick = () => { if(money>=cost) { money -= cost; t.lv++; showUpgrade(t); } };
+    const go = document.getElementById('up-go');
+    const cost = 100 * t.lv;
+    go.innerText = `UPGRADE ($${cost})`;
+    go.disabled = gold < cost || t.lv >= 20;
+    go.onclick = () => { if(gold>=cost) { gold -= cost; t.lv++; t.refresh(); showUp(t); } };
 }
 
-function createEvoBtn(txt, cb) {
-    const b = document.createElement('button'); b.className = 'btn'; 
-    b.style = "font-size:0.7rem; padding:4px; margin-top:5px; border-color:var(--gold); color:var(--gold);";
-    b.innerText = txt; b.onclick = () => { cb(); showUpgrade(selectedInst); }; return b;
-}
-
-document.getElementById('btn-next-wave').onclick = () => {
-    if(waveActive) return;
-    wave++; waveActive = true;
-    let count = 4 + wave * 2;
-    document.getElementById('diag-text').innerText = `* Wave ${wave} - One breach and it's over.`;
+document.getElementById('wave-start').onclick = () => {
+    if(waveOn) return; wave++; waveOn = true;
+    let count = 5 + wave * 2;
     for(let i=0; i<count; i++) {
         setTimeout(() => {
-            let pool = SOULS.slice(0, Math.min(wave, 6));
-            if(wave % 10 === 0 && i === 0) pool = [SOULS[6]];
-            let type = pool[Math.floor(Math.random()*pool.length)];
-            if(type.perk === 'glitch') document.getElementById('main-body').classList.add('glitch-fx');
-            enemies.push(new Enemy(type, wave));
-            if(i === count-1) {
-                let c = setInterval(() => {
-                    if(enemies.length === 0) { waveActive = false; clearInterval(c); }
-                }, 500);
-            }
-        }, i * 1100);
+            let p = SOULS.slice(0, Math.min(wave, 6));
+            if(wave % 10 === 0 && i === 0) p = [SOULS[6]];
+            enemies.push(new Enemy(p[Math.floor(Math.random()*p.length)], wave));
+        }, i * 800);
     }
 };
-
-function updateUI() {
-    document.getElementById('hp-val').innerText = coreHP;
-    document.getElementById('g-val').innerText = money;
-    document.getElementById('w-val').innerText = wave;
-}
 </script>
 </body>
 </html>
