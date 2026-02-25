@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNDERTALE: Eternal Genocide</title>
+    <title>UNDERTALE: Eternal Genocide - Determination Edition</title>
     <style>
         @font-face {
             font-family: 'Determination';
@@ -11,683 +10,584 @@
         }
 
         :root {
-            --ut-red: #ff0000;
-            --ut-yellow: #ffff00;
-            --ut-white: #ffffff;
-            --ut-bg: #000000;
-            --ut-border: #ffffff;
-            --panel-bg: rgba(20, 20, 20, 0.95);
+            --red: #ff0000;
+            --yellow: #ffff00;
+            --blue: #3498db;
+            --white: #ffffff;
+            --bg: #000;
+            --border: #fff;
         }
 
         * { box-sizing: border-box; }
 
         body {
-            background-color: var(--ut-bg);
-            color: var(--ut-white);
+            background: var(--bg);
+            color: var(--white);
             font-family: 'Determination', 'Courier New', monospace;
             margin: 0;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
             overflow: hidden;
             user-select: none;
         }
 
-        /* CRT Effect Overlay */
-        #crt::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 100;
-            background-size: 100% 4px, 3px 100%;
-            pointer-events: none;
-        }
-
-        #game-wrapper {
+        /* --- UI CONTAINER --- */
+        #game-window {
             width: 1100px;
             height: 750px;
-            border: 6px solid var(--ut-border);
+            border: 6px solid var(--border);
             display: grid;
-            grid-template-columns: 320px 1fr;
-            grid-template-rows: 1fr 280px;
-            position: relative;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 1fr 300px;
             background: #000;
+            position: relative;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.2);
         }
 
-        /* SIDEBAR */
+        /* --- SIDEBAR --- */
         #sidebar {
             grid-row: 1 / 3;
-            border-right: 6px solid var(--ut-border);
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: #050505;
-        }
-
-        .stat-box { margin-bottom: 15px; }
-        .stat-label { font-size: 16px; color: #888; text-transform: uppercase; }
-        .stat-val { font-size: 32px; display: block; }
-        .love-val { color: var(--ut-red); }
-        .gold-val { color: var(--ut-yellow); }
-
-        /* BATTLE FIELD */
-        #battle-field {
-            grid-column: 2;
-            grid-row: 1;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: url('https://www.transparenttextures.com/patterns/black-linen.png');
-        }
-
-        #monster-sprite-container {
-            height: 220px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        #monster-name { font-size: 32px; margin: 0; }
-        #monster-status { font-size: 18px; color: #888; }
-
-        #soul-area {
-            width: 150px;
-            height: 150px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            position: relative;
-        }
-
-        #soul {
-            font-size: 80px;
-            color: var(--ut-white);
-            transform: rotate(180deg);
-            transition: transform 0.1s, opacity 0.2s;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
-        }
-
-        #soul.dodge { animation: soul-dodge 0.15s ease-in-out; }
-        @keyframes soul-dodge {
-            0% { transform: rotate(180deg) translateX(0); }
-            25% { transform: rotate(180deg) translateX(-60px); }
-            75% { transform: rotate(180deg) translateX(60px); }
-            100% { transform: rotate(180deg) translateX(0); }
-        }
-
-        /* HUD BARS */
-        .hud-bar-container {
-            width: 400px;
-            height: 25px;
-            background: #400;
-            border: 3px solid var(--ut-white);
-            position: relative;
-            margin: 10px 0;
-        }
-        #hp-bar { width: 100%; height: 100%; background: var(--ut-yellow); transition: width 0.1s; }
-        #stamina-bar { width: 100%; height: 100%; background: #00ffff; transition: width 0.3s; }
-        .hud-text {
-            position: absolute; width: 100%; text-align: center; 
-            font-size: 16px; font-weight: bold; line-height: 19px; color: #000;
-        }
-
-        /* MENU SYSTEM */
-        #menu-area {
-            grid-column: 2;
-            grid-row: 2;
-            border-top: 6px solid var(--ut-border);
-            display: flex;
-            background: #000;
-        }
-
-        .tab-sidebar {
-            width: 180px;
-            border-right: 4px solid var(--ut-border);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tab-btn {
-            background: none;
-            border: none;
-            color: var(--ut-white);
-            padding: 15px;
-            font-family: inherit;
-            font-size: 20px;
-            cursor: pointer;
-            text-align: left;
-            transition: 0.2s;
-        }
-        .tab-btn:hover, .tab-btn.active { background: var(--ut-white); color: #000; }
-
-        #tab-content {
-            flex-grow: 1;
+            border-right: 6px solid var(--border);
             padding: 20px;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            align-content: start;
-        }
-
-        /* CARDS */
-        .card {
-            border: 2px solid #444;
-            padding: 12px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #0a0a0a;
-        }
-        .card:hover { border-color: var(--ut-white); }
-        .card-info b { font-size: 18px; display: block; }
-        .card-info small { color: #888; }
-        
-        .buy-btn {
-            background: #000;
-            color: var(--ut-white);
-            border: 2px solid var(--ut-white);
-            padding: 8px 12px;
-            font-family: inherit;
-            cursor: pointer;
-        }
-        .buy-btn:disabled { color: #444; border-color: #444; cursor: not-allowed; }
-
-        /* POPUPS */
-        .dmg-popup {
-            position: absolute;
-            font-size: 38px;
-            color: var(--ut-yellow);
-            font-weight: bold;
-            pointer-events: none;
-            animation: rise-fade 0.8s forwards;
-            z-index: 50;
-        }
-        @keyframes rise-fade {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-120px); opacity: 0; }
-        }
-
-        .projectile {
-            position: absolute;
-            pointer-events: none;
+            flex-direction: column;
+            background: #050505;
             z-index: 10;
         }
 
-        /* RESET SCREEN */
-        #reset-overlay {
-            position: absolute;
-            top:0; left:0; width:100%; height:100%;
-            background: #000;
-            display: none;
+        .stat-label { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; }
+        .stat-val { font-size: 32px; margin-bottom: 10px; display: block; }
+        .lv-text { color: var(--red); text-shadow: 0 0 8px var(--red); }
+        .gold-text { color: var(--yellow); }
+        .hardmode-tag { 
+            color: #ff8800; 
+            font-size: 18px; 
+            margin-top: 10px;
+            border: 1px solid #ff8800;
+            padding: 5px;
+            text-align: center;
+            animation: flicker 0.5s infinite alternate; 
+        }
+
+        @keyframes flicker { 0% { opacity: 0.4; box-shadow: 0 0 0px #ff8800; } 100% { opacity: 1; box-shadow: 0 0 10px #ff8800; } }
+
+        /* --- BATTLEFIELD --- */
+        #battlefield {
+            grid-column: 2;
+            position: relative;
+            background: radial-gradient(circle, #111 0%, #000 80%);
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            overflow: hidden;
         }
 
-        .reset-msg { color: var(--ut-red); font-size: 40px; margin-bottom: 40px; }
+        #monster-sprite {
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: transform 0.1s;
+        }
+
+        #monster-name { font-size: 42px; margin: 0; letter-spacing: 2px; }
+        #monster-desc { font-size: 18px; color: #aaa; margin-top: 5px; font-style: italic; }
+
+        #soul-container {
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            z-index: 50;
+        }
+
+        #soul {
+            font-size: 85px;
+            color: #fff;
+            transform: rotate(180deg);
+            transition: color 0.3s, transform 0.1s;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.4));
+        }
+
+        #soul.blue { color: var(--blue); }
+        #soul.yellow { color: var(--yellow); transform: rotate(0deg) !important; }
+        
+        .shake { animation: shake-anim 0.2s infinite; }
+        @keyframes shake-anim {
+            0% { transform: translate(0,0) rotate(180deg); }
+            25% { transform: translate(5px,-5px) rotate(180deg); }
+            75% { transform: translate(-5px,5px) rotate(180deg); }
+        }
+
+        /* --- HUD BARS --- */
+        .hud-bar { width: 500px; height: 35px; background: #300; border: 3px solid #fff; position: relative; margin: 5px 0; }
+        #hp-fill { width: 100%; height: 100%; background: var(--yellow); transition: width 0.1s; }
+        #stam-fill { width: 100%; height: 100%; background: #0ff; }
+        .hud-text { position: absolute; width: 100%; text-align: center; line-height: 35px; font-weight: bold; color: #000; font-size: 18px; }
+
+        /* --- MENU SYSTEM --- */
+        #menu-box {
+            grid-column: 2;
+            border-top: 6px solid var(--border);
+            display: flex;
+            background: #000;
+        }
+
+        .tab-nav { width: 200px; border-right: 6px solid var(--border); display: flex; flex-direction: column; }
+        .tab-btn {
+            background: none; border: none; color: #fff; padding: 22px;
+            font-family: inherit; font-size: 22px; cursor: pointer; text-align: left;
+            border-bottom: 1px solid #222;
+        }
+        .tab-btn:hover, .tab-btn.active { background: #fff; color: #000; }
+
+        #tab-content {
+            flex-grow: 1; padding: 20px; display: grid; grid-template-columns: 1fr 1fr;
+            gap: 15px; overflow-y: auto; align-content: start;
+        }
+
+        .item-card {
+            border: 2px solid #333; padding: 15px; background: #0a0a0a;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .item-card:hover { border-color: #fff; }
+        .item-card b { font-size: 20px; display: block; }
+        .item-card small { color: #888; font-size: 13px; }
+
+        .btn-buy {
+            background: #000; color: #fff; border: 2px solid #fff; padding: 10px 15px;
+            font-family: inherit; cursor: pointer; transition: 0.2s; font-size: 16px;
+        }
+        .btn-buy:disabled { border-color: #444; color: #444; cursor: not-allowed; }
+        .btn-buy:not(:disabled):hover { background: #fff; color: #000; }
+
+        /* --- VFX --- */
+        .dmg-num {
+            position: absolute; font-size: 42px; color: var(--yellow); font-weight: bold;
+            pointer-events: none; animation: rise 0.8s forwards; z-index: 100;
+            -webkit-text-stroke: 1px #000;
+        }
+        @keyframes rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-130px); opacity: 0; } }
+
+        .proj { position: absolute; pointer-events: none; z-index: 5; font-size: 30px; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .bullet { position: absolute; width: 8px; height: 20px; background: var(--yellow); border-radius: 2px; box-shadow: 0 0 15px var(--yellow); }
+
+        .shard { position: absolute; width: 10px; height: 10px; background: #fff; pointer-events: none; }
+
+        /* --- OVERLAYS --- */
+        #no-save-warn { color: #f00; font-size: 13px; margin-top: 10px; display: none; text-align: center; border: 1px solid red; padding: 5px; }
+        
+        #crt-fx {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+            background-size: 100% 4px, 4px 100%; pointer-events: none; z-index: 1000;
+        }
     </style>
 </head>
-<body id="crt">
+<body>
 
-<div id="game-wrapper">
+<div id="crt-fx"></div>
+
+<div id="game-window">
     <div id="sidebar">
-        <div class="stat-box">
-            <span class="stat-label">Location</span>
-            <span class="stat-val" id="ui-region">RUINS</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-label love">LOVE</span>
-            <span class="stat-val love-val" id="ui-lv">1</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-label">EXP</span>
-            <span class="stat-val" id="ui-exp">0 / 50</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-label gold">Gold</span>
-            <span class="stat-val gold-val" id="ui-gold">0</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-label">Resets</span>
-            <span class="stat-val" id="ui-resets">0</span>
-        </div>
-        
+        <span class="stat-label">CURRENT ZONE</span>
+        <span class="stat-val" id="ui-area">RUINS</span>
+
+        <span class="stat-label love">LEVEL OF VIOLENCE</span>
+        <span class="stat-val lv-text" id="ui-lv">1</span>
+
+        <span class="stat-label">EXECUTION POINTS</span>
+        <span class="stat-val" id="ui-exp">0 / 150</span>
+
+        <span class="stat-label gold">GOLD</span>
+        <span class="stat-val gold-text" id="ui-gold">0</span>
+
+        <span class="stat-label">WORLD RESETS</span>
+        <span class="stat-val" id="ui-resets">0</span>
+        <div id="ui-hardmode" class="hardmode-tag" style="display:none;">HARDMODE ACTIVE</div>
+
         <div style="margin-top: auto;">
-            <button class="buy-btn" style="width:100%; margin-bottom:10px" onclick="saveGame()">SAVE FILE</button>
-            <button id="reset-trigger" class="buy-btn" style="width:100%; color:cyan; border-color:cyan; display:none;" onclick="startResetSequence()">RESET WORLD</button>
+            <button class="btn-buy" id="btn-save" style="width:100%;" onclick="saveGame()">SAVE FILE</button>
+            <button id="btn-reset" class="btn-buy" style="width:100%; border-color: cyan; color: cyan; display:none; margin-top:10px;" onclick="doReset()">[RESET WORLD]</button>
+            <div id="no-save-warn">NO SAVE DATA DETECTED IN THE VOID.</div>
         </div>
     </div>
 
-    <div id="battle-field">
-        <div id="monster-sprite-container">
-            <h1 id="monster-name">FROGGIT</h1>
-            <span id="monster-status">* Ribbit, ribbit.</span>
+    <div id="battlefield">
+        <div id="monster-sprite">
+            <h1 id="m-name">FROGGIT</h1>
+            <p id="m-desc">* Ribbit, ribbit.</p>
         </div>
 
-        <div id="soul-area" onclick="handleSoulClick(event)">
+        <div id="soul-container" onclick="playerAttack(event)">
             <div id="soul">❤</div>
         </div>
 
-        <div class="hud-bar-container">
-            <div id="hp-bar"></div>
-            <div class="hud-text" id="hp-text">HP: 30 / 30</div>
+        <div class="hud-bar">
+            <div id="hp-fill"></div>
+            <div class="hud-text" id="hp-txt">HP: 30 / 30</div>
         </div>
-        <div class="hud-bar-container" id="stamina-box" style="display:none; border-color: #0ff;">
-            <div id="stamina-bar"></div>
-            <div class="hud-text" style="color: #000">STAMINA</div>
+
+        <div class="hud-bar" id="stam-box" style="display:none; border-color: #0ff;">
+            <div id="stam-fill"></div>
+            <div class="hud-text" style="color:#000">SANS STAMINA</div>
         </div>
     </div>
 
-    <div id="menu-area">
-        <div class="tab-sidebar">
-            <button class="tab-btn active" onclick="changeTab('recruits')">RECRUITS</button>
-            <button class="tab-btn" onclick="changeTab('skills')">SKILLS</button>
-            <button class="tab-btn" onclick="changeTab('items')">ITEMS</button>
+    <div id="menu-box">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="tab('recruits')">RECRUITS</button>
+            <button class="tab-btn" onclick="tab('skills')">SKILL TREE</button>
+            <button class="tab-btn" onclick="tab('weapons')">WEAPONS</button>
         </div>
-        <div id="tab-content">
-            </div>
-    </div>
-
-    <div id="reset-overlay">
-        <div class="reset-msg">THE WORLD WAS ERASED.</div>
-        <button class="buy-btn" style="font-size: 24px;" onclick="finishReset()">START OVER</button>
+        <div id="tab-content"></div>
     </div>
 </div>
 
 <script>
-/**
- * UNDERTALE CLICKER ENGINE
- * STATE & DATA
- */
-
-const DATA = {
-    regions: [
-        { name: "RUINS", killsNeeded: 10, boss: { name: "TORIEL", hp: 500, def: 5, gold: 100, exp: 200 } },
-        { name: "SNOWDIN", killsNeeded: 15, boss: { name: "PAPYRUS", hp: 1200, def: 10, gold: 300, exp: 500 } },
-        { name: "WATERFALL", killsNeeded: 20, boss: { name: "UNDYNE", hp: 2500, def: 20, gold: 1000, exp: 2000 } },
-        { name: "HOTLAND", killsNeeded: 25, boss: { name: "METTATON NEO", hp: 1, def: -100, gold: 2000, exp: 10000 } },
-        { name: "CORE", killsNeeded: 30, boss: { name: "ASGORE", hp: 5000, def: 40, gold: 5000, exp: 25000 } },
-        { name: "JUDGEMENT", killsNeeded: 1, boss: { name: "SANS", hp: 1, def: 999, gold: 0, exp: 100000, isSans: true } }
-    ],
-    monsters: {
-        RUINS: [{n: "Froggit", hp: 30, def: 2}, {n: "Whimsun", hp: 10, def: 0}, {n: "Loox", hp: 50, def: 4}],
-        SNOWDIN: [{n: "Snowdrake", hp: 100, def: 10}, {n: "Lesser Dog", hp: 150, def: 8}, {n: "Jerry", hp: 200, def: 30}],
-        WATERFALL: [{n: "Aaron", hp: 400, def: 15}, {n: "Woshua", hp: 350, def: 12}, {n: "Temmie", hp: 5, def: 0}],
-        HOTLAND: [{n: "Vulkin", hp: 800, def: 20}, {n: "Tsunderplane", hp: 1200, def: 35}],
-        CORE: [{n: "Knight Knight", hp: 2000, def: 50}, {n: "Madjick", hp: 1800, def: 40}]
-    },
-    recruits: [
-        { id: 'flowey', name: 'Flowey', cost: 15, lvReq: 1, desc: "Shoots friendliness pellets." },
-        { id: 'toriel', name: 'Toriel', cost: 250, lvReq: 3, desc: "Fires flame spirals." },
-        { id: 'napsta', name: 'Napstablook', cost: 800, lvReq: 5, desc: "Cries acid rain." },
-        { id: 'papyrus', name: 'Papyrus', cost: 2000, lvReq: 8, desc: "Spawns bone fields." },
-        { id: 'undyne', name: 'Undyne', cost: 7000, lvReq: 12, desc: "Spears ignore 50% Defense." },
-        { id: 'muffet', name: 'Muffet', cost: 15000, lvReq: 14, desc: "Spiders steal gold & dmg." },
-        { id: 'mtt', name: 'Mettaton', cost: 40000, lvReq: 16, desc: "Bombs deal area damage." },
-        { id: 'asgore', name: 'Asgore', cost: 100000, lvReq: 19, desc: "Trident sweeps hit hard." }
-    ],
-    items: [
-        { id: 'stick', name: 'Stick', atk: 0, cost: 0 },
-        { id: 'knife', name: 'Toy Knife', atk: 5, cost: 100 },
-        { id: 'glove', name: 'Tough Glove', atk: 12, cost: 1000 },
-        { id: 'shoes', name: 'Ballet Shoes', atk: 25, cost: 5000 },
-        { id: 'apron', name: 'Stained Apron', atk: 40, cost: 15000 },
-        { id: 'real_knife', name: 'Real Knife', atk: 99, cost: 100000 }
-    ]
-};
-
-let state = {
-    lv: 1, exp: 0, gold: 0, resets: 0,
-    regionIdx: 0, killCount: 0,
-    mHp: 30, mMaxHp: 30, mName: "Froggit", mDef: 2, mIsBoss: false,
-    weapon: 'stick',
-    ownedRecruits: [],
-    skills: {}, // e.g., { flowey: 1 }
-    currentTab: 'recruits',
-    sansStamina: 100,
-    isShattering: false
-};
-
-/**
- * CORE LOGIC
- */
-
-function init() {
-    loadGame();
-    spawnMonster();
-    renderAll();
-    
-    // Auto-attack loop
-    setInterval(() => {
-        if (!state.isShattering && state.mHp > 0) {
-            processRecruitAttacks();
-        }
-    }, 1000);
-
-    // Save loop
-    setInterval(saveGame, 30000);
-}
-
-function spawnMonster() {
-    state.isShattering = false;
-    document.getElementById('soul').style.opacity = 1;
-    document.getElementById('stamina-box').style.display = 'none';
-
-    const reg = DATA.regions[state.regionIdx];
-    
-    if (state.killCount >= reg.killsNeeded) {
-        // BOSS TIME
-        let boss = reg.boss;
-        state.mName = boss.name;
-        state.mMaxHp = boss.hp;
-        state.mHp = boss.hp;
-        state.mDef = boss.def;
-        state.mIsBoss = true;
-        
-        if (boss.isSans) {
-            state.sansStamina = 100;
-            document.getElementById('stamina-box').style.display = 'block';
-            document.getElementById('monster-status').innerText = "* You feel like you're going to have a bad time.";
-        } else {
-            document.getElementById('monster-status').innerText = "* A formidable presence blocks the way.";
-        }
-    } else {
-        // Trash mob
-        const pool = DATA.monsters[reg.name];
-        const m = pool[Math.floor(Math.random() * pool.length)];
-        state.mName = m.n;
-        state.mMaxHp = m.hp + (state.resets * 100);
-        state.mHp = state.mMaxHp;
-        state.mDef = m.def + (state.resets * 5);
-        state.mIsBoss = false;
-        document.getElementById('monster-status').innerText = "* Monster approaches!";
-    }
-    updateUI();
-}
-
-function handleSoulClick(e) {
-    if (state.isShattering) return;
-
-    const boss = DATA.regions[state.regionIdx].boss;
-    
-    // Sans Exhaustion Mechanic
-    if (state.mIsBoss && boss.isSans && state.sansStamina > 0) {
-        state.sansStamina -= 1;
-        document.getElementById('soul').classList.add('dodge');
-        setTimeout(() => document.getElementById('soul').classList.remove('dodge'), 150);
-        createPopup("MISS", e.clientX, e.clientY);
-        updateUI();
-        return;
-    }
-
-    // Normal Damage
-    const w = DATA.items.find(i => i.id === state.weapon);
-    let dmg = (state.lv * 2) + w.atk - state.mDef;
-    if (dmg < 1) dmg = 1;
-
-    applyDamage(dmg, e.clientX, e.clientY);
-}
-
-function applyDamage(dmg, x, y) {
-    state.mHp -= dmg;
-    createPopup(dmg, x, y);
-    if (state.mHp <= 0) shatterMonster();
-    updateUI();
-}
-
-function shatterMonster() {
-    state.isShattering = true;
-    document.getElementById('soul').style.opacity = 0;
-
-    // Calculate Rewards
-    const reg = DATA.regions[state.regionIdx];
-    let expGain, goldGain;
-
-    if (state.mIsBoss) {
-        expGain = reg.boss.exp;
-        goldGain = reg.boss.gold;
-        state.killCount = 0;
-        
-        if (reg.boss.isSans) {
-            document.getElementById('reset-trigger').style.display = 'block';
-        } else {
-            state.regionIdx++;
-        }
-    } else {
-        expGain = 5 + (state.regionIdx * 5);
-        goldGain = 2 + (state.regionIdx * 3);
-        state.killCount++;
-    }
-
-    state.exp += expGain;
-    state.gold += goldGain;
-    checkLevelUp();
-
-    setTimeout(spawnMonster, 1000);
-}
-
-function checkLevelUp() {
-    let req = state.lv * 50 * state.lv;
-    if (state.exp >= req && state.lv < 20) {
-        state.lv++;
-        updateUI();
-        renderTab(); // Re-render to check requirements
-    }
-}
-
-/**
- * RECRUIT SYSTEM
- */
-
-function processRecruitAttacks() {
-    const sBox = document.getElementById('soul-area').getBoundingClientRect();
-    const tx = sBox.left + 75;
-    const ty = sBox.top + 75;
-
-    state.ownedRecruits.forEach(rid => {
-        const char = DATA.recruits.find(r => r.id === rid);
-        const skillLv = state.skills[rid] || 1;
-        
-        let dmg = (char.cost / 10) * skillLv;
-        
-        // Visual Projectile
-        spawnProjectile(rid, tx, ty, dmg);
-    });
-}
-
-function spawnProjectile(type, tx, ty, dmg) {
-    const p = document.createElement('div');
-    p.className = 'projectile';
-    
-    // Style based on type
-    if(type === 'flowey') { p.innerText = '•'; p.style.color = 'white'; }
-    else if(type === 'toriel') { p.innerText = '🔥'; }
-    else if(type === 'papyrus') { p.innerHTML = '<div style="width:4px;height:20px;background:white"></div>'; }
-    else { p.innerText = '✦'; p.style.color = 'yellow'; }
-
-    p.style.left = (Math.random() * 1000) + 'px';
-    p.style.top = '-50px';
-    document.getElementById('battle-field').appendChild(p);
-
-    p.animate([
-        { top: '-50px' },
-        { top: ty + 'px', left: tx + 'px' }
-    ], 800).onfinish = () => {
-        p.remove();
-        if(!state.isShattering) applyDamage(Math.floor(dmg), tx, ty);
+    /**
+     * DATABASE - BALANCED FOR FAST PROGRESS
+     */
+    const DB = {
+        regions: [
+            { n: "RUINS", k: 5, b: { n: "TORIEL", hp: 400, d: 2, g: 50, e: 100 } },
+            { n: "SNOWDIN", k: 8, b: { n: "PAPYRUS", hp: 1200, d: 8, g: 150, e: 400 } },
+            { n: "WATERFALL", k: 10, b: { n: "UNDYNE", hp: 2500, d: 20, g: 600, e: 1500 } },
+            { n: "HOTLAND", k: 12, b: { n: "METTATON NEO", hp: 1, d: -100, g: 1000, e: 8000 } },
+            { n: "CORE", k: 15, b: { n: "ASGORE", hp: 6000, d: 40, g: 5000, e: 25000 } },
+            { n: "JUDGEMENT", k: 1, b: { n: "SANS", hp: 1, d: 999, g: 0, e: 200000, isSans: true } }
+        ],
+        recruits: [
+            { id: 'flowey', n: 'Flowey', c: 10, lv: 1, d: "Shoots friendliness pellets." },
+            { id: 'toriel', n: 'Toriel', c: 100, lv: 3, d: "Fireball spirals." },
+            { id: 'blooky', n: 'Napstablook', c: 300, lv: 5, d: "DoT Acid Rain." },
+            { id: 'papyrus', n: 'Papyrus', c: 800, lv: 8, d: "Blue Soul x2 Damage." },
+            { id: 'undyne', n: 'Undyne', c: 2000, lv: 12, d: "True Defense Pierce." },
+            { id: 'muffet', n: 'Muffet', c: 5000, lv: 14, d: "Gold Stealing Spiders." },
+            { id: 'mtt', n: 'Mettaton', c: 15000, lv: 17, d: "High DPS Lasers." },
+            { id: 'asgore', n: 'Asgore', c: 40000, lv: 19, d: "Soul-Cleaving Trident." },
+            { id: 'sans', n: 'Sans', c: 10000, lv: 20, d: "Gaster Blasters.", r: 1 },
+            { id: 'chara', n: 'Chara', c: 99999, lv: 20, d: "The Demon.", r: 2 }
+        ],
+        weapons: [
+            { id: 'stick', n: 'Stick', a: 0, c: 0 },
+            { id: 'knife', n: 'Toy Knife', a: 10, c: 15 },
+            { id: 'glove', n: 'Tough Glove', a: 25, c: 100 },
+            { id: 'shoes', n: 'Ballet Shoes', a: 50, c: 500 },
+            { id: 'apron', n: 'Stained Apron', a: 80, c: 1500 },
+            { id: 'pan', n: 'Burnt Pan', a: 120, c: 4000 },
+            { id: 'knife_real', n: 'Real Knife', a: 999, c: 0, r: 1 }
+        ]
     };
-}
 
-/**
- * UI & TABS
- */
+    /**
+     * LIVE ENGINE STATE
+     */
+    let state = {
+        lv: 1, exp: 0, gold: 0, resets: 0,
+        regionIdx: 0, kills: 0,
+        mHp: 30, mMaxHp: 30, mName: "Froggit", mDef: 2, mIsBoss: false,
+        weapon: 'stick',
+        allies: [],
+        skills: {}, // Store levels for each ally
+        currentTab: 'recruits',
+        sansStam: 100,
+        isShattering: false,
+        canSave: true,
+        hm: false
+    };
 
-function changeTab(tab) {
-    state.currentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-    renderTab();
-}
+    /**
+     * CORE ENGINE FUNCTIONS
+     */
+    function init() {
+        loadGame();
+        spawn();
+        renderAll();
+        
+        // Ally Auto-Attack Timer
+        setInterval(processAllyAttacks, 1000);
+        
+        // Auto-Save Timer
+        setInterval(() => { if(state.canSave) saveGame(); }, 10000);
+    }
 
-function renderTab() {
-    const container = document.getElementById('tab-content');
-    container.innerHTML = '';
+    function spawn() {
+        state.isShattering = false;
+        document.getElementById('soul').style.opacity = 1;
+        document.getElementById('soul').classList.remove('shake', 'blue', 'yellow');
+        document.getElementById('stam-box').style.display = 'none';
+        
+        const reg = DB.regions[state.regionIdx];
+        const isHM = state.resets >= 5;
+        state.hm = isHM;
 
-    if (state.currentTab === 'recruits') {
-        DATA.recruits.forEach(r => {
-            const owned = state.ownedRecruits.includes(r.id);
-            const canAfford = state.gold >= r.cost && state.lv >= r.lvReq;
-            container.innerHTML += `
-                <div class="card">
-                    <div class="card-info">
-                        <b>${r.name}</b>
-                        <small>Req: LV ${r.lvReq}</small>
-                    </div>
-                    <button class="buy-btn" ${ (owned || !canAfford) ? 'disabled' : ''} onclick="buyRecruit('${r.id}', ${r.cost})">
-                        ${owned ? 'RECRUITED' : r.cost + 'G'}
-                    </button>
-                </div>
-            `;
-        });
-    } else if (state.currentTab === 'skills') {
-        if (state.ownedRecruits.length === 0) {
-            container.innerHTML = "<p>Recruit monsters to unlock their skill trees.</p>";
+        // Visual Soul States
+        const soul = document.getElementById('soul');
+        if (isHM) {
+            soul.classList.add('yellow');
+            document.getElementById('ui-hardmode').style.display = 'block';
+        } else if (state.allies.includes('papyrus')) {
+            soul.classList.add('blue');
+        }
+
+        // Judgement Path Lockout
+        if (reg.n === "JUDGEMENT") {
+            state.canSave = false;
+            document.getElementById('btn-save').disabled = true;
+            document.getElementById('no-save-warn').style.display = 'block';
+        }
+
+        if (state.kills >= reg.k) {
+            // BOSS SPAWN
+            let b = reg.b;
+            state.mName = (state.resets >= 1 && b.n === "UNDYNE") ? "UNDYNE THE UNDYING" : b.n;
+            state.mMaxHp = b.hp;
+            if (isHM) state.mMaxHp *= 5; // Hardmode Boss Scaling
+            state.mHp = state.mMaxHp;
+            state.mDef = b.d;
+            state.mIsBoss = true;
+            if (b.isSans) document.getElementById('stam-box').style.display = 'block';
+            document.getElementById('m-desc').innerText = "* A boss stands in your way.";
+        } else {
+            // NORMAL MONSTER SPAWN
+            const pool = ["Froggit", "Whimsun", "Loox", "Snowdrake", "Aaron", "Knight Knight"][state.regionIdx];
+            state.mName = pool;
+            state.mMaxHp = 30 * (state.regionIdx + 1);
+            if (isHM) state.mMaxHp *= 3; // Hardmode Normal Scaling
+            state.mHp = state.mMaxHp;
+            state.mDef = state.regionIdx * 4;
+            state.mIsBoss = false;
+            document.getElementById('m-desc').innerText = "* Smells like dust.";
+        }
+        updateUI();
+    }
+
+    function playerAttack(e) {
+        if (state.isShattering) return;
+
+        // Justice Shooting
+        if (state.hm) {
+            fireJusticeBullet(e.clientX, e.clientY);
+        }
+
+        // Sans Specific Stamina Logic
+        if (state.mIsBoss && state.mName === "SANS" && state.sansStam > 0) {
+            state.sansStam -= 2;
+            document.getElementById('soul').classList.add('shake');
+            setTimeout(() => document.getElementById('soul').classList.remove('shake'), 150);
+            drawPopup("MISS", e.clientX, e.clientY);
+            updateUI();
             return;
         }
-        state.ownedRecruits.forEach(rid => {
-            const char = DATA.recruits.find(r => r.id === rid);
-            const lv = state.skills[rid] || 1;
-            const upCost = Math.floor(char.cost * lv * 1.5);
-            container.innerHTML += `
-                <div class="card">
-                    <div class="card-info">
-                        <b>${char.name} LV ${lv}</b>
-                        <small>Next: +50% ATK</small>
-                    </div>
-                    <button class="buy-btn" ${state.gold < upCost ? 'disabled' : ''} onclick="upgradeSkill('${rid}', ${upCost})">
-                        UPGRADE (${upCost}G)
-                    </button>
-                </div>
-            `;
-        });
-    } else if (state.currentTab === 'items') {
-        DATA.items.forEach(i => {
-            const isEquipped = state.weapon === i.id;
-            const canAfford = state.gold >= i.cost;
-            container.innerHTML += `
-                <div class="card">
-                    <div class="card-info">
-                        <b>${i.name}</b>
-                        <small>ATK +${i.atk}</small>
-                    </div>
-                    <button class="buy-btn" ${ (isEquipped || !canAfford) ? 'disabled' : ''} onclick="buyItem('${i.id}', ${i.cost})">
-                        ${isEquipped ? 'EQUIPPED' : i.cost + 'G'}
-                    </button>
-                </div>
-            `;
+
+        const weapon = DB.weapons.find(w => w.id === state.weapon);
+        let dmg = (state.lv * 6) + weapon.a - state.mDef;
+        
+        // Papyrus Blue Mode Bonus (x2 dmg)
+        if (state.allies.includes('papyrus')) dmg *= 2;
+
+        processDamage(dmg, e.clientX, e.clientY);
+    }
+
+    function fireJusticeBullet(x, y) {
+        const b = document.createElement('div');
+        b.className = 'bullet';
+        b.style.left = x + 'px';
+        b.style.top = y + 'px';
+        document.body.appendChild(b);
+        b.animate([{ top: y + 'px' }, { top: '-50px' }], 400).onfinish = () => {
+            b.remove();
+            processDamage(state.lv * 4, x, 100);
+        };
+    }
+
+    function processDamage(d, x, y) {
+        if (d < 1) d = 1;
+        state.mHp -= d;
+        drawPopup(Math.floor(d), x, y);
+        if (state.mHp <= 0) doDeath();
+        updateUI();
+    }
+
+    function doDeath() {
+        state.isShattering = true;
+        document.getElementById('soul').style.opacity = 0;
+        const reg = DB.regions[state.regionIdx];
+
+        // Soul Shard Particles
+        for(let i=0; i<10; i++) {
+            const s = document.createElement('div');
+            s.className = 'shard';
+            s.style.left = (window.innerWidth/2 + 200) + 'px';
+            s.style.top = '350px';
+            document.body.appendChild(s);
+            s.animate([
+                { transform: 'translate(0,0)' },
+                { transform: `translate(${(Math.random()-0.5)*400}px, 600px) rotate(720deg)` }
+            ], 1200).onfinish = () => s.remove();
+        }
+
+        // Rewards Logic
+        if (state.mIsBoss) {
+            state.gold += reg.b.g;
+            state.exp += reg.b.e;
+            state.kills = 0;
+            if (reg.b.isSans) {
+                document.getElementById('btn-reset').style.display = 'block';
+            } else {
+                state.regionIdx++;
+            }
+        } else {
+            state.gold += 10 + (state.regionIdx * 10);
+            state.exp += 20 + (state.regionIdx * 15);
+            state.kills++;
+        }
+        
+        levelUpCheck();
+        setTimeout(spawn, 1000);
+    }
+
+    function levelUpCheck() {
+        let req = state.lv * 150;
+        if (state.exp >= req && state.lv < 20) {
+            state.lv++;
+            renderAll();
+        }
+    }
+
+    function processAllyAttacks() {
+        if (state.isShattering || state.mHp <= 0) return;
+        const sBox = document.getElementById('soul-container').getBoundingClientRect();
+        const tx = sBox.left + 100, ty = sBox.top + 100;
+
+        state.allies.forEach(id => {
+            let mult = state.skills[id] || 1;
+            if (id === 'flowey') animAllyAtk('white', '•', tx, ty, state.lv * mult);
+            if (id === 'toriel') animAllyAtk('orange', '🔥', tx, ty, state.lv * 5 * mult);
+            if (id === 'sans') animAllyAtk('lightblue', '💀', tx, ty, state.lv * 60 * mult);
+            if (id === 'chara') animAllyAtk('red', '🔪', tx, ty, state.lv * 150 * mult);
+            if (id === 'undyne') animAllyAtk('cyan', '↑', tx, ty, state.lv * 15 * mult);
         });
     }
-}
 
-function buyRecruit(id, cost) {
-    state.gold -= cost;
-    state.ownedRecruits.push(id);
-    state.skills[id] = 1;
-    renderAll();
-}
-
-function upgradeSkill(id, cost) {
-    state.gold -= cost;
-    state.skills[id]++;
-    renderAll();
-}
-
-function buyItem(id, cost) {
-    state.gold -= cost;
-    state.weapon = id;
-    renderAll();
-}
-
-function updateUI() {
-    document.getElementById('ui-region').innerText = DATA.regions[state.regionIdx].name;
-    document.getElementById('ui-lv').innerText = state.lv;
-    document.getElementById('ui-exp').innerText = `${state.exp} / ${state.lv * 50 * state.lv}`;
-    document.getElementById('ui-gold').innerText = Math.floor(state.gold);
-    document.getElementById('ui-resets').innerText = state.resets;
-
-    document.getElementById('monster-name').innerText = state.mName.toUpperCase();
-    const hpPerc = (state.mHp / state.mMaxHp) * 100;
-    document.getElementById('hp-bar').style.width = Math.max(0, hpPerc) + '%';
-    document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.floor(state.mHp))} / ${state.mMaxHp}`;
-
-    if (state.mIsBoss && DATA.regions[state.regionIdx].boss.isSans) {
-        document.getElementById('stamina-bar').style.width = state.sansStamina + '%';
+    function animAllyAtk(color, sym, tx, ty, d) {
+        const p = document.createElement('div');
+        p.className = 'proj'; p.innerText = sym; p.style.color = color;
+        p.style.left = (Math.random() * 1100) + 'px'; p.style.top = '-50px';
+        document.body.appendChild(p);
+        p.animate([{ top: '-50px' }, { top: ty+'px', left: tx+'px' }], 600).onfinish = () => {
+            p.remove(); processDamage(d, tx, ty);
+        };
     }
-}
 
-function createPopup(txt, x, y) {
-    const p = document.createElement('div');
-    p.className = 'dmg-popup';
-    p.innerText = txt;
-    p.style.left = x + 'px';
-    p.style.top = y + 'px';
-    document.body.appendChild(p);
-    setTimeout(() => p.remove(), 800);
-}
+    /**
+     * UI RENDERING LOGIC
+     */
+    function tab(t) {
+        state.currentTab = t;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(t)));
+        renderTab();
+    }
 
-function renderAll() {
-    updateUI();
-    renderTab();
-}
+    function renderTab() {
+        const cont = document.getElementById('tab-content');
+        cont.innerHTML = '';
 
-/**
- * PERSISTENCE & RESET
- */
+        if (state.currentTab === 'recruits') {
+            DB.recruits.forEach(r => {
+                const owned = state.allies.includes(r.id);
+                const rReq = r.r ? state.resets >= r.r : true;
+                cont.innerHTML += `
+                    <div class="item-card">
+                        <div><b>${r.n}</b><small>${r.d}</small></div>
+                        <button class="btn-buy" ${ (owned || state.gold < r.c || state.lv < r.lv || !rReq) ? 'disabled' : ''} onclick="buyAlly('${r.id}', ${r.c})">
+                            ${owned ? 'RECRUITED' : (rReq ? r.c + 'G' : 'RESET REQ')}
+                        </button>
+                    </div>`;
+            });
+        } else if (state.currentTab === 'skills') {
+            if (!state.allies.length) { cont.innerHTML = "<div style='grid-column: 1/3; text-align:center'>No allies recruited to upgrade.</div>"; return; }
+            state.allies.forEach(id => {
+                const lv = state.skills[id] || 1;
+                const cost = Math.floor(lv * 300);
+                cont.innerHTML += `
+                    <div class="item-card">
+                        <div><b>${id.toUpperCase()} Mastery</b><small>Current Level ${lv}</small></div>
+                        <button class="btn-buy" ${state.gold < cost ? 'disabled' : ''} onclick="buySkill('${id}', ${cost})">
+                            UPGRADE (${cost}G)
+                        </button>
+                    </div>`;
+            });
+        } else if (state.currentTab === 'weapons') {
+            DB.weapons.forEach(w => {
+                const eq = state.weapon === w.id;
+                const rReq = w.r ? state.resets >= w.r : true;
+                cont.innerHTML += `
+                    <div class="item-card">
+                        <div><b>${w.n}</b><small>ATK +${w.a}</small></div>
+                        <button class="btn-buy" ${(eq || state.gold < w.c || !rReq) ? 'disabled' : ''} onclick="buyWeapon('${w.id}', ${w.c})">
+                            ${eq ? 'EQUIPPED' : (rReq ? w.c + 'G' : 'RESET REQ')}
+                        </button>
+                    </div>`;
+            });
+        }
+    }
 
-function saveGame() {
-    localStorage.setItem('ut_eternal_genocide', JSON.stringify(state));
-}
+    function buyAlly(id, c) { state.gold -= c; state.allies.push(id); state.skills[id] = 1; renderAll(); }
+    function buySkill(id, c) { state.gold -= c; state.skills[id]++; renderAll(); }
+    function buyWeapon(id, c) { state.gold -= c; state.weapon = id; renderAll(); }
 
-function loadGame() {
-    const s = localStorage.getItem('ut_eternal_genocide');
-    if (s) state = Object.assign(state, JSON.parse(s));
-}
+    function updateUI() {
+        document.getElementById('ui-area').innerText = DB.regions[state.regionIdx].n;
+        document.getElementById('ui-lv').innerText = state.lv;
+        document.getElementById('ui-exp').innerText = `${state.exp} / ${state.lv * 150}`;
+        document.getElementById('ui-gold').innerText = Math.floor(state.gold);
+        document.getElementById('ui-resets').innerText = state.resets;
+        document.getElementById('m-name').innerText = state.mName;
+        
+        const hpPerc = (state.mHp / state.mMaxHp) * 100;
+        document.getElementById('hp-fill').style.width = Math.max(0, hpPerc) + '%';
+        document.getElementById('hp-txt').innerText = `${Math.ceil(state.mHp)} / ${state.mMaxHp}`;
 
-function startResetSequence() {
-    document.getElementById('reset-overlay').style.display = 'flex';
-}
+        if (DB.regions[state.regionIdx].b.isSans) {
+            document.getElementById('stam-fill').style.width = state.sansStam + '%';
+        }
+    }
 
-function finishReset() {
-    state.resets++;
-    state.lv = 1;
-    state.exp = 0;
-    state.gold = 0;
-    state.regionIdx = 0;
-    state.killCount = 0;
-    state.ownedRecruits = [];
-    state.skills = {};
-    state.weapon = 'stick';
-    document.getElementById('reset-overlay').style.display = 'none';
-    document.getElementById('reset-trigger').style.display = 'none';
-    spawnMonster();
-    renderAll();
-    saveGame();
-}
+    function renderAll() { updateUI(); renderTab(); }
+    
+    function drawPopup(t, x, y) {
+        const p = document.createElement('div'); p.className='dmg-num'; p.innerText=t; p.style.left=x+'px'; p.style.top=y+'px';
+        document.body.appendChild(p); setTimeout(()=>p.remove(), 700);
+    }
 
-// Start
-init();
+    function doReset() {
+        if (!confirm("Erase this world and restart?")) return;
+        state.resets++; state.lv = 1; state.exp = 0; state.gold = 0; state.regionIdx = 0; state.kills = 0;
+        state.allies = []; state.skills = {}; state.weapon = 'stick'; state.canSave = true;
+        document.getElementById('btn-save').disabled = false;
+        document.getElementById('no-save-warn').style.display = 'none';
+        document.getElementById('btn-reset').style.display = 'none';
+        spawn(); renderAll(); saveGame();
+    }
 
+    function saveGame() { if(state.canSave) localStorage.setItem('ut_absolute_save_v1', JSON.stringify(state)); }
+    function loadGame() {
+        const s = localStorage.getItem('ut_absolute_save_v1');
+        if (s) state = Object.assign(state, JSON.parse(s));
+    }
+
+    init();
 </script>
 </body>
 </html>
