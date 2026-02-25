@@ -2,592 +2,549 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UNDERTALE: Eternal Genocide - Determination Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Tower Defense</title>
     <style>
-        @font-face {
-            font-family: 'Determination';
-            src: url('https://fonts.cdnfonts.com/s/19732/DeterminationMono.woff') format('woff');
-        }
-
         :root {
-            --red: #ff0000;
-            --yellow: #ffff00;
-            --blue: #3498db;
-            --white: #ffffff;
-            --bg: #000;
-            --border: #fff;
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
         }
-
-        * { box-sizing: border-box; }
 
         body {
-            background: var(--bg);
-            color: var(--white);
-            font-family: 'Determination', 'Courier New', monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
-            user-select: none;
         }
 
-        /* --- UI CONTAINER --- */
-        #game-window {
-            width: 1100px;
-            height: 750px;
-            border: 6px solid var(--border);
+        .menu-panel {
+            background: var(--panel);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            text-align: center;
+            pointer-events: auto;
+            border: 2px solid var(--accent);
+            max-width: 600px;
+        }
+
+        .tower-grid {
             display: grid;
-            grid-template-columns: 300px 1fr;
-            grid-template-rows: 1fr 300px;
-            background: #000;
-            position: relative;
-            box-shadow: 0 0 50px rgba(255, 0, 0, 0.2);
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
         }
 
-        /* --- SIDEBAR --- */
-        #sidebar {
-            grid-row: 1 / 3;
-            border-right: 6px solid var(--border);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            background: #050505;
-            z-index: 10;
-        }
-
-        .stat-label { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; }
-        .stat-val { font-size: 32px; margin-bottom: 10px; display: block; }
-        .lv-text { color: var(--red); text-shadow: 0 0 8px var(--red); }
-        .gold-text { color: var(--yellow); }
-        .hardmode-tag { 
-            color: #ff8800; 
-            font-size: 18px; 
-            margin-top: 10px;
-            border: 1px solid #ff8800;
-            padding: 5px;
-            text-align: center;
-            animation: flicker 0.5s infinite alternate; 
-        }
-
-        @keyframes flicker { 0% { opacity: 0.4; box-shadow: 0 0 0px #ff8800; } 100% { opacity: 1; box-shadow: 0 0 10px #ff8800; } }
-
-        /* --- BATTLEFIELD --- */
-        #battlefield {
-            grid-column: 2;
-            position: relative;
-            background: radial-gradient(circle, #111 0%, #000 80%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        #monster-sprite {
-            height: 200px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: transform 0.1s;
-        }
-
-        #monster-name { font-size: 42px; margin: 0; letter-spacing: 2px; }
-        #monster-desc { font-size: 18px; color: #aaa; margin-top: 5px; font-style: italic; }
-
-        #soul-container {
-            width: 200px;
-            height: 200px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        .tower-card {
+            background: #334155;
+            padding: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            position: relative;
-            z-index: 50;
+            border: 2px solid transparent;
+            transition: 0.2s;
         }
 
-        #soul {
-            font-size: 85px;
-            color: #fff;
-            transform: rotate(180deg);
-            transition: color 0.3s, transform 0.1s;
-            filter: drop-shadow(0 0 15px rgba(255,255,255,0.4));
+        .tower-card.selected {
+            border-color: var(--accent);
+            background: #0ea5e9;
         }
 
-        #soul.blue { color: var(--blue); }
-        #soul.yellow { color: var(--yellow); transform: rotate(0deg) !important; }
-        
-        .shake { animation: shake-anim 0.2s infinite; }
-        @keyframes shake-anim {
-            0% { transform: translate(0,0) rotate(180deg); }
-            25% { transform: translate(5px,-5px) rotate(180deg); }
-            75% { transform: translate(-5px,5px) rotate(180deg); }
+        .tower-card:hover {
+            transform: translateY(-2px);
         }
 
-        /* --- HUD BARS --- */
-        .hud-bar { width: 500px; height: 35px; background: #300; border: 3px solid #fff; position: relative; margin: 5px 0; }
-        #hp-fill { width: 100%; height: 100%; background: var(--yellow); transition: width 0.1s; }
-        #stam-fill { width: 100%; height: 100%; background: #0ff; }
-        .hud-text { position: absolute; width: 100%; text-align: center; line-height: 35px; font-weight: bold; color: #000; font-size: 18px; }
+        canvas {
+            background: #020617;
+            cursor: crosshair;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
 
-        /* --- MENU SYSTEM --- */
-        #menu-box {
-            grid-column: 2;
-            border-top: 6px solid var(--border);
+        #hud {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.9);
+            padding: 10px 20px;
+            border-radius: 50px;
             display: flex;
-            background: #000;
+            gap: 20px;
+            pointer-events: auto;
+            border: 1px solid var(--accent);
         }
 
-        .tab-nav { width: 200px; border-right: 6px solid var(--border); display: flex; flex-direction: column; }
-        .tab-btn {
-            background: none; border: none; color: #fff; padding: 22px;
-            font-family: inherit; font-size: 22px; cursor: pointer; text-align: left;
-            border-bottom: 1px solid #222;
+        .stat { font-weight: bold; color: var(--accent); }
+
+        #tower-shop {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
         }
-        .tab-btn:hover, .tab-btn.active { background: #fff; color: #000; }
 
-        #tab-content {
-            flex-grow: 1; padding: 20px; display: grid; grid-template-columns: 1fr 1fr;
-            gap: 15px; overflow-y: auto; align-content: start;
+        .shop-btn {
+            width: 80px;
+            height: 80px;
+            background: var(--panel);
+            border: 2px solid #475569;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-        .item-card {
-            border: 2px solid #333; padding: 15px; background: #0a0a0a;
-            display: flex; justify-content: space-between; align-items: center;
+        .shop-btn.active { border-color: var(--accent); background: #0f172a; }
+
+        #upgrade-menu {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--panel);
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            pointer-events: auto;
+            width: 150px;
         }
-        .item-card:hover { border-color: #fff; }
-        .item-card b { font-size: 20px; display: block; }
-        .item-card small { color: #888; font-size: 13px; }
 
-        .btn-buy {
-            background: #000; color: #fff; border: 2px solid #fff; padding: 10px 15px;
-            font-family: inherit; cursor: pointer; transition: 0.2s; font-size: 16px;
+        button {
+            background: var(--accent);
+            border: none;
+            padding: 10px 20px;
+            color: var(--bg);
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
         }
-        .btn-buy:disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        .btn-buy:not(:disabled):hover { background: #fff; color: #000; }
 
-        /* --- VFX --- */
-        .dmg-num {
-            position: absolute; font-size: 42px; color: var(--yellow); font-weight: bold;
-            pointer-events: none; animation: rise 0.8s forwards; z-index: 100;
-            -webkit-text-stroke: 1px #000;
-        }
-        @keyframes rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-130px); opacity: 0; } }
-
-        .proj { position: absolute; pointer-events: none; z-index: 5; font-size: 30px; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        .bullet { position: absolute; width: 8px; height: 20px; background: var(--yellow); border-radius: 2px; box-shadow: 0 0 15px var(--yellow); }
-
-        .shard { position: absolute; width: 10px; height: 10px; background: #fff; pointer-events: none; }
-
-        /* --- OVERLAYS --- */
-        #no-save-warn { color: #f00; font-size: 13px; margin-top: 10px; display: none; text-align: center; border: 1px solid red; padding: 5px; }
-        
-        #crt-fx {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
-            background-size: 100% 4px, 4px 100%; pointer-events: none; z-index: 1000;
-        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="crt-fx"></div>
+    <div id="ui-layer">
+        <div id="selection-menu" class="menu-panel">
+            <h1>DEFENDER CORE</h1>
+            <p>Pick exactly 4 towers to bring into battle</p>
+            <div id="tower-options" class="tower-grid"></div>
+            <p id="selection-count">Selected: 0/4</p>
+            <button id="start-btn" disabled>START MISSION</button>
+        </div>
 
-<div id="game-window">
-    <div id="sidebar">
-        <span class="stat-label">CURRENT ZONE</span>
-        <span class="stat-val" id="ui-area">RUINS</span>
-
-        <span class="stat-label love">LEVEL OF VIOLENCE</span>
-        <span class="stat-val lv-text" id="ui-lv">1</span>
-
-        <span class="stat-label">EXECUTION POINTS</span>
-        <span class="stat-val" id="ui-exp">0 / 150</span>
-
-        <span class="stat-label gold">GOLD</span>
-        <span class="stat-val gold-text" id="ui-gold">0</span>
-
-        <span class="stat-label">WORLD RESETS</span>
-        <span class="stat-val" id="ui-resets">0</span>
-        <div id="ui-hardmode" class="hardmode-tag" style="display:none;">HARDMODE ACTIVE</div>
-
-        <div style="margin-top: auto;">
-            <button class="btn-buy" id="btn-save" style="width:100%;" onclick="saveGame()">SAVE FILE</button>
-            <button id="btn-reset" class="btn-buy" style="width:100%; border-color: cyan; color: cyan; display:none; margin-top:10px;" onclick="doReset()">[RESET WORLD]</button>
-            <div id="no-save-warn">NO SAVE DATA DETECTED IN THE VOID.</div>
+        <div id="game-over" class="menu-panel hidden">
+            <h1 id="result-text">BASE DESTROYED</h1>
+            <button onclick="location.reload()">RETRY</button>
         </div>
     </div>
 
-    <div id="battlefield">
-        <div id="monster-sprite">
-            <h1 id="m-name">FROGGIT</h1>
-            <p id="m-desc">* Ribbit, ribbit.</p>
-        </div>
-
-        <div id="soul-container" onclick="playerAttack(event)">
-            <div id="soul">❤</div>
-        </div>
-
-        <div class="hud-bar">
-            <div id="hp-fill"></div>
-            <div class="hud-text" id="hp-txt">HP: 30 / 30</div>
-        </div>
-
-        <div class="hud-bar" id="stam-box" style="display:none; border-color: #0ff;">
-            <div id="stam-fill"></div>
-            <div class="hud-text" style="color:#000">SANS STAMINA</div>
-        </div>
+    <div id="hud" class="hidden">
+        <div>Health: <span id="hp-val" class="stat">20</span></div>
+        <div>Credits: <span id="money-val" class="stat">500</span></div>
+        <div>Wave: <span id="wave-val" class="stat">1</span></div>
+        <button id="next-wave">START WAVE</button>
     </div>
 
-    <div id="menu-box">
-        <div class="tab-nav">
-            <button class="tab-btn active" onclick="tab('recruits')">RECRUITS</button>
-            <button class="tab-btn" onclick="tab('skills')">SKILL TREE</button>
-            <button class="tab-btn" onclick="tab('weapons')">WEAPONS</button>
-        </div>
-        <div id="tab-content"></div>
+    <div id="tower-shop" class="hidden"></div>
+
+    <div id="upgrade-menu">
+        <h4 id="up-name">Tower</h4>
+        <p id="up-stats">Lvl: 1</p>
+        <button id="up-btn">Upgrade ($100)</button>
+        <button id="sell-btn" style="background:#ef4444">Sell</button>
     </div>
-</div>
+
+    <canvas id="gameCanvas"></canvas>
 
 <script>
-    /**
-     * DATABASE - BALANCED FOR FAST PROGRESS
-     */
-    const DB = {
-        regions: [
-            { n: "RUINS", k: 5, b: { n: "TORIEL", hp: 400, d: 2, g: 50, e: 100 } },
-            { n: "SNOWDIN", k: 8, b: { n: "PAPYRUS", hp: 1200, d: 8, g: 150, e: 400 } },
-            { n: "WATERFALL", k: 10, b: { n: "UNDYNE", hp: 2500, d: 20, g: 600, e: 1500 } },
-            { n: "HOTLAND", k: 12, b: { n: "METTATON NEO", hp: 1, d: -100, g: 1000, e: 8000 } },
-            { n: "CORE", k: 15, b: { n: "ASGORE", hp: 6000, d: 40, g: 5000, e: 25000 } },
-            { n: "JUDGEMENT", k: 1, b: { n: "SANS", hp: 1, d: 999, g: 0, e: 200000, isSans: true } }
-        ],
-        recruits: [
-            { id: 'flowey', n: 'Flowey', c: 10, lv: 1, d: "Shoots friendliness pellets." },
-            { id: 'toriel', n: 'Toriel', c: 100, lv: 3, d: "Fireball spirals." },
-            { id: 'blooky', n: 'Napstablook', c: 300, lv: 5, d: "DoT Acid Rain." },
-            { id: 'papyrus', n: 'Papyrus', c: 800, lv: 8, d: "Blue Soul x2 Damage." },
-            { id: 'undyne', n: 'Undyne', c: 2000, lv: 12, d: "True Defense Pierce." },
-            { id: 'muffet', n: 'Muffet', c: 5000, lv: 14, d: "Gold Stealing Spiders." },
-            { id: 'mtt', n: 'Mettaton', c: 15000, lv: 17, d: "High DPS Lasers." },
-            { id: 'asgore', n: 'Asgore', c: 40000, lv: 19, d: "Soul-Cleaving Trident." },
-            { id: 'sans', n: 'Sans', c: 10000, lv: 20, d: "Gaster Blasters.", r: 1 },
-            { id: 'chara', n: 'Chara', c: 99999, lv: 20, d: "The Demon.", r: 2 }
-        ],
-        weapons: [
-            { id: 'stick', n: 'Stick', a: 0, c: 0 },
-            { id: 'knife', n: 'Toy Knife', a: 10, c: 15 },
-            { id: 'glove', n: 'Tough Glove', a: 25, c: 100 },
-            { id: 'shoes', n: 'Ballet Shoes', a: 50, c: 500 },
-            { id: 'apron', n: 'Stained Apron', a: 80, c: 1500 },
-            { id: 'pan', n: 'Burnt Pan', a: 120, c: 4000 },
-            { id: 'knife_real', n: 'Real Knife', a: 999, c: 0, r: 1 }
-        ]
-    };
+/** * GAME CONFIGURATION 
+ */
+const TILE_SIZE = 50;
+const COLS = 16;
+const ROWS = 12;
+const WIDTH = COLS * TILE_SIZE;
+const HEIGHT = ROWS * TILE_SIZE;
 
-    /**
-     * LIVE ENGINE STATE
-     */
-    let state = {
-        lv: 1, exp: 0, gold: 0, resets: 0,
-        regionIdx: 0, kills: 0,
-        mHp: 30, mMaxHp: 30, mName: "Froggit", mDef: 2, mIsBoss: false,
-        weapon: 'stick',
-        allies: [],
-        skills: {}, // Store levels for each ally
-        currentTab: 'recruits',
-        sansStam: 100,
-        isShattering: false,
-        canSave: true,
-        hm: false
-    };
+const TOWER_TYPES = [
+    { id: 'gun', name: 'Sentry', cost: 100, range: 120, dmg: 10, rate: 20, color: '#94a3b8', detect: false, desc: 'Basic rapid fire' },
+    { id: 'sniper', name: 'Railgun', cost: 200, range: 250, dmg: 50, rate: 80, color: '#fbbf24', detect: false, desc: 'High dmg, long range' },
+    { id: 'radar', name: 'Oracle', cost: 150, range: 150, dmg: 5, rate: 30, color: '#c084fc', detect: true, desc: 'Reveals cloaked enemies' },
+    { id: 'slow', name: 'Cryo', cost: 175, range: 100, dmg: 2, rate: 10, color: '#38bdf8', detect: false, desc: 'Slows enemies down' },
+    { id: 'splash', name: 'Mortar', cost: 250, range: 180, dmg: 30, rate: 100, color: '#f87171', detect: false, splash: 60, desc: 'Area of effect damage' },
+    { id: 'tesla', name: 'Tesla', cost: 300, range: 90, dmg: 15, rate: 5, color: '#4ade80', detect: true, desc: 'Ultra fast, detects cloaked' }
+];
 
-    /**
-     * CORE ENGINE FUNCTIONS
-     */
-    function init() {
-        loadGame();
-        spawn();
-        renderAll();
-        
-        // Ally Auto-Attack Timer
-        setInterval(processAllyAttacks, 1000);
-        
-        // Auto-Save Timer
-        setInterval(() => { if(state.canSave) saveGame(); }, 10000);
-    }
+const ENEMY_TYPES = [
+    { name: 'Scout', hp: 30, speed: 1.5, color: '#fff', money: 15, stealth: false },
+    { name: 'Tank', hp: 150, speed: 0.6, color: '#475569', money: 30, stealth: false },
+    { name: 'Phantom', hp: 40, speed: 1.2, color: '#6366f1', money: 25, stealth: true },
+    { name: 'Speedster', hp: 20, speed: 2.8, color: '#fbbf24', money: 20, stealth: false }
+];
 
-    function spawn() {
-        state.isShattering = false;
-        document.getElementById('soul').style.opacity = 1;
-        document.getElementById('soul').classList.remove('shake', 'blue', 'yellow');
-        document.getElementById('stam-box').style.display = 'none';
-        
-        const reg = DB.regions[state.regionIdx];
-        const isHM = state.resets >= 5;
-        state.hm = isHM;
+/**
+ * GAME STATE
+ */
+let canvas = document.getElementById('gameCanvas');
+let ctx = canvas.getContext('2d');
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
 
-        // Visual Soul States
-        const soul = document.getElementById('soul');
-        if (isHM) {
-            soul.classList.add('yellow');
-            document.getElementById('ui-hardmode').style.display = 'block';
-        } else if (state.allies.includes('papyrus')) {
-            soul.classList.add('blue');
-        }
+let state = 'SELECTING';
+let selectedTowerIds = [];
+let map = [];
+let path = [];
+let enemies = [];
+let towers = [];
+let projectiles = [];
+let wave = 0;
+let money = 500;
+let lives = 20;
+let selectedMapTile = null;
+let activeTowerToPlace = null;
+let waveInProgress = false;
 
-        // Judgement Path Lockout
-        if (reg.n === "JUDGEMENT") {
-            state.canSave = false;
-            document.getElementById('btn-save').disabled = true;
-            document.getElementById('no-save-warn').style.display = 'block';
-        }
-
-        if (state.kills >= reg.k) {
-            // BOSS SPAWN
-            let b = reg.b;
-            state.mName = (state.resets >= 1 && b.n === "UNDYNE") ? "UNDYNE THE UNDYING" : b.n;
-            state.mMaxHp = b.hp;
-            if (isHM) state.mMaxHp *= 5; // Hardmode Boss Scaling
-            state.mHp = state.mMaxHp;
-            state.mDef = b.d;
-            state.mIsBoss = true;
-            if (b.isSans) document.getElementById('stam-box').style.display = 'block';
-            document.getElementById('m-desc').innerText = "* A boss stands in your way.";
-        } else {
-            // NORMAL MONSTER SPAWN
-            const pool = ["Froggit", "Whimsun", "Loox", "Snowdrake", "Aaron", "Knight Knight"][state.regionIdx];
-            state.mName = pool;
-            state.mMaxHp = 30 * (state.regionIdx + 1);
-            if (isHM) state.mMaxHp *= 3; // Hardmode Normal Scaling
-            state.mHp = state.mMaxHp;
-            state.mDef = state.regionIdx * 4;
-            state.mIsBoss = false;
-            document.getElementById('m-desc').innerText = "* Smells like dust.";
-        }
-        updateUI();
-    }
-
-    function playerAttack(e) {
-        if (state.isShattering) return;
-
-        // Justice Shooting
-        if (state.hm) {
-            fireJusticeBullet(e.clientX, e.clientY);
-        }
-
-        // Sans Specific Stamina Logic
-        if (state.mIsBoss && state.mName === "SANS" && state.sansStam > 0) {
-            state.sansStam -= 2;
-            document.getElementById('soul').classList.add('shake');
-            setTimeout(() => document.getElementById('soul').classList.remove('shake'), 150);
-            drawPopup("MISS", e.clientX, e.clientY);
-            updateUI();
-            return;
-        }
-
-        const weapon = DB.weapons.find(w => w.id === state.weapon);
-        let dmg = (state.lv * 6) + weapon.a - state.mDef;
-        
-        // Papyrus Blue Mode Bonus (x2 dmg)
-        if (state.allies.includes('papyrus')) dmg *= 2;
-
-        processDamage(dmg, e.clientX, e.clientY);
-    }
-
-    function fireJusticeBullet(x, y) {
-        const b = document.createElement('div');
-        b.className = 'bullet';
-        b.style.left = x + 'px';
-        b.style.top = y + 'px';
-        document.body.appendChild(b);
-        b.animate([{ top: y + 'px' }, { top: '-50px' }], 400).onfinish = () => {
-            b.remove();
-            processDamage(state.lv * 4, x, 100);
-        };
-    }
-
-    function processDamage(d, x, y) {
-        if (d < 1) d = 1;
-        state.mHp -= d;
-        drawPopup(Math.floor(d), x, y);
-        if (state.mHp <= 0) doDeath();
-        updateUI();
-    }
-
-    function doDeath() {
-        state.isShattering = true;
-        document.getElementById('soul').style.opacity = 0;
-        const reg = DB.regions[state.regionIdx];
-
-        // Soul Shard Particles
-        for(let i=0; i<10; i++) {
-            const s = document.createElement('div');
-            s.className = 'shard';
-            s.style.left = (window.innerWidth/2 + 200) + 'px';
-            s.style.top = '350px';
-            document.body.appendChild(s);
-            s.animate([
-                { transform: 'translate(0,0)' },
-                { transform: `translate(${(Math.random()-0.5)*400}px, 600px) rotate(720deg)` }
-            ], 1200).onfinish = () => s.remove();
-        }
-
-        // Rewards Logic
-        if (state.mIsBoss) {
-            state.gold += reg.b.g;
-            state.exp += reg.b.e;
-            state.kills = 0;
-            if (reg.b.isSans) {
-                document.getElementById('btn-reset').style.display = 'block';
-            } else {
-                state.regionIdx++;
-            }
-        } else {
-            state.gold += 10 + (state.regionIdx * 10);
-            state.exp += 20 + (state.regionIdx * 15);
-            state.kills++;
-        }
-        
-        levelUpCheck();
-        setTimeout(spawn, 1000);
-    }
-
-    function levelUpCheck() {
-        let req = state.lv * 150;
-        if (state.exp >= req && state.lv < 20) {
-            state.lv++;
-            renderAll();
-        }
-    }
-
-    function processAllyAttacks() {
-        if (state.isShattering || state.mHp <= 0) return;
-        const sBox = document.getElementById('soul-container').getBoundingClientRect();
-        const tx = sBox.left + 100, ty = sBox.top + 100;
-
-        state.allies.forEach(id => {
-            let mult = state.skills[id] || 1;
-            if (id === 'flowey') animAllyAtk('white', '•', tx, ty, state.lv * mult);
-            if (id === 'toriel') animAllyAtk('orange', '🔥', tx, ty, state.lv * 5 * mult);
-            if (id === 'sans') animAllyAtk('lightblue', '💀', tx, ty, state.lv * 60 * mult);
-            if (id === 'chara') animAllyAtk('red', '🔪', tx, ty, state.lv * 150 * mult);
-            if (id === 'undyne') animAllyAtk('cyan', '↑', tx, ty, state.lv * 15 * mult);
-        });
-    }
-
-    function animAllyAtk(color, sym, tx, ty, d) {
-        const p = document.createElement('div');
-        p.className = 'proj'; p.innerText = sym; p.style.color = color;
-        p.style.left = (Math.random() * 1100) + 'px'; p.style.top = '-50px';
-        document.body.appendChild(p);
-        p.animate([{ top: '-50px' }, { top: ty+'px', left: tx+'px' }], 600).onfinish = () => {
-            p.remove(); processDamage(d, tx, ty);
-        };
-    }
-
-    /**
-     * UI RENDERING LOGIC
-     */
-    function tab(t) {
-        state.currentTab = t;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(t)));
-        renderTab();
-    }
-
-    function renderTab() {
-        const cont = document.getElementById('tab-content');
-        cont.innerHTML = '';
-
-        if (state.currentTab === 'recruits') {
-            DB.recruits.forEach(r => {
-                const owned = state.allies.includes(r.id);
-                const rReq = r.r ? state.resets >= r.r : true;
-                cont.innerHTML += `
-                    <div class="item-card">
-                        <div><b>${r.n}</b><small>${r.d}</small></div>
-                        <button class="btn-buy" ${ (owned || state.gold < r.c || state.lv < r.lv || !rReq) ? 'disabled' : ''} onclick="buyAlly('${r.id}', ${r.c})">
-                            ${owned ? 'RECRUITED' : (rReq ? r.c + 'G' : 'RESET REQ')}
-                        </button>
-                    </div>`;
-            });
-        } else if (state.currentTab === 'skills') {
-            if (!state.allies.length) { cont.innerHTML = "<div style='grid-column: 1/3; text-align:center'>No allies recruited to upgrade.</div>"; return; }
-            state.allies.forEach(id => {
-                const lv = state.skills[id] || 1;
-                const cost = Math.floor(lv * 300);
-                cont.innerHTML += `
-                    <div class="item-card">
-                        <div><b>${id.toUpperCase()} Mastery</b><small>Current Level ${lv}</small></div>
-                        <button class="btn-buy" ${state.gold < cost ? 'disabled' : ''} onclick="buySkill('${id}', ${cost})">
-                            UPGRADE (${cost}G)
-                        </button>
-                    </div>`;
-            });
-        } else if (state.currentTab === 'weapons') {
-            DB.weapons.forEach(w => {
-                const eq = state.weapon === w.id;
-                const rReq = w.r ? state.resets >= w.r : true;
-                cont.innerHTML += `
-                    <div class="item-card">
-                        <div><b>${w.n}</b><small>ATK +${w.a}</small></div>
-                        <button class="btn-buy" ${(eq || state.gold < w.c || !rReq) ? 'disabled' : ''} onclick="buyWeapon('${w.id}', ${w.c})">
-                            ${eq ? 'EQUIPPED' : (rReq ? w.c + 'G' : 'RESET REQ')}
-                        </button>
-                    </div>`;
-            });
-        }
-    }
-
-    function buyAlly(id, c) { state.gold -= c; state.allies.push(id); state.skills[id] = 1; renderAll(); }
-    function buySkill(id, c) { state.gold -= c; state.skills[id]++; renderAll(); }
-    function buyWeapon(id, c) { state.gold -= c; state.weapon = id; renderAll(); }
-
-    function updateUI() {
-        document.getElementById('ui-area').innerText = DB.regions[state.regionIdx].n;
-        document.getElementById('ui-lv').innerText = state.lv;
-        document.getElementById('ui-exp').innerText = `${state.exp} / ${state.lv * 150}`;
-        document.getElementById('ui-gold').innerText = Math.floor(state.gold);
-        document.getElementById('ui-resets').innerText = state.resets;
-        document.getElementById('m-name').innerText = state.mName;
-        
-        const hpPerc = (state.mHp / state.mMaxHp) * 100;
-        document.getElementById('hp-fill').style.width = Math.max(0, hpPerc) + '%';
-        document.getElementById('hp-txt').innerText = `${Math.ceil(state.mHp)} / ${state.mMaxHp}`;
-
-        if (DB.regions[state.regionIdx].b.isSans) {
-            document.getElementById('stam-fill').style.width = state.sansStam + '%';
-        }
-    }
-
-    function renderAll() { updateUI(); renderTab(); }
+/**
+ * MAP GENERATION (Random Walk / Pathfinding)
+ */
+function generateMap() {
+    // 0 = path, 1 = wall/buildable
+    map = Array(ROWS).fill().map(() => Array(COLS).fill(1));
     
-    function drawPopup(t, x, y) {
-        const p = document.createElement('div'); p.className='dmg-num'; p.innerText=t; p.style.left=x+'px'; p.style.top=y+'px';
-        document.body.appendChild(p); setTimeout(()=>p.remove(), 700);
+    let x = 0;
+    let y = Math.floor(Math.random() * (ROWS - 2)) + 1;
+    path = [];
+
+    // Simple random walk to right side
+    while (x < COLS) {
+        path.push({x, y});
+        map[y][x] = 0;
+        
+        let rand = Math.random();
+        if (rand < 0.4 && y > 1 && map[y-1][x] !== 0) y--;
+        else if (rand < 0.8 && y < ROWS - 2 && map[y+1][x] !== 0) y++;
+        else x++;
+    }
+}
+
+/**
+ * TOWER SELECTION LOGIC
+ */
+const selectionMenu = document.getElementById('tower-options');
+TOWER_TYPES.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'tower-card';
+    card.innerHTML = `<strong>${t.name}</strong><br><small>${t.desc}</small><br>Cost: $${t.cost}`;
+    card.onclick = () => {
+        if (selectedTowerIds.includes(t.id)) {
+            selectedTowerIds = selectedTowerIds.filter(id => id !== t.id);
+            card.classList.remove('selected');
+        } else if (selectedTowerIds.length < 4) {
+            selectedTowerIds.push(t.id);
+            card.classList.add('selected');
+        }
+        document.getElementById('selection-count').innerText = `Selected: ${selectedTowerIds.length}/4`;
+        document.getElementById('start-btn').disabled = selectedTowerIds.length !== 4;
+    };
+    selectionMenu.appendChild(card);
+});
+
+document.getElementById('start-btn').onclick = () => {
+    document.getElementById('selection-menu').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('tower-shop').classList.remove('hidden');
+    initShop();
+    generateMap();
+    state = 'PLAYING';
+    requestAnimationFrame(gameLoop);
+};
+
+function initShop() {
+    const shop = document.getElementById('tower-shop');
+    selectedTowerIds.forEach(id => {
+        const type = TOWER_TYPES.find(t => t.id === id);
+        const btn = document.createElement('button');
+        btn.className = 'shop-btn';
+        btn.innerHTML = `<b>${type.name}</b><br>$${type.cost}`;
+        btn.onclick = () => {
+            activeTowerToPlace = type;
+            document.querySelectorAll('.shop-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        };
+        shop.appendChild(btn);
+    });
+}
+
+/**
+ * GAME OBJECTS
+ */
+class Enemy {
+    constructor(type, waveMult) {
+        this.type = type;
+        this.pathIndex = 0;
+        this.x = path[0].x * TILE_SIZE + TILE_SIZE/2;
+        this.y = path[0].y * TILE_SIZE + TILE_SIZE/2;
+        this.hp = type.hp * (1 + waveMult * 0.2);
+        this.maxHp = this.hp;
+        this.speed = type.speed;
+        this.money = type.money;
+        this.stealth = type.stealth;
+        this.revealed = !type.stealth;
+        this.reachedEnd = false;
+        this.slowTimer = 0;
     }
 
-    function doReset() {
-        if (!confirm("Erase this world and restart?")) return;
-        state.resets++; state.lv = 1; state.exp = 0; state.gold = 0; state.regionIdx = 0; state.kills = 0;
-        state.allies = []; state.skills = {}; state.weapon = 'stick'; state.canSave = true;
-        document.getElementById('btn-save').disabled = false;
-        document.getElementById('no-save-warn').style.display = 'none';
-        document.getElementById('btn-reset').style.display = 'none';
-        spawn(); renderAll(); saveGame();
+    update() {
+        if (this.slowTimer > 0) {
+            this.slowTimer--;
+            this.x += (path[this.pathIndex].x * TILE_SIZE + TILE_SIZE/2 - this.x) * (this.speed * 0.5) * 0.1;
+            this.y += (path[this.pathIndex].y * TILE_SIZE + TILE_SIZE/2 - this.y) * (this.speed * 0.5) * 0.1;
+        } else {
+            const targetX = path[this.pathIndex].x * TILE_SIZE + TILE_SIZE/2;
+            const targetY = path[this.pathIndex].y * TILE_SIZE + TILE_SIZE/2;
+            const dx = targetX - this.x;
+            const dy = targetY - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < 2) {
+                this.pathIndex++;
+                if (this.pathIndex >= path.length) {
+                    this.reachedEnd = true;
+                    return;
+                }
+            }
+            this.x += (dx/dist) * this.speed;
+            this.y += (dy/dist) * this.speed;
+        }
     }
 
-    function saveGame() { if(state.canSave) localStorage.setItem('ut_absolute_save_v1', JSON.stringify(state)); }
-    function loadGame() {
-        const s = localStorage.getItem('ut_absolute_save_v1');
-        if (s) state = Object.assign(state, JSON.parse(s));
+    draw() {
+        if (this.stealth && !this.revealed) {
+            ctx.globalAlpha = 0.1;
+        }
+        ctx.fillStyle = this.type.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 10, 0, Math.PI*2);
+        ctx.fill();
+        
+        // HP Bar
+        ctx.fillStyle = 'red';
+        ctx.fillRect(this.x - 10, this.y - 15, 20, 3);
+        ctx.fillStyle = 'lime';
+        ctx.fillRect(this.x - 10, this.y - 15, 20 * (this.hp/this.maxHp), 3);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+class Tower {
+    constructor(type, tx, ty) {
+        this.type = type;
+        this.tx = tx;
+        this.ty = ty;
+        this.x = tx * TILE_SIZE + TILE_SIZE/2;
+        this.y = ty * TILE_SIZE + TILE_SIZE/2;
+        this.level = 1;
+        this.range = type.range;
+        this.dmg = type.dmg;
+        this.rate = type.rate;
+        this.cooldown = 0;
     }
 
-    init();
+    update() {
+        if (this.cooldown > 0) this.cooldown--;
+
+        // Stealth Detection logic
+        if (this.type.detect) {
+            enemies.forEach(e => {
+                let d = Math.sqrt((e.x - this.x)**2 + (e.y - this.y)**2);
+                if (d < this.range) e.revealed = true;
+            });
+        }
+
+        if (this.cooldown <= 0) {
+            const target = enemies.find(e => {
+                let d = Math.sqrt((e.x - this.x)**2 + (e.y - this.y)**2);
+                return d < this.range && e.revealed;
+            });
+
+            if (target) {
+                this.shoot(target);
+                this.cooldown = this.rate;
+            }
+        }
+    }
+
+    shoot(target) {
+        if (this.type.id === 'slow') {
+            target.hp -= this.dmg;
+            target.slowTimer = 60;
+        } else if (this.type.splash) {
+            enemies.forEach(e => {
+                let d = Math.sqrt((e.x - target.x)**2 + (e.y - target.y)**2);
+                if (d < this.type.splash) e.hp -= this.dmg;
+            });
+        } else {
+            target.hp -= this.dmg;
+        }
+        
+        // Visual Bolt
+        ctx.strokeStyle = this.type.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+    }
+
+    draw() {
+        ctx.fillStyle = this.type.color;
+        ctx.fillRect(this.tx * TILE_SIZE + 5, this.ty * TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+        ctx.fillStyle = 'white';
+        ctx.fillText("L" + this.level, this.x - 5, this.y + 5);
+    }
+}
+
+/**
+ * GAME LOOP & INTERACTION
+ */
+function gameLoop() {
+    if (lives <= 0) {
+        document.getElementById('game-over').classList.remove('hidden');
+        return;
+    }
+
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    // Draw Map
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            ctx.fillStyle = map[r][c] === 0 ? '#1e293b' : '#020617';
+            ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.strokeStyle = '#0f172a';
+            ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    }
+
+    // Update & Draw Towers
+    towers.forEach(t => {
+        t.update();
+        t.draw();
+    });
+
+    // Handle Wave Logic
+    if (waveInProgress) {
+        enemies.forEach((e, i) => {
+            e.revealed = !e.stealth; // Reset revelation state each frame
+            e.update();
+            e.draw();
+            if (e.reachedEnd) {
+                lives--;
+                enemies.splice(i, 1);
+            } else if (e.hp <= 0) {
+                money += e.money;
+                enemies.splice(i, 1);
+            }
+        });
+
+        if (enemies.length === 0) waveInProgress = false;
+    }
+
+    updateHUD();
+    requestAnimationFrame(gameLoop);
+}
+
+function updateHUD() {
+    document.getElementById('hp-val').innerText = lives;
+    document.getElementById('money-val').innerText = money;
+    document.getElementById('wave-val').innerText = wave;
+}
+
+// Interaction
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const tx = Math.floor(mx / TILE_SIZE);
+    const ty = Math.floor(my / TILE_SIZE);
+
+    const existingTower = towers.find(t => t.tx === tx && t.ty === ty);
+
+    if (existingTower) {
+        showUpgradeMenu(existingTower);
+    } else if (activeTowerToPlace && map[ty][tx] === 1 && money >= activeTowerToPlace.cost) {
+        money -= activeTowerToPlace.cost;
+        towers.push(new Tower(activeTowerToPlace, tx, ty));
+        document.getElementById('upgrade-menu').style.display = 'none';
+    } else {
+        document.getElementById('upgrade-menu').style.display = 'none';
+    }
+});
+
+function showUpgradeMenu(tower) {
+    const menu = document.getElementById('upgrade-menu');
+    menu.style.display = 'block';
+    document.getElementById('up-name').innerText = tower.type.name;
+    const upCost = Math.floor(tower.type.cost * 0.8 * tower.level);
+    document.getElementById('up-stats').innerText = `Lvl: ${tower.level}\nDmg: ${tower.dmg}\nRange: ${tower.range}`;
+    document.getElementById('up-btn').innerText = `Upgrade ($${upCost})`;
+    
+    document.getElementById('up-btn').onclick = () => {
+        if (money >= upCost) {
+            money -= upCost;
+            tower.level++;
+            tower.dmg = Math.floor(tower.dmg * 1.5);
+            tower.range += 10;
+            tower.rate = Math.max(2, tower.rate - 2);
+            showUpgradeMenu(tower);
+        }
+    };
+
+    document.getElementById('sell-btn').onclick = () => {
+        money += Math.floor(tower.type.cost * 0.5);
+        towers = towers.filter(t => t !== tower);
+        menu.style.display = 'none';
+    };
+}
+
+document.getElementById('next-wave').onclick = () => {
+    if (waveInProgress) return;
+    wave++;
+    waveInProgress = true;
+    const count = 5 + wave * 2;
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            const type = ENEMY_TYPES[Math.floor(Math.random() * Math.min(wave, ENEMY_TYPES.length))];
+            enemies.push(new Enemy(type, wave));
+        }, i * 600);
+    }
+};
+
 </script>
 </body>
 </html>
