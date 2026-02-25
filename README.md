@@ -2,255 +2,256 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Undertale Clicker: Gain LOVE</title>
+    <title>UNDERTALE: Soul Crusher</title>
     <style>
+        @font-face {
+            font-family: 'Determination';
+            src: url('https://fonts.cdnfonts.com/s/19732/DeterminationMono.woff') format('woff');
+        }
+
         body {
             background-color: #000;
             color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            font-family: 'Determination', 'Courier New', monospace;
             margin: 0;
-            padding: 20px;
-            user-select: none; /* Prevents text highlighting when clicking fast */
-        }
-        
-        #stats-box {
-            border: 4px solid #fff;
-            padding: 20px;
-            width: 400px;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        h1 { margin: 0 0 10px 0; font-size: 24px; }
-        .stat { font-size: 18px; font-weight: bold; margin: 5px 0; }
-
-        /* The Clickable Soul */
-        #soul-container {
-            height: 150px;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 30px;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        #monster-soul {
-            font-size: 100px;
-            color: #fff;
-            transform: rotate(180deg); /* Upside down heart = monster soul */
-            cursor: pointer;
-            transition: transform 0.05s;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-
-        #monster-soul:active {
-            transform: rotate(180deg) scale(0.85); /* Squish effect when clicked */
-            color: #ccc;
-        }
-
-        /* Upgrades Section */
-        #upgrades-container {
+        #game-layout {
+            display: grid;
+            grid-template-columns: 300px 600px;
+            grid-gap: 20px;
             border: 4px solid #fff;
-            width: 400px;
             padding: 20px;
+            background: #000;
+        }
+
+        /* Battle Area */
+        #battle-screen {
+            border: 4px solid #fff;
+            height: 400px;
+            position: relative;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        .upgrade-btn {
-            background-color: #000;
+        #soul {
+            font-size: 80px;
             color: #fff;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.05s;
+            filter: drop-shadow(0 0 10px #fff);
+        }
+
+        #soul.shattering { animation: shatter 0.5s forwards; pointer-events: none; }
+
+        @keyframes shatter {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.2) rotate(10deg); opacity: 0.5; }
+            100% { transform: scale(0) rotate(-20deg); opacity: 0; }
+        }
+
+        .hp-bar-bg { width: 200px; height: 20px; background: #444; margin-top: 20px; border: 2px solid #fff; }
+        #hp-fill { width: 100%; height: 100%; background: #ff0000; transition: width 0.1s; }
+
+        /* Stats & Menu */
+        #menu-side {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-line { font-size: 20px; margin-bottom: 5px; }
+        .gold { color: #ffff00; }
+        .love { color: #ff0000; }
+
+        .tab-content {
             border: 2px solid #fff;
+            height: 250px;
+            overflow-y: auto;
             padding: 10px;
-            font-family: 'Courier New', Courier, monospace;
+            background: #111;
+        }
+
+        .upgrade-item {
+            border: 1px solid #555;
+            padding: 8px;
+            margin-bottom: 8px;
             cursor: pointer;
-            text-align: left;
-            display: flex;
-            justify-content: space-between;
-            font-size: 16px;
-            display: none; /* Hidden by default for the 'tree' effect */
+            font-size: 14px;
         }
 
-        .upgrade-btn:hover:not(:disabled) {
-            background-color: #333;
+        .upgrade-item:hover { background: #222; border-color: #fff; }
+        .upgrade-item.locked { color: #444; border-color: #333; cursor: not-allowed; }
+
+        .dmg-text {
+            position: absolute;
+            color: #ff0000;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.6s ease-out forwards;
         }
 
-        .upgrade-btn:disabled {
-            border-color: #555;
-            color: #555;
-            cursor: not-allowed;
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-50px); }
         }
-
-        .system-buttons {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .sys-btn {
-            background: none;
-            color: #fff;
-            border: 1px solid #fff;
-            font-family: inherit;
-            cursor: pointer;
-            padding: 5px 10px;
-        }
-        
-        .sys-btn:hover { background: #fff; color: #000; }
     </style>
 </head>
 <body>
 
-    <div id="stats-box">
-        <h1>* You feel your sins crawling on your back.</h1>
-        <div class="stat">LOVE: <span id="love-display">0</span></div>
-        <div class="stat">LOVE per click: <span id="click-power-display">1</span></div>
-        <div class="stat">LOVE per sec: <span id="auto-power-display">0</span></div>
-    </div>
-
-    <div id="soul-container">
-        <div id="monster-soul">♥</div>
-    </div>
-
-    <div id="upgrades-container">
-        <h2 style="margin-top:0; border-bottom: 2px solid #fff; padding-bottom:5px;">Upgrades Tree</h2>
+<div id="game-layout">
+    <div id="menu-side">
+        <div class="stat-line love">LV <span id="lv-val">1</span></div>
+        <div class="stat-line">EXP: <span id="exp-val">0</span> / <span id="next-lv">50</span></div>
+        <div class="stat-line gold">G: <span id="gold-val">0</span></div>
         
-        <button class="upgrade-btn" id="upg-stick" onclick="buyUpgrade('stick')">
-            <span>Stick (Auto +1/s)</span>
-            <span>Cost: <span id="cost-stick">10</span></span>
-        </button>
-
-        <button class="upgrade-btn" id="upg-toyknife" onclick="buyUpgrade('toyknife')">
-            <span>Toy Knife (Click +1)</span>
-            <span>Cost: <span id="cost-toyknife">50</span></span>
-        </button>
-
-        <button class="upgrade-btn" id="upg-glove" onclick="buyUpgrade('glove')">
-            <span>Tough Glove (Auto +5/s)</span>
-            <span>Cost: <span id="cost-glove">200</span></span>
-        </button>
-
-        <button class="upgrade-btn" id="upg-shoes" onclick="buyUpgrade('shoes')">
-            <span>Ballet Shoes (Click +5)</span>
-            <span>Cost: <span id="cost-shoes">500</span></span>
-        </button>
+        <div style="border-bottom: 2px solid #fff; margin: 10px 0;">RECRUIT (UPGRADES)</div>
+        <div class="tab-content" id="shop-list">
+            </div>
+        <button onclick="saveGame()" style="background:#000; color:#fff; border:1px solid #fff; cursor:pointer;">SAVE DATA</button>
     </div>
 
-    <div class="system-buttons">
-        <button class="sys-btn" onclick="saveGame()">Save Game</button>
-        <button class="sys-btn" onclick="hardReset()" style="border-color: red; color: red;">Erase Save</button>
+    <div id="battle-screen">
+        <div id="soul-name">* Monster Soul</div>
+        <div id="soul" onclick="dealDamage(event)">❤</div>
+        <div class="hp-bar-bg"><div id="hp-fill"></div></div>
+        <div id="hp-text">HP: 10 / 10</div>
     </div>
+</div>
 
-    <script>
-        // --- GAME STATE ---
-        let game = {
-            love: 0,
-            clickPower: 1,
-            autoPower: 0,
-            upgrades: {
-                stick: { cost: 10, count: 0, autoAdd: 1, clickAdd: 0, req: 0 },
-                toyknife: { cost: 50, count: 0, autoAdd: 0, clickAdd: 1, req: 10 },
-                glove: { cost: 200, count: 0, autoAdd: 5, clickAdd: 0, req: 100 },
-                shoes: { cost: 500, count: 0, autoAdd: 0, clickAdd: 5, req: 300 }
-            },
-            totalLoveGathered: 0 // Used to unlock the tree
-        };
+<script>
+    let state = {
+        lv: 1,
+        exp: 0,
+        gold: 0,
+        clickDmg: 1,
+        autoDmg: 0,
+        monsterMaxHp: 10,
+        monsterHp: 10,
+        kills: 0
+    };
 
-        // --- LOAD GAME ---
-        function loadGame() {
-            const savedData = localStorage.getItem('undertaleSave');
-            if (savedData) {
-                // Merge saved data with base game object to prevent missing data errors
-                game = { ...game, ...JSON.parse(savedData) };
-            }
+    const upgrades = [
+        { id: 'flowey', name: 'Flowey', cost: 15, lvReq: 1, dps: 1, desc: 'Petals deal 1 DPS' },
+        { id: 'papyrus', name: 'Papyrus', cost: 100, lvReq: 3, dps: 5, desc: 'Blue Bones deal 5 DPS' },
+        { id: 'undyne', name: 'Undyne', cost: 500, lvReq: 7, dps: 20, desc: 'Spears deal 20 DPS' },
+        { id: 'sans', name: 'Sans', cost: 2500, lvReq: 15, dps: 100, desc: 'Gaster Blasters deal 100 DPS' }
+    ];
+
+    let purchased = {};
+
+    function dealDamage(e) {
+        if (state.monsterHp <= 0) return;
+
+        spawnDmgText(e.clientX, e.clientY, state.clickDmg);
+        state.monsterHp -= state.clickDmg;
+        
+        if (state.monsterHp <= 0) {
+            killMonster();
+        }
+        updateUI();
+    }
+
+    function spawnDmgText(x, y, amt) {
+        const div = document.createElement('div');
+        div.className = 'dmg-text';
+        div.style.left = (x - 20) + 'px';
+        div.style.top = (y - 20) + 'px';
+        div.innerText = amt;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 600);
+    }
+
+    function killMonster() {
+        const soul = document.getElementById('soul');
+        soul.classList.add('shattering');
+        
+        // Rewards
+        const rewardG = 5 + (state.lv * 2);
+        const rewardExp = 10 + (state.lv * 5);
+        state.gold += rewardG;
+        state.exp += rewardExp;
+        state.kills++;
+
+        // Level Up Logic
+        let nextLvExp = state.lv * 50 * state.lv;
+        if (state.exp >= nextLvExp) {
+            state.lv++;
+            state.clickDmg += 2;
+        }
+
+        setTimeout(() => {
+            state.monsterMaxHp = Math.floor(10 * Math.pow(1.3, state.kills));
+            state.monsterHp = state.monsterMaxHp;
+            soul.classList.remove('shattering');
+            updateUI();
+        }, 600);
+    }
+
+    function buyUpgrade(idx) {
+        const upg = upgrades[idx];
+        if (state.gold >= upg.cost && state.lv >= upg.lvReq) {
+            state.gold -= upg.cost;
+            state.autoDmg += upg.dps;
+            upg.cost = Math.floor(upg.cost * 1.5);
             updateUI();
         }
+    }
 
-        // --- SAVE GAME ---
-        function saveGame() {
-            localStorage.setItem('undertaleSave', JSON.stringify(game));
-            console.log("Game Saved!");
-        }
+    function updateUI() {
+        document.getElementById('lv-val').innerText = state.lv;
+        document.getElementById('exp-val').innerText = state.exp;
+        document.getElementById('next-lv').innerText = state.lv * 50 * state.lv;
+        document.getElementById('gold-val').innerText = state.gold;
+        
+        const hpPercent = (state.monsterHp / state.monsterMaxHp) * 100;
+        document.getElementById('hp-fill').style.width = Math.max(0, hpPercent) + '%';
+        document.getElementById('hp-text').innerText = `HP: ${Math.max(0, state.monsterHp)} / ${state.monsterMaxHp}`;
 
-        // --- HARD RESET ---
-        function hardReset() {
-            if(confirm("* Are you sure you want to ERASE this world? All progress will be lost forever.")) {
-                localStorage.removeItem('undertaleSave');
-                location.reload();
-            }
-        }
-
-        // --- CORE MECHANICS ---
-        // Clicking the soul
-        document.getElementById('monster-soul').addEventListener('mousedown', () => {
-            game.love += game.clickPower;
-            game.totalLoveGathered += game.clickPower;
-            updateUI();
+        // Render Shop
+        const shop = document.getElementById('shop-list');
+        shop.innerHTML = '';
+        upgrades.forEach((upg, i) => {
+            const isLocked = state.lv < upg.lvReq;
+            const div = document.createElement('div');
+            div.className = `upgrade-item ${isLocked ? 'locked' : ''}`;
+            div.innerHTML = `
+                <b>${isLocked ? '???' : upg.name}</b> [Cost: ${upg.cost}G]<br>
+                <small>${isLocked ? 'Requires LV ' + upg.lvReq : upg.desc}</small>
+            `;
+            if (!isLocked) div.onclick = () => buyUpgrade(i);
+            shop.appendChild(div);
         });
+    }
 
-        // Buying an upgrade
-        function buyUpgrade(id) {
-            let upg = game.upgrades[id];
-            if (game.love >= upg.cost) {
-                game.love -= upg.cost;
-                upg.count++;
-                
-                // Apply effects
-                game.autoPower += upg.autoAdd;
-                game.clickPower += upg.clickAdd;
-                
-                // Increase cost by 15% each time
-                upg.cost = Math.ceil(upg.cost * 1.15);
-                
-                updateUI();
-            }
+    // Auto Damage Loop
+    setInterval(() => {
+        if (state.autoDmg > 0 && state.monsterHp > 0) {
+            state.monsterHp -= (state.autoDmg / 10);
+            if (state.monsterHp <= 0) killMonster();
+            updateUI();
         }
+    }, 100);
 
-        // --- UI UPDATES ---
-        function updateUI() {
-            // Update Text
-            document.getElementById('love-display').innerText = Math.floor(game.love);
-            document.getElementById('click-power-display').innerText = game.clickPower;
-            document.getElementById('auto-power-display').innerText = game.autoPower;
+    function saveGame() {
+        localStorage.setItem('ut_clicker_save', JSON.stringify(state));
+        alert("Progress Saved to the Void.");
+    }
 
-            // Loop through all upgrades to update costs, buttons, and "Tree" visibility
-            for (const [id, upg] of Object.entries(game.upgrades)) {
-                let btn = document.getElementById('upg-' + id);
-                let costText = document.getElementById('cost-' + id);
-                
-                // Update cost text
-                costText.innerText = upg.cost;
-
-                // Disable button if not enough LOVE
-                btn.disabled = game.love < upg.cost;
-
-                // TREE LOGIC: Only show upgrade if total LOVE gathered meets the requirement
-                if (game.totalLoveGathered >= upg.req) {
-                    btn.style.display = "flex";
-                }
-            }
-        }
-
-        // --- GAME LOOP ---
-        // Runs every second to add Auto-LOVE
-        setInterval(() => {
-            if (game.autoPower > 0) {
-                game.love += game.autoPower;
-                game.totalLoveGathered += game.autoPower;
-                updateUI();
-            }
-        }, 1000);
-
-        // Auto-save every 10 seconds
-        setInterval(saveGame, 10000);
-
-        // Start the game by loading and doing an initial UI update
-        loadGame();
-    </script>
+    // Init
+    const saved = localStorage.getItem('ut_clicker_save');
+    if (saved) state = JSON.parse(saved);
+    updateUI();
+</script>
 
 </body>
 </html>
