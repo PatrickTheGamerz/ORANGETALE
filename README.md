@@ -2,327 +2,329 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UTD: ABSOLUTE RESOLVE</title>
+    <title>UTD: ABSOLUTE CORRUPTION</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        :root { --red: #ff0000; --gold: #ffcc00; --white: #ffffff; --box-bg: #000; }
-        body { background: #111; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        :root { --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --purple: #d946ef; --corrupt: #4ade80; }
         
-        #game-ui { display: grid; grid-template-columns: 850px 300px; grid-template-rows: 60px 450px 200px; gap: 10px; padding: 10px; border: 4px solid white; background: #000; }
+        body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        #layout { display: grid; grid-template-columns: 850px 320px; grid-template-rows: 70px 450px 240px; gap: 10px; padding: 10px; border: 4px double white; position: relative; }
         
         header { grid-column: 1 / 3; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid #fff; }
-        canvas { grid-column: 1; grid-row: 2; background: #000; border: 1px solid #333; }
+        canvas { grid-column: 1; grid-row: 2; background: #050505; border: 1px solid #222; }
         
-        #sidebar { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .tower-card { border: 2px solid white; padding: 10px; text-align: center; cursor: pointer; font-size: 0.8rem; }
-        .tower-card.active { border-color: var(--gold); color: var(--gold); }
+        #sidebar { grid-column: 2; grid-row: 2 / 4; border: 2px solid white; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #0a0a0a; position: relative; }
+        .tower-card { border: 2px solid white; padding: 10px; text-align: center; cursor: pointer; font-size: 0.8rem; transition: 0.1s; }
+        .tower-card.active { border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
 
-        #bottom-panel { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; }
-        #frisk-controls { width: 400px; border-right: 2px solid white; padding-right: 15px; display: none; }
-        #dialogue { flex: 1; font-size: 1.2rem; position: relative; }
-
-        .act-btn { background: #000; border: 2px solid #ffcc00; color: #ffcc00; padding: 5px; margin: 2px; cursor: pointer; width: 45%; font-family: inherit; font-weight: bold; }
-        .act-btn:hover { background: #ffcc00; color: #000; }
+        #dashboard { grid-column: 1; grid-row: 3; border: 2px solid white; display: flex; padding: 15px; gap: 20px; background: #000; overflow: hidden; }
         
-        #menu-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn { background: #000; border: 2px solid #fff; color: #fff; padding: 10px 20px; cursor: pointer; font-family: inherit; font-size: 1.2rem; }
-        .btn:hover { background: #fff; color: #000; }
+        /* CORRUPTION UI */
+        #frisk-core { width: 440px; border-right: 2px solid white; padding-right: 15px; position: relative; }
+        .stat-line { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px; }
+        .meter-bg { width: 100%; height: 6px; background: #222; border: 1px solid #444; margin-bottom: 5px; }
+        .meter-fill { height: 100%; transition: width 0.4s ease-out; }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; }
+        .cmd-btn { background: #000; border: 2px solid #fff; color: #fff; padding: 10px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 1rem; position: relative; }
+        .cmd-btn:hover:not(:disabled) { background: #fff; color: #000; }
+        
+        #log-box { flex: 1; font-size: 1.1rem; line-height: 1.2; position: relative; }
+
+        .glitch-heavy { animation: glitch 0.1s infinite; color: var(--red); filter: contrast(200%); }
+        @keyframes glitch { 0% { transform: translate(3px, -2px); opacity: 0.8; } 50% { transform: translate(-3px, 2px); opacity: 1; } 100% { transform: translate(0); } }
+        
+        #soulless-overlay { position: fixed; inset: 0; background: red; z-index: 10000; display: none; align-items: center; justify-content: center; color: black; font-size: 3rem; font-weight: bold; text-align: center; }
     </style>
 </head>
-<body>
+<body id="b">
 
-    <div id="menu-overlay">
-        <h1 style="color:var(--red); font-size: 4rem;">UTD</h1>
-        <p>ONLY ONE RESOLVE REMAINS.</p>
-        <div id="selection-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin: 20px;"></div>
-        <button id="start-game" class="btn" disabled>INITIATE</button>
-    </div>
+    <div id="soulless-overlay">ERASING...</div>
 
-    <div id="game-ui">
-        <header>
+    <div id="layout">
+        <header id="main-header">
             <div>DT: <span id="hp" style="color:var(--red)">999</span></div>
-            <div>GOLD: <span id="gold" style="color:var(--gold)">400</span></div>
+            <div>GOLD: <span id="gold" style="color:var(--gold)">600</span></div>
             <div>LV: <span id="lv">1</span></div>
-            <button id="wave-btn" class="btn" style="font-size: 0.8rem;">FIGHT</button>
+            <button id="btn-fight" class="cmd-btn" style="width:120px; padding:2px">FIGHT</button>
         </header>
 
         <canvas id="canvas"></canvas>
 
         <div id="sidebar">
-            <h4 style="text-align:center; margin:0;">SUMMON</h4>
+            <h4 style="text-align:center; margin:0;">THE VOID</h4>
             <div id="shop"></div>
+            <div id="corruption-warning" style="color:var(--red); font-size:0.6rem; text-align:center; position:absolute; bottom:5px;"></div>
         </div>
 
-        <div id="bottom-panel">
-            <div id="frisk-controls">
-                <b id="frisk-name">FRISK</b> <span id="frisk-weapon" style="font-size:0.7rem; color: #888;">Stick</span>
-                <div style="display:flex; flex-wrap:wrap; margin-top:10px;">
-                    <button class="act-btn" onclick="friskCommand('FIGHT')">FIGHT</button>
-                    <button class="act-btn" onclick="friskCommand('TALK')">ACT: TALK</button>
-                    <button class="act-btn" onclick="friskCommand('FLIRT')">ACT: FLIRT</button>
-                    <button class="act-btn" onclick="friskCommand('SPARE')">MERCY</button>
+        <div id="dashboard">
+            <div id="frisk-core">
+                <div class="stat-line"><b>FRISK</b> <span id="status-text">PLAYER CONTROL: 95%</span></div>
+                <div class="meter-bg"><div id="player-bar" class="meter-fill" style="background:var(--cyan); width:95%"></div></div>
+                <div class="stat-line"><span style="color:var(--red)">CHARA INFLUENCE</span> <span id="chara-val">5%</span></div>
+                <div class="meter-bg"><div id="chara-bar" class="meter-fill" style="background:var(--red); width:5%"></div></div>
+                
+                <div class="btn-grid" id="controls">
+                    <button class="cmd-btn" id="btn-f" onclick="cmd('FIGHT')">FIGHT</button>
+                    <button class="cmd-btn" id="btn-a" onclick="cmd('ACT')">ACT</button>
+                    <button class="cmd-btn" id="btn-i" onclick="cmd('ITEM')">ITEM</button>
+                    <button class="cmd-btn" id="btn-m" onclick="cmd('MERCY')">SPARE</button>
                 </div>
-                <button id="up-frisk" class="btn" style="width:100%; margin-top:5px; font-size:0.7rem;">LEVEL UP ($100)</button>
+                <button id="reset-btn" class="cmd-btn" style="width:100%; margin-top:10px; border-color:var(--red); color:var(--red); display:none;">ERASE TIMELINE (100G)</button>
             </div>
-            <div id="dialogue">
-                <span style="color:red">❤</span> <span id="log">A Sans Lost Soul has 1 HP, but can kill you in a millisecond.</span>
+            <div id="log-box">
+                <span style="color:red">❤</span> <span id="log">* Chara is watching you.</span>
             </div>
         </div>
     </div>
 
 <script>
-/** * LORE-ACCURATE DATA 
- */
-const TOWERS = {
-    frisk: { name: "Frisk", cost: 200, color: "#ff00ff", desc: "The only one who can FIGHT effectively." },
-    sans:  { name: "Sans",  cost: 600, color: "#008cff", desc: "1 DMG. Inflicts KR (Karma Poison)." },
-    papy:  { name: "Papyrus", cost: 150, color: "#fff", desc: "0 DMG. Turns souls Blue (Massive Slow)." },
-    undyne:{ name: "Undyne", cost: 400, color: "#00ffff", desc: "10 DMG. Spears 'Mark' enemies for Frisk." }
+/** ⚙️ THE CORRUPTION ENGINE **/
+let state = {
+    gold: 600, hp: 999, lv: 1, 
+    playerInfluence: 95, charaInfluence: 5, friskPower: 0,
+    soulless: false, wave: 0,
+    mouse: { tx: 0, ty: 0 }
 };
 
-const SOULS = [
-    { n: 'Patience',  hp: 100, spd: 0.5, c: '#0ff', perk: 'wait' },
-    { n: 'Justice',   hp: 150, spd: 1.2, c: '#ff0', perk: 'stun' },
-    { n: 'SANS BOSS', hp: 1,   spd: 3.5, c: '#008cff', perk: 'god' }
-];
+const TOWERS = {
+    frisk: { n: "Frisk", c: 200, col: "#ff00ff" },
+    sans:  { n: "Sans",  c: 600, col: "#008cff" },
+    papy:  { n: "Papyrus", c: 150, col: "#fff" },
+    undy:  { n: "Undyne", c: 400, col: "#00ffff" },
+    void:  { n: "Void",   c: 500, col: "#555" }
+};
 
-const WEAPONS = [
-    { lv: 1,  n: "Stick", dmg: 50 },
-    { lv: 10, n: "Tough Glove", dmg: 300 },
-    { lv: 19, n: "True Knife", dmg: 9999 }
-];
-
-/** ENGINE **/
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const TILE = 50;
 canvas.width = 850; canvas.height = 450;
 
-let gold = 400, playerLv = 1, wave = 0;
-let guardians = [], enemies = [], path = [], bullets = [], vfx = [];
-let loadout = [], activePlacement = null, selectedFrisk = null;
-let mouse = { tx: 0, ty: 0 };
+let units = [], enemies = [], path = [], bullets = [], effects = [];
+let placement = null, selected = null;
 
-// Init Menu
-const grid = document.getElementById('selection-grid');
-Object.keys(TOWERS).forEach(k => {
-    const card = document.createElement('div');
-    card.className = 'tower-card';
-    card.innerHTML = `<b>${TOWERS[k].name}</b><br>$${TOWERS[k].cost}`;
-    card.onclick = () => {
-        if(loadout.includes(k)) loadout = loadout.filter(i => i!==k);
-        else if(loadout.length < 4) loadout.push(k);
-        card.classList.toggle('active', loadout.includes(k));
-        document.getElementById('start-game').disabled = loadout.length < 4;
-    };
-    grid.appendChild(card);
-});
-
-document.getElementById('start-game').onclick = () => {
-    document.getElementById('menu-overlay').style.display = 'none';
-    const shopList = document.getElementById('shop');
-    loadout.forEach(k => {
-        const btn = document.createElement('div');
-        btn.className = 'tower-card';
-        btn.innerHTML = `<b>${TOWERS[k].name}</b><br>$${TOWERS[k].cost}`;
-        btn.onclick = () => {
-            activePlacement = TOWERS[k];
-            activePlacement.id = k;
+/** ⚔️ CORE LOGIC **/
+function init() {
+    const shop = document.getElementById('shop');
+    Object.keys(TOWERS).forEach(k => {
+        const div = document.createElement('div');
+        div.className = 'tower-card';
+        div.innerHTML = `<b>${TOWERS[k].n}</b><br>$${TOWERS[k].c}`;
+        div.onclick = () => {
+            placement = { ...TOWERS[k], id: k };
             document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
+            div.classList.add('active');
         };
-        shopList.appendChild(btn);
+        shop.appendChild(div);
     });
     genPath();
-    requestAnimationFrame(loop);
-};
+    loop();
+}
 
 function genPath() {
     let x = 0, y = 4;
     while(x < 17) {
         path.push({x, y});
-        if(Math.random() < 0.2 && y > 1) y--;
-        else if(Math.random() < 0.2 && y < 7) y++;
-        else x++;
+        if(Math.random() < 0.2 && y > 1) y--; else if(Math.random() < 0.2 && y < 7) y++; else x++;
     }
 }
 
-/** TOWER CLASS **/
+/** 🛡️ GUARDIAN REFACTOR **/
 class Guardian {
     constructor(id, tx, ty) {
         this.id = id; this.tx = tx; this.ty = ty;
         this.x = tx*TILE+TILE/2; this.y = ty*TILE+TILE/2;
-        this.lv = (id === 'frisk' ? playerLv : 1);
-        this.cd = 0; this.stun = 0;
-        this.target = null;
+        this.lv = (id==='frisk')?state.lv:1;
+        this.stamina = 100; this.dodge = 100;
+        this.cd = 0;
     }
     update() {
-        if(this.stun > 0) { this.stun--; return; }
         if(this.cd > 0) this.cd--;
         
-        let range = (this.id === 'frisk') ? 120 : 300;
+        let range = (this.id === 'frisk') ? 140 : 350;
         this.target = enemies.find(e => Math.hypot(e.x-this.x, e.y-this.y) < range);
 
-        if(this.target && this.cd <= 0 && this.id !== 'frisk') {
-            this.autoAttack(this.target);
-            this.cd = (this.id === 'sans') ? 2 : 50;
+        // AUTO-CORRUPTION (Chara taking control)
+        if(this.id === 'frisk') {
+            this.lv = state.lv;
+            if(state.charaInfluence > 30 && this.target && this.cd <= 0) {
+                if(Math.random()*100 < state.charaInfluence) {
+                    this.strike(this.target, true);
+                    this.cd = 30;
+                }
+            }
+        } else if(this.target && this.cd <= 0) {
+            this.strike(this.target);
+            this.cd = (this.id==='sans')?5:60;
         }
     }
-    autoAttack(t) {
-        if(this.id === 'sans') { t.hp -= 0.1; t.kr += 5; } // Debuffed: 0.1 DMG
-        if(this.id === 'papy') { t.blue = 60; } // 0 DMG
-        if(this.id === 'undyne') { t.hp -= 10; t.marked = true; } // Low DMG
-        
-        bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:5, c:TOWERS[this.id].color});
+    strike(t, charaControlled = false) {
+        let dmg = (this.id==='frisk') ? this.lv*80 : 50;
+        if(this.id === 'sans') { t.kr = 100; dmg = 1; }
+        if(charaControlled) dmg *= 2;
+
+        t.hp -= dmg;
+        bullets.push({x1:this.x, y1:this.y, x2:t.x, y2:t.y, life:5, col:charaControlled?'#f00':'#fff'});
     }
     draw() {
-        ctx.fillStyle = (selectedFrisk === this) ? varColor('--gold') : TOWERS[this.id].color;
+        let c = TOWERS[this.id].col;
+        if(this.id === 'frisk' && state.charaInfluence > 50) c = "#f00";
+        if(selected === this) { ctx.shadowBlur = 10; ctx.shadowColor = 'gold'; }
+        ctx.fillStyle = c;
         ctx.fillRect(this.tx*TILE+5, this.ty*TILE+5, TILE-10, TILE-10);
-        if(this.id === 'frisk') { ctx.strokeStyle='red'; ctx.strokeRect(this.tx*TILE+5, this.ty*TILE+5, TILE-10, TILE-10); }
+        ctx.shadowBlur = 0;
+        ctx.fillStyle='#000'; ctx.font='10px Arial'; ctx.fillText("LV"+this.lv, this.x-10, this.y+5);
     }
 }
 
-/** ENEMY CLASS **/
-class Enemy {
-    constructor(d, wave) {
-        this.d = d; this.pIdx = 0;
-        this.x = path[0].x*TILE+TILE/2; this.y = path[0].y*TILE+TILE/2;
-        this.hp = d.hp * (1 + wave); this.max = this.hp;
-        this.spd = d.spd; this.kr = 0; this.blue = 0;
-        this.vuln = false; this.marked = false;
+/** 🕹️ COMMAND ENGINE **/
+function cmd(type) {
+    if(!selected || selected.id !== 'frisk') return;
+    
+    // Meta-Corruption Check
+    if(Math.random()*100 < state.charaInfluence) {
+        type = "FIGHT";
+        logIt("* CHARA: Do not hesitate.");
     }
-    update() {
-        if(this.kr > 0) { this.hp -= 0.5; this.kr--; }
-        let s = this.blue > 0 ? this.spd * 0.3 : this.spd;
-        if(this.blue > 0) this.blue--;
 
-        if(this.d.perk === 'god' && Math.random() < 0.95) this.dodging = true; // Sans boss dodge
-        else this.dodging = false;
+    if(!selected.target) return logIt("* But nobody was there.");
+    let t = selected.target;
 
-        let target = path[this.pIdx];
-        if(!target) return 'leak';
-        let tx = target.x*TILE+TILE/2, ty = target.y*TILE+TILE/2;
-        let dist = Math.hypot(tx-this.x, ty-this.y);
-        if(dist < s) this.pIdx++;
-        else { this.x += ((tx-this.x)/dist)*s; this.y += ((ty-this.y)/dist)*s; }
-
-        return this.hp <= 0 ? 'die' : null;
+    if(type === 'FIGHT') {
+        t.hp -= state.lv * 150;
+        state.lv++; 
+        logIt(`* You dealt ${state.lv*150} damage.`);
+    } else if(type === 'ACT') {
+        t.spd *= 0.5;
+        logIt("* You calmed the soul.");
+    } else if(type === 'MERCY') {
+        if(t.hp < 100) {
+            state.gold += 300;
+            enemies = enemies.filter(e => e !== t);
+            logIt("* SPARED. Gained 300G.");
+        } else logIt("* Not weak enough.");
     }
-    draw() {
-        ctx.fillStyle = this.vuln ? 'yellow' : this.d.c;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 12, 0, Math.PI*2); ctx.fill();
-        if(this.marked) { ctx.strokeStyle='cyan'; ctx.stroke(); }
-        ctx.fillStyle = 'red'; ctx.fillRect(this.x-15, this.y-22, 30, 4);
-        ctx.fillStyle = '#0f0'; ctx.fillRect(this.x-15, this.y-22, 30*(this.hp/this.max), 4);
+    
+    updateSchism();
+}
+
+function updateSchism() {
+    if(!state.soulless) {
+        state.charaInfluence = Math.min(90, (state.lv * 4.5));
+        state.playerInfluence = 100 - state.charaInfluence;
+    } else {
+        // Reincarnated State: 60 Player, 30 Chara base
+        state.charaInfluence = 30 + (state.lv * 3);
+        state.playerInfluence = 100 - state.charaInfluence;
+    }
+
+    if(state.lv >= 20) {
+        document.getElementById('reset-btn').style.display = 'block';
+    }
+
+    // Visual Glitches based on Corruption
+    if(state.charaInfluence > 70) {
+        document.getElementById('dashboard').classList.add('glitch-heavy');
+        document.getElementById('corruption-warning').innerText = "SYSTEM FAILURE: CHARA DETECTED";
     }
 }
 
-/** LOOP **/
+document.getElementById('reset-btn').onclick = () => {
+    if(state.gold >= 100) {
+        state.gold -= 100;
+        state.soulless = true;
+        document.getElementById('soulless-overlay').style.display = 'flex';
+        setTimeout(() => {
+            document.getElementById('soulless-overlay').style.display = 'none';
+            state.lv = 1;
+            state.playerInfluence = 60;
+            state.charaInfluence = 30;
+            state.friskPower = 10;
+            units = units.filter(u => u.id === 'frisk'); // Keep only Frisk
+            logIt("* You brought her back. Why?");
+            document.getElementById('reset-btn').style.display = 'none';
+            updateSchism();
+        }, 1500);
+    }
+};
+
+/** 🔁 LOOP **/
 function loop() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     path.forEach(p => { ctx.fillStyle = '#111'; ctx.fillRect(p.x*TILE, p.y*TILE, TILE, TILE); });
 
-    guardians.forEach(g => { g.update(); g.draw(); });
+    units.forEach(u => { u.update(); u.draw(); });
 
     for(let i=enemies.length-1; i>=0; i--) {
-        let res = enemies[i].update();
-        if(res === 'leak') { alert("TIMELINE ERASED IN A MILLISECOND."); location.reload(); return; }
-        if(res === 'die') { gold += 30; enemies.splice(i,1); }
-        else enemies[i].draw();
+        let e = enemies[i];
+        let s = (e.spd || 1);
+        let target = path[e.pIdx];
+        if(!target) { alert("TIMELINE ERASED."); location.reload(); return; }
+        
+        let tx = target.x*TILE+TILE/2, ty = target.y*TILE+TILE/2;
+        let d = Math.hypot(tx-e.x, ty-e.y);
+        if(d < s) e.pIdx++; else { e.x += ((tx-e.x)/d)*s; e.y += ((ty-e.y)/d)*s; }
+
+        if(e.hp <= 0) { state.gold += 40; enemies.splice(i,1); }
+        else {
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x, e.y, 10, 0, Math.PI*2); ctx.fill();
+        }
     }
 
     bullets.forEach((b,i) => {
-        ctx.strokeStyle = b.c; ctx.lineWidth = 2;
+        ctx.strokeStyle = b.col; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
         b.life--; if(b.life <= 0) bullets.splice(i,1);
     });
 
-    if(activePlacement) {
-        ctx.globalAlpha = 0.3; ctx.fillStyle = activePlacement.color;
-        ctx.fillRect(mouse.tx*TILE, mouse.ty*TILE, TILE, TILE);
-        ctx.globalAlpha = 1;
-    }
+    // Dashboard HUD
+    document.getElementById('hp').innerText = state.hp;
+    document.getElementById('gold').innerText = state.gold;
+    document.getElementById('lv').innerText = state.lv;
+    document.getElementById('player-bar').style.width = state.playerInfluence + "%";
+    document.getElementById('chara-bar').style.width = state.charaInfluence + "%";
+    document.getElementById('status-text').innerText = `PLAYER CONTROL: ${Math.floor(state.playerInfluence)}%`;
+    document.getElementById('chara-val').innerText = `${Math.floor(state.charaInfluence)}%`;
 
-    document.getElementById('gold').innerText = gold;
-    document.getElementById('lv').innerText = playerLv;
     requestAnimationFrame(loop);
 }
 
-/** FRISK COMPLEX ACTIONS **/
-function friskCommand(cmd) {
-    if(!selectedFrisk || !selectedFrisk.target) { 
-        logIt("* But nobody was in range."); return; 
-    }
-    let t = selectedFrisk.target;
-    let weapon = WEAPONS.reverse().find(w => playerLv >= w.lv);
-
-    if(cmd === 'FIGHT') {
-        if(t.dodging) { logIt("* MISS"); return; }
-        let dmg = weapon.dmg;
-        if(t.vuln) dmg *= 10;
-        if(t.marked) dmg *= 2;
-        t.hp -= dmg;
-        logIt(`* You dealt ${Math.floor(dmg)} damage.`);
-        playerLv++; // FIGHTing gives EXP
-    } else if(cmd === 'TALK') {
-        t.blue += 120;
-        logIt("* You told the soul a joke. It stopped to listen.");
-    } else if(cmd === 'FLIRT') {
-        t.vuln = true;
-        logIt("* The soul is confused and vulnerable.");
-    } else if(cmd === 'SPARE') {
-        if(t.hp < t.max * 0.3) {
-            gold += 200; // SPAREing gives massive GOLD
-            enemies = enemies.filter(e => e !== t);
-            logIt("* You Spared the soul. You gained 200G.");
-        } else {
-            logIt("* The soul is not ready to be spared.");
+/** 🖱️ INPUT **/
+canvas.onmousedown = () => {
+    let tx = state.mouse.tx, ty = state.mouse.ty;
+    let u = units.find(x => x.tx === tx && x.ty === ty);
+    
+    if(u) {
+        selected = u;
+        document.getElementById('frisk-core').style.opacity = (u.id === 'frisk') ? "1" : "0.3";
+    } else if(placement) {
+        if(state.gold >= placement.c) {
+            state.gold -= placement.c;
+            units.push(new Guardian(placement.id, tx, ty));
+            placement = null;
+            document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('active'));
         }
     }
-}
+};
 
-/** UI **/
 canvas.onmousemove = (e) => {
     let r = canvas.getBoundingClientRect();
-    mouse.tx = Math.floor((e.clientX - r.left)/TILE);
-    mouse.ty = Math.floor((e.clientY - r.top)/TILE);
+    state.mouse.tx = Math.floor((e.clientX - r.left)/TILE);
+    state.mouse.ty = Math.floor((e.clientY - r.top)/TILE);
 };
 
-canvas.onmousedown = () => {
-    if(activePlacement) {
-        let occ = guardians.find(g=>g.tx===mouse.tx && g.ty===mouse.ty) || !path.every(p => p.x!==mouse.tx || p.y!==mouse.ty);
-        if(!occ && gold >= activePlacement.cost) {
-            gold -= activePlacement.cost; guardians.push(new Guardian(activePlacement.id, mouse.tx, mouse.ty));
-            activePlacement = null; document.querySelectorAll('.tower-card').forEach(b => b.classList.remove('active'));
-        }
-    } else {
-        let g = guardians.find(x => x.tx === mouse.tx && x.ty === mouse.ty);
-        if(g && g.id === 'frisk') {
-            selectedFrisk = g;
-            document.getElementById('frisk-controls').style.display='block';
-            let weapon = WEAPONS.find(w => playerLv >= w.lv);
-            document.getElementById('frisk-weapon').innerText = weapon.n;
-        } else {
-            selectedFrisk = null;
-            document.getElementById('frisk-controls').style.display='none';
-        }
-    }
-};
-
-document.getElementById('wave-btn').onclick = () => {
-    wave++;
-    let count = 3 + wave;
-    for(let i=0; i<count; i++) {
+document.getElementById('btn-fight').onclick = () => {
+    state.wave++;
+    for(let i=0; i<3+state.wave; i++) {
         setTimeout(() => {
-            let type = SOULS[Math.floor(Math.random()*2)];
-            if(wave % 5 === 0 && i === 0) type = SOULS[2]; // Sans boss
-            enemies.push(new Enemy(type, wave));
+            enemies.push({ x: path[0].x*TILE+TILE/2, y: path[0].y*TILE+TILE/2, pIdx: 0, hp: 200*(1+state.wave*0.5), spd: 1.2 });
         }, i * 1500);
     }
 };
 
-function logIt(txt) { document.getElementById('log').innerText = txt; }
-function varColor(n) { return getComputedStyle(document.documentElement).getPropertyValue(n); }
+function logIt(t) { document.getElementById('log').innerText = t; }
+init();
 </script>
 </body>
 </html>
