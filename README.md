@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UNDERTALE: Soul Crusher Pro</title>
+    <title>UNDERTALE: The Genocide Clicker</title>
     <style>
         @font-face {
             font-family: 'Determination';
@@ -12,7 +12,7 @@
         body {
             background-color: #000;
             color: #fff;
-            font-family: 'Determination', 'Courier New', monospace;
+            font-family: 'Determination', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -22,461 +22,509 @@
             user-select: none;
         }
 
-        /* UI Layout */
-        #game-window {
-            width: 800px;
-            height: 600px;
-            border: 4px solid #fff;
-            display: flex;
-            flex-direction: column;
-            position: relative;
+        #game-container {
+            width: 900px;
+            height: 650px;
+            border: 6px solid #fff;
+            display: grid;
+            grid-template-columns: 300px 1fr;
             background: #000;
         }
 
-        #top-stats {
+        /* Sidebar Stats */
+        #sidebar {
+            border-right: 4px solid #fff;
             padding: 15px;
-            border-bottom: 4px solid #fff;
             display: flex;
-            justify-content: space-around;
-            font-size: 24px;
+            flex-direction: column;
+            background: #050505;
         }
 
-        /* Battle Area */
-        #battle-area {
-            flex-grow: 1;
+        .stat-group { margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .lv-text { color: #ff0000; font-size: 28px; }
+        .g-text { color: #ffff00; font-size: 22px; }
+        .reset-text { color: #00ffff; font-size: 18px; }
+
+        /* Battle Screen */
+        #battle-screen {
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #monster-sprite-box {
+            height: 200px;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            background: #000;
+            font-size: 20px;
+            text-align: center;
         }
 
-        /* The Soul (Monster Soul: White, Upside Down) */
-        #soul-container {
-            position: relative;
+        /* The Monster Soul */
+        #soul-target {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             cursor: crosshair;
+            position: relative;
+            margin: 40px 0;
         }
 
-        #monster-soul {
+        #soul {
             font-size: 80px;
             color: #fff;
             transform: rotate(180deg);
-            display: inline-block;
-            transition: transform 0.05s;
+            text-shadow: 0 0 10px #fff;
+            transition: transform 0.1s;
         }
 
-        .soul-shard {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: #fff;
-            pointer-events: none;
-        }
+        /* UI Bars */
+        .hp-bar-outer { width: 400px; height: 30px; background: #c00; border: 3px solid #fff; position: relative; }
+        #hp-bar-inner { width: 100%; height: 100%; background: #ff0; transition: width 0.1s; }
+        #hp-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; line-height: 30px; }
 
-        /* HP Bar */
-        .monster-info { text-align: center; margin-bottom: 20px; font-size: 20px; }
-        .hp-container {
-            width: 300px;
-            height: 25px;
-            background: #c00;
-            border: 2px solid #fff;
-            position: relative;
-        }
-        #hp-bar { width: 100%; height: 100%; background: #ff0; transition: width 0.2s; }
-
-        /* Menu System */
-        #menu-area {
-            height: 200px;
+        /* Menu Tabs */
+        #menu-box {
+            margin-top: auto;
+            height: 250px;
+            width: 100%;
             border-top: 4px solid #fff;
-            display: flex;
-        }
-
-        .tab-buttons {
-            width: 150px;
-            border-right: 4px solid #fff;
             display: flex;
             flex-direction: column;
         }
 
-        .tab-btn {
-            background: #000;
-            color: #fff;
-            border: none;
-            padding: 15px;
-            font-family: inherit;
-            font-size: 18px;
-            cursor: pointer;
-            text-align: left;
-        }
+        .tabs { display: flex; border-bottom: 2px solid #fff; }
+        .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-right: 1px solid #fff; }
+        .tab:hover, .tab.active { background: #fff; color: #000; }
 
-        .tab-btn:hover, .tab-btn.active { background: #fff; color: #000; }
+        #tab-content { padding: 10px; overflow-y: auto; flex-grow: 1; }
 
-        .tab-content {
-            flex-grow: 1;
-            padding: 15px;
-            overflow-y: auto;
-        }
-
-        .item-row {
+        .upgrade-card {
+            border: 1px solid #555;
+            padding: 8px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid #333;
-            padding: 10px;
-            margin-bottom: 5px;
         }
 
-        .item-row:hover { border-color: #fff; }
-
-        .buy-btn {
-            background: #000;
-            color: #ff0;
-            border: 1px solid #ff0;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-
+        .upgrade-card:hover { border-color: #fff; }
+        .buy-btn { background: #000; color: #fff; border: 1px solid #fff; padding: 5px 10px; cursor: pointer; font-family: inherit; }
         .buy-btn:disabled { color: #444; border-color: #444; }
 
-        /* Projectiles */
-        .pellet {
+        /* Projectiles & Damage */
+        .pellet { position: absolute; width: 12px; height: 12px; background: #fff; border-radius: 2px; z-index: 5; }
+        .dmg-num {
             position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border-radius: 2px;
-            pointer-events: none;
-        }
-
-        .damage-popup {
-            position: absolute;
-            color: #ff0;
+            color: #ffff00;
+            font-size: 30px;
             font-weight: bold;
-            font-size: 24px;
-            animation: floatDamage 0.8s ease-out forwards;
             pointer-events: none;
+            animation: dmgRise 0.7s forwards;
             z-index: 10;
         }
 
-        @keyframes floatDamage {
+        @keyframes dmgRise {
             0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-60px); opacity: 0; }
+            100% { transform: translateY(-80px); opacity: 0; }
         }
     </style>
 </head>
 <body>
 
-<div id="game-window">
-    <div id="top-stats">
-        <span>LV <span id="lv">1</span></span>
-        <span>EXP <span id="exp">0</span></span>
-        <span>G <span id="gold">0</span></span>
-        <span style="color: #ff0;">Weapon: <span id="weapon-name">Stick</span></span>
+<div id="game-container">
+    <div id="sidebar">
+        <div class="stat-group">
+            <div class="lv-text">LV <span id="val-lv">1</span></div>
+            <div>EXP: <span id="val-exp">0</span> / <span id="val-next-exp">50</span></div>
+            <div class="reset-text">Resets: <span id="val-resets">0</span></div>
+        </div>
+        <div class="stat-group">
+            <div class="g-text">GOLD: <span id="val-gold">0</span></div>
+        </div>
+        <div id="active-allies" style="font-size: 14px;">
+            Characters: <br><span id="ally-list">None</span>
+        </div>
+        <button onclick="manualSave()" style="margin-top:auto; background:none; color:white; border:1px solid white; cursor:pointer">SAVE FILE</button>
+        <button id="reset-btn" onclick="triggerReset()" style="display:none; margin-top:10px; border-color: cyan; color: cyan;">[RESET WORLD]</button>
     </div>
 
-    <div id="battle-area">
-        <div class="monster-info">
-            <div id="monster-name">* Whimsun</div>
-            <div class="hp-container"><div id="hp-bar"></div></div>
-            <div id="hp-text">HP: 10 / 10</div>
+    <div id="battle-screen">
+        <div id="monster-sprite-box">
+            <h2 id="monster-name">* Whimsun</h2>
         </div>
 
-        <div id="soul-container" onclick="playerAttack(event)">
-            <div id="monster-soul">❤</div>
+        <div id="soul-target" onclick="clickAttack(event)">
+            <div id="soul">❤</div>
         </div>
-    </div>
 
-    <div id="menu-area">
-        <div class="tab-buttons">
-            <button class="tab-btn active" onclick="openTab('weapons')">WEAPONS</button>
-            <button class="tab-btn" onclick="openTab('allies')">ALLIES</button>
-            <button class="tab-btn" onclick="openTab('skills')">SKILLS</button>
+        <div class="hp-bar-outer">
+            <div id="hp-bar-inner"></div>
+            <div id="hp-text">10 / 10</div>
         </div>
-        <div id="weapons" class="tab-content"></div>
-        <div id="allies" class="tab-content" style="display:none"></div>
-        <div id="skills" class="tab-content" style="display:none"></div>
+
+        <div id="menu-box">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('upgrades')">CHARACTERS</div>
+                <div class="tab" onclick="switchTab('weapons')">WEAPONS</div>
+                <div class="tab" onclick="switchTab('skills')">SKILL TREE</div>
+            </div>
+            <div id="tab-content"></div>
+        </div>
     </div>
 </div>
 
 <script>
     // --- DATABASE ---
-    const MONSTERS = [
-        { name: "Whimsun", hp: 10, def: 0, gold: 2, exp: 3, lvReq: 1 },
-        { name: "Froggit", hp: 30, def: 2, gold: 4, exp: 10, lvReq: 1 },
-        { name: "Moldsmal", hp: 50, def: 0, gold: 6, exp: 15, lvReq: 2 },
-        { name: "Loox", hp: 50, def: 6, gold: 12, exp: 20, lvReq: 3 },
-        { name: "Vegetoid", hp: 70, def: 0, gold: 15, exp: 25, lvReq: 4 },
-        { name: "Greater Dog", hp: 200, def: 10, gold: 50, exp: 100, lvReq: 7 }
+    const REGIONS = [
+        { name: "RUINS", monsters: [
+            { name: "Whimsun", hp: 10, def: 0, gold: 2, exp: 4 },
+            { name: "Froggit", hp: 30, def: 2, gold: 5, exp: 10 },
+            { name: "Loox", hp: 45, def: 5, gold: 10, exp: 15 }
+        ]},
+        { name: "SNOWDIN", monsters: [
+            { name: "Snowdrake", hp: 80, def: 10, gold: 20, exp: 40 },
+            { name: "Greater Dog", hp: 200, def: 15, gold: 50, exp: 100 }
+        ]},
+        { name: "WATERFALL", monsters: [
+            { name: "Aaron", hp: 400, def: 20, gold: 100, exp: 250 },
+            { name: "Undyne (Shadow)", hp: 1200, def: 30, gold: 500, exp: 1000 }
+        ]},
+        { name: "HOTLAND/CORE", monsters: [
+            { name: "Madjick", hp: 2500, def: 40, gold: 800, exp: 3000 },
+            { name: "Mettaton NEO", hp: 1, def: -100, gold: 5000, exp: 20000 }
+        ]}
     ];
+
+    const SANS_BOSS = { name: "SANS", hp: 1, def: 9999, gold: 0, exp: 50000, isSans: true };
 
     const WEAPONS = [
-        { id: 'stick', name: 'Stick', atk: 0, cost: 0, lvReq: 1 },
-        { id: 'knife', name: 'Toy Knife', atk: 3, cost: 20, lvReq: 1 },
-        { id: 'glove', name: 'Tough Glove', atk: 7, cost: 100, lvReq: 3 },
-        { id: 'shoes', name: 'Ballet Shoes', atk: 12, cost: 400, lvReq: 6 },
-        { id: 'notebook', name: 'Torn Notebook', atk: 15, cost: 1000, lvReq: 10 }
+        { name: "Stick", atk: 0, price: 0, lv: 1 },
+        { name: "Toy Knife", atk: 5, price: 50, lv: 1 },
+        { name: "Tough Glove", atk: 12, price: 500, lv: 4 },
+        { name: "Ballet Shoes", atk: 25, price: 2500, lv: 8 },
+        { name: "Real Knife", atk: 99, price: 50000, lv: 18 }
     ];
 
-    const ALLIES = {
-        flowey: { 
-            name: "Flowey", 
-            cost: 50, 
-            lvReq: 2, 
-            bought: false, 
-            level: 1, 
-            cooldown: 3000, 
-            lastShot: 0,
-            desc: "Shoots friendliness pellets." 
-        }
-    };
-
-    // --- STATE ---
+    // --- GAME STATE ---
     let state = {
-        lv: 1, exp: 0, gold: 0,
-        weapon: WEAPONS[0],
-        monster: null,
-        monsterHp: 0,
-        unlockedWeapons: ['stick'],
-        activeTab: 'weapons'
+        lv: 1, exp: 0, gold: 0, resets: 0,
+        weapon: "Stick", weaponAtk: 0,
+        mHp: 10, mMaxHp: 10, mName: "Whimsun", mDef: 0,
+        currentRegion: 0,
+        allies: [],
+        skills: [],
+        currentTab: 'upgrades',
+        isShattering: false
     };
 
-    // --- CORE ENGINE ---
+    // --- INITIALIZATION ---
     function init() {
-        spawnMonster();
-        renderShop();
+        loadGame();
+        updateUI();
         gameLoop();
+        spawnMonster();
     }
 
     function spawnMonster() {
-        const possible = MONSTERS.filter(m => state.lv >= m.lvReq);
-        state.monster = possible[Math.floor(Math.random() * possible.length)];
-        state.monsterHp = state.monster.hp;
-        document.getElementById('monster-soul').style.opacity = '1';
-        updateUI();
+        if (state.lv >= 19) {
+            setMonster(SANS_BOSS);
+        } else {
+            let regIdx = Math.min(REGIONS.length - 1, Math.floor(state.lv / 5));
+            let pool = REGIONS[regIdx].monsters;
+            setMonster(pool[Math.floor(Math.random() * pool.length)]);
+        }
     }
 
-    function playerAttack(e) {
-        if (state.monsterHp <= 0) return;
-        
-        // Damage = (LV + WeaponATK) - MonsterDEF
-        let dmg = (state.lv + state.weapon.atk) - state.monster.def;
-        if (dmg < 1) dmg = 1;
-
-        applyDamage(dmg, e.clientX, e.clientY);
+    function setMonster(m) {
+        state.mName = m.name;
+        state.mMaxHp = m.hp;
+        state.mHp = m.hp;
+        state.mDef = m.def;
+        state.isShattering = false;
+        document.getElementById('soul').style.opacity = "1";
     }
 
-    function applyDamage(dmg, x, y) {
-        state.monsterHp -= dmg;
-        createDamagePopup(dmg, x, y);
+    // --- COMBAT ---
+    function clickAttack(e) {
+        if (state.isShattering) return;
         
-        if (state.monsterHp <= 0) {
-            shatterSoul();
+        let dmg = (state.lv * 2) + state.weaponAtk - state.mDef;
+        // Sans Logic: Miss 95% of time unless specific triggers (simplified clicker logic)
+        if (state.mName === "SANS" && Math.random() > 0.05) dmg = 0; 
+        if (dmg < 1 && state.mName !== "SANS") dmg = 1;
+
+        dealDamage(dmg, e.clientX, e.clientY);
+    }
+
+    function dealDamage(dmg, x, y) {
+        if (dmg === 0 && state.mName === "SANS") {
+            createDmgNum("MISS", x, y, "#888");
+            return;
+        }
+
+        state.mHp -= dmg;
+        createDmgNum(dmg, x, y, "#ffff00");
+
+        if (state.mHp <= 0) {
+            shatter();
         }
         updateUI();
     }
 
-    function shatterSoul() {
-        const soul = document.getElementById('monster-soul');
-        const container = document.getElementById('soul-container');
-        soul.style.opacity = '0';
+    function shatter() {
+        state.isShattering = true;
+        document.getElementById('soul').style.opacity = "0";
+        
+        // Find reward
+        let expGain = 0;
+        let goldGain = 0;
 
-        // Rewards
-        state.gold += state.monster.gold;
-        state.exp += state.monster.exp;
+        if (state.mName === "SANS") {
+            expGain = 50000;
+            state.lv = 20;
+            document.getElementById('reset-btn').style.display = "block";
+        } else {
+            let m = findMonsterData(state.mName);
+            expGain = m.exp;
+            goldGain = m.gold;
+        }
+
+        state.exp += expGain;
+        state.gold += goldGain;
+        
         checkLevelUp();
-
-        // Particle effect
-        for(let i=0; i<8; i++) {
-            const shard = document.createElement('div');
-            shard.className = 'soul-shard';
-            shard.style.left = '40px';
-            shard.style.top = '40px';
-            container.appendChild(shard);
-
-            const angle = (Math.PI * 2 / 8) * i;
-            const velocity = 5 + Math.random() * 5;
-            let sx = Math.cos(angle) * velocity;
-            let sy = Math.sin(angle) * velocity;
-
-            let posX = 40;
-            let posY = 40;
-
-            const anim = setInterval(() => {
-                posX += sx;
-                posY += sy;
-                sy += 0.5; // Gravity
-                shard.style.left = posX + 'px';
-                shard.style.top = posY + 'px';
-                if (posY > 300) {
-                    shard.remove();
-                    clearInterval(anim);
-                }
-            }, 30);
-        }
-
-        setTimeout(spawnMonster, 1000);
+        setTimeout(spawnMonster, 800);
     }
 
-    function gameLoop() {
-        const now = Date.now();
+    function checkLevelUp() {
+        let req = state.lv * state.lv * 50;
+        if (state.exp >= req && state.lv < 20) {
+            state.lv++;
+            updateUI();
+        }
+    }
 
-        // Flowey Attack Logic
-        if (ALLIES.flowey.bought) {
-            let cd = ALLIES.flowey.level === 1 ? 3000 : 1500;
-            if (now - ALLIES.flowey.lastShot > cd && state.monsterHp > 0) {
-                shootPellet(ALLIES.flowey.level);
-                ALLIES.flowey.lastShot = now;
+    // --- SKILL TREE & ALLIES ---
+    const ALLY_DATA = {
+        'Flowey': { cost: 20, lv: 1, desc: "Shoots pellets every 3s" },
+        'Toriel': { cost: 500, lv: 5, desc: "Fireballs deal high burst" },
+        'Papyrus': { cost: 2000, lv: 8, desc: "Bones deal constant DPS" },
+        'Undyne': { cost: 10000, lv: 12, desc: "Spears ignore 50% DEF" },
+        'Sans': { cost: 100000, lv: 19, desc: "Gaster Blasters deal massive DMG" }
+    };
+
+    const SKILLS = [
+        { id: 'f_pellet3', name: 'Triple Pellets', cost: 100, parent: 'Flowey', desc: "Flowey fires 3 pellets" },
+        { id: 'f_circle', name: 'Pellet Circle', cost: 1000, parent: 'Flowey', desc: "Surrounds soul (leaves 1 HP)" },
+        { id: 'f_omega', name: 'OMEGA FLOWEY', cost: 50000, parent: 'Flowey', resets: 1, desc: "The ultimate form." }
+    ];
+
+    function buyAlly(name) {
+        let d = ALLY_DATA[name];
+        if (state.gold >= d.cost && state.lv >= d.lv && !state.allies.includes(name)) {
+            state.gold -= d.cost;
+            state.allies.push(name);
+            renderTab();
+            updateUI();
+        }
+    }
+
+    function buySkill(s) {
+        if (state.gold >= s.cost && !state.skills.includes(s.id)) {
+            state.gold -= s.cost;
+            state.skills.push(s.id);
+            renderTab();
+        }
+    }
+
+    // --- TICK LOGIC (PROJECTILES) ---
+    function gameLoop() {
+        if (!state.isShattering && state.mHp > 0) {
+            // Flowey Logic
+            if (state.allies.includes('Flowey')) {
+                if (Math.random() < 0.01) { // Random frequency
+                    if (state.skills.includes('f_circle')) {
+                        spawnPelletCircle();
+                    } else {
+                        spawnPellet(state.skills.includes('f_pellet3') ? 3 : 1);
+                    }
+                }
             }
         }
-
         requestAnimationFrame(gameLoop);
     }
 
-    function shootPellet(level) {
-        const count = level === 1 ? 1 : 5;
-        const rect = document.getElementById('soul-container').getBoundingClientRect();
-        
-        for (let i = 0; i < count; i++) {
-            const pellet = document.createElement('div');
-            pellet.className = 'pellet';
-            // Start from random edges
-            pellet.style.left = (Math.random() * 600) + 'px';
-            pellet.style.top = "-20px";
-            document.getElementById('battle-area').appendChild(pellet);
-
-            // Move towards soul
-            const targetX = rect.left + 40 - document.getElementById('battle-area').offsetLeft;
-            const targetY = rect.top + 40 - document.getElementById('battle-area').offsetTop;
+    function spawnPellet(count) {
+        for(let i=0; i<count; i++) {
+            const p = document.createElement('div');
+            p.className = 'pellet';
+            p.style.left = Math.random() * 400 + "px";
+            p.style.top = "-10px";
+            document.getElementById('battle-screen').appendChild(p);
             
-            pellet.animate([
-                { top: '-20px' },
-                { top: targetY + 'px', left: targetX + 'px' }
-            ], { duration: 1000, fill: 'forwards' }).onfinish = () => {
-                pellet.remove();
-                if (state.monsterHp > 0) applyDamage(2 * level, rect.left, rect.top);
+            p.animate([
+                { top: '-10px' },
+                { top: '250px', left: '200px' }
+            ], 1500).onfinish = () => {
+                p.remove();
+                dealDamage(2 + state.lv, 450, 300);
             };
         }
     }
 
-    // --- UI HELPERS ---
-    function updateUI() {
-        document.getElementById('lv').innerText = state.lv;
-        document.getElementById('exp').innerText = state.exp;
-        document.getElementById('gold').innerText = state.gold;
-        document.getElementById('weapon-name').innerText = state.weapon.name;
-        document.getElementById('monster-name').innerText = "* " + state.monster.name;
-        
-        const perc = (state.monsterHp / state.monster.hp) * 100;
-        document.getElementById('hp-bar').style.width = Math.max(0, perc) + "%";
-        document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.floor(state.monsterHp))} / ${state.monster.hp}`;
-    }
+    function spawnPelletCircle() {
+        const center = { x: 200, y: 250 };
+        for(let i=0; i<8; i++) {
+            const p = document.createElement('div');
+            p.className = 'pellet';
+            let angle = (i / 8) * Math.PI * 2;
+            let startDist = 150;
+            p.style.left = (center.x + Math.cos(angle) * startDist) + "px";
+            p.style.top = (center.y + Math.sin(angle) * startDist) + "px";
+            document.getElementById('battle-screen').appendChild(p);
 
-    function createDamagePopup(dmg, x, y) {
-        const p = document.createElement('div');
-        p.className = 'damage-popup';
-        p.innerText = dmg;
-        p.style.left = x + 'px';
-        p.style.top = y + 'px';
-        document.body.appendChild(p);
-        setTimeout(() => p.remove(), 800);
-    }
-
-    function checkLevelUp() {
-        const nextExp = state.lv * 100;
-        if (state.exp >= nextExp) {
-            state.lv++;
-            renderShop();
+            p.animate([
+                { opacity: 1 },
+                { left: center.x + 'px', top: center.y + 'px' }
+            ], 2000).onfinish = () => {
+                p.remove();
+                // "Leave 1 HP" Logic
+                let d = 10;
+                if (state.mHp - d < 1) d = Math.max(0, state.mHp - 1);
+                dealDamage(Math.floor(d), 450, 300);
+            };
         }
     }
 
-    function openTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).style.display = 'block';
+    // --- UI ENGINE ---
+    function switchTab(t) {
+        state.currentTab = t;
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         event.target.classList.add('active');
-        state.activeTab = tabId;
-        renderShop();
+        renderTab();
     }
 
-    function renderShop() {
-        // Weapons
-        const wDiv = document.getElementById('weapons');
-        wDiv.innerHTML = '';
-        WEAPONS.forEach(w => {
-            const isOwned = state.weapon.id === w.id;
-            const canAfford = state.gold >= w.cost && state.lv >= w.lvReq;
-            wDiv.innerHTML += `
-                <div class="item-row">
-                    <div><b>${w.name}</b> (ATK: ${w.atk})<br><small>Req: LV ${w.lvReq}</small></div>
-                    <button class="buy-btn" ${(!canAfford || isOwned) ? 'disabled' : ''} onclick="buyWeapon('${w.id}')">
-                        ${isOwned ? 'EQUIPPED' : w.cost + 'G'}
-                    </button>
-                </div>`;
-        });
-
-        // Allies
-        const aDiv = document.getElementById('allies');
-        aDiv.innerHTML = '';
-        for (let key in ALLIES) {
-            const ally = ALLIES[key];
-            const canBuy = state.gold >= ally.cost && state.lv >= ally.lvReq && !ally.bought;
-            aDiv.innerHTML += `
-                <div class="item-row">
-                    <div><b>${ally.name}</b><br><small>${ally.desc}</small></div>
-                    <button class="buy-btn" ${!canBuy ? 'disabled' : ''} onclick="buyAlly('${key}')">
-                        ${ally.bought ? 'RECRUITED' : ally.cost + 'G'}
-                    </button>
-                </div>`;
-        }
-
-        // Skills
-        const sDiv = document.getElementById('skills');
-        sDiv.innerHTML = '';
-        if (ALLIES.flowey.bought) {
-            const cost = 500;
-            sDiv.innerHTML += `
-                <div class="item-row">
-                    <div><b>Flowey: Pellet Circle</b><br><small>Fire 5 pellets at once.</small></div>
-                    <button class="buy-btn" ${(state.gold < cost || ALLIES.flowey.level > 1) ? 'disabled' : ''} onclick="upgradeFlowey()">
-                        ${ALLIES.flowey.level > 1 ? 'MAXED' : cost + 'G'}
-                    </button>
-                </div>`;
-        } else {
-            sDiv.innerHTML = "Recruit allies to see their skill trees.";
+    function renderTab() {
+        const cont = document.getElementById('tab-content');
+        cont.innerHTML = '';
+        
+        if (state.currentTab === 'upgrades') {
+            for (let name in ALLY_DATA) {
+                let d = ALLY_DATA[name];
+                let owned = state.allies.includes(name);
+                cont.innerHTML += `
+                    <div class="upgrade-card">
+                        <div><b>${name}</b><br><small>${d.desc}</small></div>
+                        <button class="buy-btn" ${ (state.gold < d.cost || state.lv < d.lv || owned) ? 'disabled' : '' } onclick="buyAlly('${name}')">
+                            ${owned ? 'RECRUITED' : d.cost + ' G'}
+                        </button>
+                    </div>`;
+            }
+        } else if (state.currentTab === 'skills') {
+            SKILLS.forEach(s => {
+                let hasParent = state.allies.includes(s.parent);
+                let owned = state.skills.includes(s.id);
+                let resetReq = s.resets ? (state.resets >= s.resets) : true;
+                cont.innerHTML += `
+                    <div class="upgrade-card" style="opacity: ${hasParent ? 1 : 0.4}">
+                        <div><b>${s.name}</b><br><small>${s.desc}</small></div>
+                        <button class="buy-btn" ${ (!hasParent || state.gold < s.cost || owned || !resetReq) ? 'disabled' : '' } onclick="buySkill(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                            ${owned ? 'OWNED' : (resetReq ? s.cost + ' G' : 'Needs Reset')}
+                        </button>
+                    </div>`;
+            });
+        } else if (state.currentTab === 'weapons') {
+            WEAPONS.forEach(w => {
+                let active = state.weapon === w.name;
+                cont.innerHTML += `
+                    <div class="upgrade-card">
+                        <div><b>${w.name}</b> (ATK +${w.atk})</div>
+                        <button class="buy-btn" ${ (state.gold < w.price || active || state.lv < w.lv) ? 'disabled' : '' } onclick="buyWeapon('${w.name}', ${w.atk}, ${w.price})">
+                            ${active ? 'EQUIPPED' : w.price + ' G'}
+                        </button>
+                    </div>`;
+            });
         }
     }
 
-    function buyWeapon(id) {
-        const w = WEAPONS.find(x => x.id === id);
-        if (state.gold >= w.cost) {
-            state.gold -= w.cost;
-            state.weapon = w;
-            renderShop();
+    function buyWeapon(name, atk, price) {
+        state.gold -= price;
+        state.weapon = name;
+        state.weaponAtk = atk;
+        renderTab();
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('val-lv').innerText = state.lv;
+        document.getElementById('val-exp').innerText = state.exp;
+        document.getElementById('val-next-exp').innerText = state.lv * state.lv * 50;
+        document.getElementById('val-gold').innerText = Math.floor(state.gold);
+        document.getElementById('val-resets').innerText = state.resets;
+        document.getElementById('ally-list').innerText = state.allies.length ? state.allies.join(', ') : "None";
+        
+        document.getElementById('monster-name').innerText = "* " + state.mName;
+        let p = (state.mHp / state.mMaxHp) * 100;
+        document.getElementById('hp-bar-inner').style.width = Math.max(0, p) + "%";
+        document.getElementById('hp-text').innerText = Math.max(0, Math.floor(state.mHp)) + " / " + state.mMaxHp;
+    }
+
+    function createDmgNum(txt, x, y, color) {
+        const d = document.createElement('div');
+        d.className = 'dmg-num';
+        d.innerText = txt;
+        d.style.left = (x - 20) + "px";
+        d.style.top = (y - 50) + "px";
+        d.style.color = color;
+        document.body.appendChild(d);
+        setTimeout(() => d.remove(), 700);
+    }
+
+    function findMonsterData(name) {
+        for(let r of REGIONS) {
+            let m = r.monsters.find(x => x.name === name);
+            if(m) return m;
+        }
+        return {exp: 0, gold: 0};
+    }
+
+    // --- RESET SYSTEM ---
+    function triggerReset() {
+        if(confirm("Erase this world and move on?")) {
+            state.resets++;
+            state.lv = 1;
+            state.exp = 0;
+            state.gold = 0;
+            state.allies = [];
+            state.skills = [];
+            state.weapon = "Stick";
+            state.weaponAtk = 0;
+            document.getElementById('reset-btn').style.display = "none";
+            spawnMonster();
             updateUI();
+            manualSave();
         }
     }
 
-    function buyAlly(key) {
-        const a = ALLIES[key];
-        if (state.gold >= a.cost) {
-            state.gold -= a.cost;
-            a.bought = true;
-            renderShop();
-            updateUI();
-        }
+    // --- STORAGE ---
+    function manualSave() {
+        localStorage.setItem('ut_genocide_save', JSON.stringify(state));
     }
-
-    function upgradeFlowey() {
-        if (state.gold >= 500) {
-            state.gold -= 500;
-            ALLIES.flowey.level = 2;
-            renderShop();
-        }
+    function loadGame() {
+        const s = localStorage.getItem('ut_genocide_save');
+        if (s) Object.assign(state, JSON.parse(s));
     }
+    setInterval(manualSave, 10000); // Auto-save 10s
 
     init();
+    renderTab();
 </script>
 
 </body>
