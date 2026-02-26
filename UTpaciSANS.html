@@ -2,312 +2,409 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DUSTTRUST - Papyrus Encounter</title>
+    <title>DUSTTRUST: 3D Papyrus Encounter</title>
     <style>
-        @font-face {
-            font-family: 'Determination';
-            src: url('https://fonts.cdnfonts.com/s/14876/DeterminationMono.woff') format('woff');
-        }
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         body {
-            background-color: #000;
-            color: #fff;
-            font-family: 'Determination', 'Courier New', Courier, monospace;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
+            margin: 0; overflow: hidden; background: #000;
+            font-family: 'VT323', monospace; color: white; user-select: none;
         }
 
-        #battle-container {
-            width: 640px;
-            height: 480px;
-            position: relative;
-            border: 2px solid #555;
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        /* Sprite Area */
-        #enemy-sprite {
-            width: 100%;
-            height: 180px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            padding-bottom: 20px;
-            font-size: 80px;
+        /* Top HUD */
+        #top-hud {
+            padding: 20px; font-size: 28px; text-shadow: 2px 2px #000;
+            display: flex; justify-content: space-between;
         }
 
-        /* Dialogue Bubble */
-        #speech-bubble {
-            position: absolute;
-            top: 50px;
-            right: 50px;
-            background: white;
-            color: black;
-            padding: 10px;
-            border-radius: 10px;
-            width: 150px;
-            display: none;
-            font-size: 14px;
+        /* Dialogue Box */
+        #dialogue-container {
+            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+            width: 600px; background: black; border: 4px solid white;
+            padding: 20px; font-size: 32px; display: none;
         }
 
-        /* Battle Box */
-        #battle-box {
-            width: 400px;
-            height: 140px;
-            border: 5px solid white;
-            margin: 0 auto;
-            position: relative;
-            background: black;
-            overflow: hidden;
+        /* Bottom UI (Undertale Style) */
+        #bottom-ui {
+            padding: 20px; display: flex; flex-direction: column; align-items: center;
+            background: rgba(0,0,0,0.8); border-top: 4px solid white; pointer-events: auto;
         }
 
-        /* HUD */
-        #hud {
-            width: 400px;
-            margin: 10px auto;
-            display: flex;
-            align-items: center;
-            font-size: 20px;
+        #stats-bar {
+            display: flex; align-items: center; font-size: 32px; margin-bottom: 20px; width: 800px;
         }
 
-        #hp-bar-bg { width: 100px; height: 20px; background: red; margin: 0 10px; position: relative; }
-        #hp-bar-fill { width: 100%; height: 100%; background: #ffff00; }
+        .hp-box { width: 150px; height: 30px; background: red; margin: 0 15px; border: 2px solid #555; position: relative; }
+        #hp-fill { height: 100%; background: #ffff00; width: 100%; transition: width 0.1s; }
+        #kr-fill { height: 100%; background: #c800ff; position: absolute; right: 0; top: 0; width: 0%; transition: width 0.1s; }
 
-        /* Buttons */
-        #button-container {
-            width: 580px;
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
+        #action-buttons {
+            display: flex; justify-content: space-between; width: 800px;
         }
 
-        .btn {
-            width: 110px;
-            height: 42px;
-            border: 2px solid #e7762e;
-            color: #e7762e;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
+        .action-btn {
+            background: black; color: #ff8c00; border: 4px solid #ff8c00;
+            width: 160px; height: 60px; font-size: 32px; font-family: inherit;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: 0.1s;
         }
 
-        .btn.active { border-color: #ffff00; color: #ffff00; }
-        .btn:hover { border-color: #ffff00; color: #ffff00; }
+        .action-btn:hover { background: #ff8c00; color: black; }
+        .action-btn:disabled { border-color: #555; color: #555; cursor: not-allowed; }
 
-        /* Soul */
-        #soul {
-            width: 16px;
-            height: 16px;
-            position: absolute;
-            z-index: 100;
-        }
-
-        /* Game Over */
+        /* Game Over Screen */
         #game-over {
-            position: absolute;
-            inset: 0;
-            background: black;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            position: absolute; inset: 0; background: black; z-index: 100;
+            display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto;
         }
+        .go-text { font-size: 100px; letter-spacing: 10px; margin: 0; color: #fff; }
+        .retry-btn { margin-top: 50px; font-size: 40px; background: none; color: white; border: 2px solid white; padding: 10px 30px; cursor: pointer; font-family: inherit; }
+        .retry-btn:hover { background: white; color: black; }
+
+        #controls-hint { position: absolute; right: 20px; bottom: 150px; font-size: 24px; color: #888; text-align: right;}
     </style>
 </head>
 <body>
 
-<div id="battle-container">
-    <div id="enemy-sprite">💀</div>
-    <div id="speech-bubble"></div>
-    
-    <div id="battle-box">
-        <canvas id="attackCanvas" width="400" height="140"></canvas>
-        <div id="soul">❤️</div>
+<div id="ui-layer">
+    <div id="top-hud">
+        <span style="color: cyan;">❤️ SANS</span>
+        <span style="color: red;">LV 19</span>
+        <span>EXP: 49999</span>
     </div>
 
-    <div id="hud">
-        <span>FRISK  LV 19</span>
-        <span style="margin-left: 20px;">HP</span>
-        <div id="hp-bar-bg"><div id="hp-bar-fill"></div></div>
-        <span id="hp-text">92 / 92</span>
+    <div id="dialogue-container">
+        <div id="paps-dialogue">...</div>
     </div>
 
-    <div id="button-container">
-        <div class="btn" id="btn-fight">FIGHT</div>
-        <div class="btn" id="btn-act">ACT</div>
-        <div class="btn" id="btn-item">ITEM</div>
-        <div class="btn" id="btn-mercy">MERCY</div>
+    <div id="controls-hint">[WASD] Move Arena<br>[SPACE] Jump Bones</div>
+
+    <div id="bottom-ui">
+        <div id="stats-bar">
+            <span>HP</span>
+            <div class="hp-box"><div id="hp-fill"></div><div id="kr-fill"></div></div>
+            <span id="hp-text">92 / 92</span>
+            <span style="margin-left: 20px; color: #c800ff;">KR</span>
+        </div>
+        <div id="action-buttons">
+            <button class="action-btn" id="btn-fight" onclick="playerAttack()">FIGHT</button>
+            <button class="action-btn" id="btn-act" onclick="playerAct()">ACT</button>
+            <button class="action-btn" id="btn-item" disabled>ITEM</button>
+            <button class="action-btn" id="btn-mercy" disabled>MERCY</button>
+        </div>
     </div>
 </div>
 
 <div id="game-over">
-    <h1 style="color: red; font-size: 60px;">GAME OVER</h1>
-    <p style="color: white; font-size: 20px;">Stay determined...</p>
-    <button onclick="location.reload()" style="background: none; border: 1px solid white; color: white; padding: 10px; cursor: pointer;">RETRY</button>
+    <h1 class="go-text">GAME OVER</h1>
+    <p style="font-size: 40px; color: #888;">You cannot give up just yet...</p>
+    <button class="retry-btn" onclick="location.reload()">STAY DETERMINED</button>
 </div>
 
-<script>
-    const canvas = document.getElementById('attackCanvas');
-    const ctx = canvas.getContext('2d');
-    const soul = document.getElementById('soul');
-    const hpFill = document.getElementById('hp-bar-fill');
-    const hpText = document.getElementById('hp-text');
-    const bubble = document.getElementById('speech-bubble');
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    let game = {
-        hp: 92,
-        maxHp: 92,
-        enemyHp: 1500,
-        state: 'menu', // menu, dialogue, attacking
-        soulX: 192,
-        soulY: 62,
-        turn: 0
+<script>
+    // --- GAME STATE ---
+    const state = {
+        hp: 92, maxHp: 92, kr: 0,
+        turn: 0, isDodging: false,
+        playerPos: new THREE.Vector3(0, 0.5, 0),
+        playerVel: new THREE.Vector3(0, 0, 0)
     };
 
     const keys = {};
     window.addEventListener('keydown', e => keys[e.code] = true);
     window.addEventListener('keyup', e => keys[e.code] = false);
 
-    const attacks = [];
+    // --- 3D ENGINE SETUP ---
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x000000, 10, 50);
+    
+    // Fixed camera looking at the arena
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 12, 18);
+    camera.lookAt(0, 0, 0);
 
-    const dialogue = [
-        "HUMAN. OR SHOULD I SAY... MURDERER.",
-        "MY BROTHER IS GONE. AND YET, I FEEL NOTHING BUT DUST.",
-        "YOU THINK YOU ARE IN CONTROL?",
-        "THIS IS DUSTTRUST. THE RULES HAVE CHANGED."
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0x333333));
+    const spotLight = new THREE.SpotLight(0xffffff, 2);
+    spotLight.position.set(0, 20, 0);
+    scene.add(spotLight);
+
+    // --- ARENA & ENTITIES ---
+    // The "Bullet Board" Floor
+    const arenaSize = 20;
+    const floorGeo = new THREE.PlaneGeometry(arenaSize, arenaSize);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = Math.PI / 2;
+    scene.add(floor);
+
+    // Arena Border
+    const gridHelper = new THREE.GridHelper(arenaSize, 10, 0x880000, 0xff8c00);
+    scene.add(gridHelper);
+
+    // Player (Cyan Soul / Underswap Sans Representation)
+    const playerGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    const playerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff }); // Cyan
+    const player = new THREE.Mesh(playerGeo, playerMat);
+    scene.add(player);
+
+    // Dusttrust Papyrus Boss Model
+    const papsGroup = new THREE.Group();
+    // Body (Hoodie)
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcc5500 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 4, 16), bodyMat);
+    body.position.y = 2;
+    papsGroup.add(body);
+    // Head (Skull)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshStandardMaterial({color: 0xffffff}));
+    head.position.y = 5;
+    papsGroup.add(head);
+    // Glowing Eye
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshBasicMaterial({color: 0xff0000}));
+    eye.position.set(0.5, 5.2, 1.1);
+    papsGroup.add(eye);
+    const eyeLight = new THREE.PointLight(0xff0000, 2, 10);
+    eyeLight.position.set(0.5, 5.2, 1.5);
+    papsGroup.add(eyeLight);
+
+    papsGroup.position.set(0, 0, -15);
+    scene.add(papsGroup);
+
+    // --- ATTACK SYSTEM ---
+    let projectiles = [];
+
+    function spawnBone(x, z, size, speed, dirX, dirZ) {
+        const geo = new THREE.CylinderGeometry(0.3, 0.3, size, 8);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const bone = new THREE.Mesh(geo, mat);
+        bone.position.set(x, size/2, z);
+        scene.add(bone);
+        projectiles.push({ mesh: bone, type: 'bone', vx: dirX * speed, vz: dirZ * speed, w: 0.6, h: size });
+    }
+
+    function spawnBlaster(x, y, z, aimX, aimZ) {
+        // Warning Line
+        const warnGeo = new THREE.CylinderGeometry(0.1, 0.1, 40, 8);
+        const warnMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 });
+        const warn = new THREE.Mesh(warnGeo, warnMat);
+        warn.rotation.x = Math.PI/2;
+        warn.position.set(x, y, z);
+        warn.lookAt(aimX, y, aimZ);
+        warn.translateZ(20);
+        scene.add(warn);
+
+        projectiles.push({ mesh: warn, type: 'blaster', timer: 60, rx: x, ry: y, rz: z, ax: aimX, az: aimZ });
+    }
+
+    // --- GAMEPLAY LOGIC ---
+    const dialogueLines = [
+        "YOU REALLY THINK I'D LET YOU HURT ANYONE ELSE?",
+        "MY BROTHER BELIEVED IN YOU. LOOK WHERE THAT GOT HIM.",
+        "I'VE GATHERED ENOUGH L.V. TO END THIS MULTIVERSE.",
+        "DODGE THIS, 'BUDDY'."
     ];
 
-    // --- MAIN LOOP ---
-    function loop() {
-        if (game.state === 'attacking') {
-            updateSoul();
-            updateAttacks();
+    function toggleButtons(enabled) {
+        document.querySelectorAll('.action-btn').forEach(b => b.disabled = !enabled);
+        if(enabled) {
+            document.getElementById('btn-item').disabled = true; // No items left
+            document.getElementById('btn-mercy').disabled = true; // No mercy
         }
-        drawAttacks();
-        requestAnimationFrame(loop);
     }
 
-    function updateSoul() {
-        const speed = 3;
-        if (keys['ArrowUp'] && game.soulY > 0) game.soulY -= speed;
-        if (keys['ArrowDown'] && game.soulY < 124) game.soulY += speed;
-        if (keys['ArrowLeft'] && game.soulX > 0) game.soulX -= speed;
-        if (keys['ArrowRight'] && game.soulX < 384) game.soulX += speed;
-
-        soul.style.left = game.soulX + 'px';
-        soul.style.top = game.soulY + 'px';
+    function playerAttack() {
+        toggleButtons(false);
+        
+        // Paps Dodges
+        let dodgeInterval = setInterval(() => {
+            papsGroup.position.x += 1;
+            if(papsGroup.position.x > 8) {
+                clearInterval(dodgeInterval);
+                showDialogue("YOU CAN'T HIT ME. I'VE MEMORIZED YOUR PATTERNS.", startEnemyTurn);
+            }
+        }, 16);
     }
 
-    // --- COMBAT LOGIC ---
+    function playerAct() {
+        toggleButtons(false);
+        showDialogue("... THERE'S NOTHING LEFT TO SAY.", startEnemyTurn);
+    }
+
+    function showDialogue(text, callback) {
+        const box = document.getElementById('dialogue-container');
+        const pText = document.getElementById('paps-dialogue');
+        box.style.display = 'block';
+        pText.innerText = '';
+        
+        let i = 0;
+        const type = setInterval(() => {
+            pText.innerText += text.charAt(i);
+            i++;
+            if(i >= text.length) {
+                clearInterval(type);
+                setTimeout(() => {
+                    box.style.display = 'none';
+                    // Reset paps pos
+                    papsGroup.position.x = 0;
+                    callback();
+                }, 2000);
+            }
+        }, 30);
+    }
+
     function startEnemyTurn() {
-        game.state = 'dialogue';
-        bubble.style.display = 'block';
-        bubble.innerText = dialogue[game.turn % dialogue.length];
+        state.isDodging = true;
+        state.turn++;
         
-        setTimeout(() => {
-            bubble.style.display = 'none';
-            game.state = 'attacking';
-            game.soulX = 192; game.soulY = 62;
-            soul.style.display = 'block';
-            spawnAttack();
-        }, 2000);
+        // Phase pattern
+        let attackPhase = 0;
+        const attackInterval = setInterval(() => {
+            if(attackPhase > 15) {
+                clearInterval(attackInterval);
+                state.isDodging = false;
+                toggleButtons(true);
+                return;
+            }
+
+            if(Math.random() > 0.4) {
+                // Sweeping Bone
+                let side = Math.random() > 0.5 ? 1 : -1;
+                spawnBone(side * 10, player.position.z + (Math.random()*4 - 2), 3, 0.3, -side, 0);
+            } else {
+                // Gaster Blaster aimed at player
+                spawnBlaster(Math.random()*10 - 5, 1, -10, player.position.x, player.position.z);
+            }
+            attackPhase++;
+        }, 600);
     }
 
-    function spawnAttack() {
-        attacks.length = 0;
-        const pattern = Math.random();
-        
-        if (pattern > 0.5) {
-            // Bone Wave
-            for(let i=0; i<10; i++) {
-                attacks.push({ x: 400 + (i*60), y: 100, w: 10, h: 40, speed: 4, type: 'bone' });
-            }
+    function takeDamage(amt, isKarma = false) {
+        if(isKarma) {
+            state.kr += amt;
+            if(state.hp - state.kr <= 1) state.kr = state.hp - 1; // KR can't kill directly instantly
         } else {
-            // Blaster Warning
-            attacks.push({ x: 0, y: 50, w: 400, h: 40, timer: 60, type: 'blaster' });
+            state.hp -= amt;
+            if (state.hp <= 0) gameOver();
+        }
+        updateHUD();
+    }
+
+    function updateHUD() {
+        const hpPct = Math.max(0, (state.hp / state.maxHp) * 100);
+        const krPct = Math.max(0, (state.kr / state.maxHp) * 100);
+        
+        document.getElementById('hp-fill').style.width = hpPct + '%';
+        document.getElementById('kr-fill').style.width = krPct + '%';
+        document.getElementById('hp-text').innerText = `${Math.max(0, state.hp - state.kr)} / ${state.maxHp}`;
+    }
+
+    function gameOver() {
+        state.isDodging = false;
+        document.getElementById('game-over').style.display = 'flex';
+    }
+
+    // --- MAIN RENDER LOOP ---
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Player Movement (Cyan Soul)
+        if (state.isDodging) {
+            const speed = 0.2;
+            if(keys['KeyW'] || keys['ArrowUp']) state.playerVel.z = -speed;
+            else if(keys['KeyS'] || keys['ArrowDown']) state.playerVel.z = speed;
+            else state.playerVel.z = 0;
+
+            if(keys['KeyA'] || keys['ArrowLeft']) state.playerVel.x = -speed;
+            else if(keys['KeyD'] || keys['ArrowRight']) state.playerVel.x = speed;
+            else state.playerVel.x = 0;
+
+            // Jump (Blue Soul Gravity Mechanics)
+            if((keys['Space'] || keys['ArrowUp']) && player.position.y <= 0.5) {
+                state.playerVel.y = 0.4; // Jump force
+            }
+
+            // Gravity
+            state.playerVel.y -= 0.02; 
+
+            player.position.add(state.playerVel);
+
+            // Arena Constraints
+            player.position.x = Math.max(-9.5, Math.min(9.5, player.position.x));
+            player.position.z = Math.max(-9.5, Math.min(9.5, player.position.z));
+            if(player.position.y < 0.5) {
+                player.position.y = 0.5;
+                state.playerVel.y = 0;
+            }
+
+            // Projectile Updates & Collision
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                
+                if(p.type === 'bone') {
+                    p.mesh.position.x += p.vx;
+                    p.mesh.position.z += p.vz;
+                    
+                    // Simple Box/Sphere Collision
+                    if(Math.abs(p.mesh.position.x - player.position.x) < 0.8 &&
+                       Math.abs(p.mesh.position.z - player.position.z) < 0.8 &&
+                       player.position.y < p.h) {
+                        takeDamage(1, true); // Bones do KR poison
+                    }
+
+                    if(Math.abs(p.mesh.position.x) > 12 || Math.abs(p.mesh.position.z) > 12) {
+                        scene.remove(p.mesh);
+                        projectiles.splice(i, 1);
+                    }
+                }
+                
+                if(p.type === 'blaster') {
+                    p.timer--;
+                    if(p.timer === 0) {
+                        // FIRE!
+                        p.mesh.scale.set(15, 1, 15);
+                        p.mesh.material.color.setHex(0xffffff);
+                        p.mesh.material.opacity = 1;
+                        
+                        // Check damage (if player is in the beam line)
+                        const dist = new THREE.Vector2(player.position.x - p.mesh.position.x, player.position.z - p.mesh.position.z).length();
+                        if(dist < 5) takeDamage(15); // Huge direct damage
+
+                    } else if (p.timer < -15) {
+                        scene.remove(p.mesh);
+                        projectiles.splice(i, 1);
+                    }
+                }
+            }
+
+            // Apply KR Drain over time
+            if(state.kr > 0 && Math.random() < 0.1) {
+                state.kr--;
+                state.hp--;
+                if(state.hp <= 0) gameOver();
+                updateHUD();
+            }
         }
 
-        setTimeout(() => {
-            game.state = 'menu';
-            soul.style.display = 'none';
-            game.turn++;
-        }, 5000);
+        // Papyrus Idle Animation
+        papsGroup.position.y = Math.sin(Date.now() * 0.003) * 0.5;
+
+        renderer.render(scene, camera);
     }
 
-    function updateAttacks() {
-        attacks.forEach((a, index) => {
-            if (a.type === 'bone') {
-                a.x -= a.speed;
-                // Collision
-                if (game.soulX < a.x + a.w && game.soulX + 16 > a.x && game.soulY < a.y + a.h && game.soulY + 16 > a.y) {
-                    takeDamage(1);
-                }
-            }
-            if (a.type === 'blaster') {
-                a.timer--;
-                if (a.timer < 0 && a.timer > -10) {
-                    if (game.soulY + 8 > a.y && game.soulY < a.y + a.h) takeDamage(5);
-                }
-            }
-        });
-    }
-
-    function drawAttacks() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        attacks.forEach(a => {
-            if (a.type === 'bone') {
-                ctx.fillStyle = 'white';
-                ctx.fillRect(a.x, a.y, a.w, a.h);
-            }
-            if (a.type === 'blaster') {
-                if (a.timer > 0) {
-                    ctx.strokeStyle = 'red';
-                    ctx.strokeRect(a.x, a.y, a.w, a.h);
-                } else if (a.timer > -15) {
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(a.x, a.y, a.w, a.h);
-                }
-            }
-        });
-    }
-
-    function takeDamage(amt) {
-        game.hp -= amt;
-        if (game.hp <= 0) {
-            game.hp = 0;
-            document.getElementById('game-over').style.display = 'flex';
-        }
-        const percent = (game.hp / game.maxHp) * 100;
-        hpFill.style.width = percent + '%';
-        hpText.innerText = `${game.hp} / ${game.maxHp}`;
-    }
-
-    // --- BUTTONS ---
-    document.getElementById('btn-fight').onclick = () => {
-        if (game.state !== 'menu') return;
-        game.enemyHp -= 100;
-        alert(`You attacked Papyrus! Dealing 100 DMG.`);
-        startEnemyTurn();
-    };
-
-    document.getElementById('btn-act').onclick = () => {
-        if (game.state !== 'menu') return;
-        alert(`* You told Papyrus he looks dusty. \n* He didn't find it funny.`);
-        startEnemyTurn();
-    };
-
-    // Start
-    soul.style.display = 'none';
-    loop();
+    // Init
+    updateHUD();
+    animate();
 </script>
-
 </body>
 </html>
