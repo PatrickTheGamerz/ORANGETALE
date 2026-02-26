@@ -2,259 +2,293 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Undertale: The Internal Chronicles</title>
+    <title>Underground Odyssey - 2D Adventure</title>
     <style>
         :root {
             --ut-white: #ffffff;
             --ut-red: #ff0000;
             --ut-yellow: #ffff00;
-            --ut-bg: #000000;
+            --ut-bg: #000;
             --ut-blue: #00a2ff;
         }
 
         body {
-            background-color: #050505;
-            color: var(--ut-white);
+            background-color: #222;
+            color: white;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
             margin: 0;
-            padding: 20px;
+            overflow: hidden;
         }
 
-        #game-window {
-            width: 750px;
-            background: var(--ut-bg);
-            border: 5px solid var(--ut-white);
-            padding: 25px;
-            box-shadow: 0 0 15px var(--ut-blue);
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border: 4px solid white;
+            margin-top: 20px;
+            background: black;
         }
 
-        #stats-bar {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 3px solid var(--ut-white);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-            font-weight: bold;
-            font-size: 1.2rem;
+        canvas {
+            display: block;
         }
 
-        #location-tag { color: var(--ut-blue); }
-        #lv-tag { color: var(--ut-red); }
-
-        #dialogue-box {
-            font-size: 1.25rem;
-            min-height: 180px;
-            margin-bottom: 25px;
-            line-height: 1.5;
-            border-left: 4px solid #333;
-            padding-left: 15px;
+        /* Dialogue & Internal UI Overlay */
+        #ui-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 740px;
+            height: 180px;
+            background: black;
+            border: 4px solid white;
+            padding: 15px;
+            display: none; /* Hidden by default */
+            z-index: 10;
         }
 
-        .choice-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+        #internal-view {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a0505; /* Deep fleshy red */
+            display: none; /* Hidden unless inside someone */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 20;
         }
 
-        button {
+        .choice-btn {
             background: black;
             color: white;
             border: 2px solid white;
-            padding: 15px;
-            font-family: inherit;
-            font-size: 1rem;
+            padding: 10px 20px;
+            margin: 5px;
             cursor: pointer;
-            transition: 0.1s;
+            font-family: inherit;
         }
 
-        button:hover {
-            background: white;
-            color: black;
-            font-weight: bold;
+        .choice-btn:hover {
+            color: var(--ut-yellow);
+            border-color: var(--ut-yellow);
         }
 
-        #achievements-panel {
-            margin-top: 20px;
-            width: 750px;
-            background: #111;
-            padding: 15px;
-            border: 1px solid #444;
-            font-size: 0.9rem;
+        #stats-bar {
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #000;
+            border: 2px solid #444;
+            font-size: 1.2rem;
+            color: var(--ut-yellow);
         }
 
-        .flavor { color: var(--ut-yellow); font-style: italic; }
-        .internal { color: #ff99aa; } /* Pinkish for internal areas */
-        .system { color: #00ff00; }
+        .internal-text {
+            color: #ff99aa;
+            font-size: 1.4rem;
+            max-width: 80%;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
 
-<div id="game-window">
-    <div id="stats-bar">
-        <span>NAME: FRISK</span>
-        <span id="lv-tag">LV 1</span>
-        <span id="location-tag">THE RUINS</span>
+<div id="stats-bar">
+    <span>❤️ FRISK</span>
+    <span id="lv-display">LV: 1</span>
+    <span id="loc-display">RUINS - HALLWAY</span>
+</div>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div id="ui-overlay">
+        <div id="dialogue-text" style="font-size: 1.2rem; margin-bottom: 20px;"></div>
+        <div id="choice-container"></div>
     </div>
-    
-    <div id="dialogue-box">
-        </div>
 
-    <div class="choice-grid" id="choices">
-        </div>
+    <div id="internal-view">
+        <div id="stage-title" style="font-weight: bold; color: yellow; margin-bottom: 10px;"></div>
+        <div id="internal-description" class="internal-text"></div>
+        <div id="internal-choices" style="margin-top: 30px;"></div>
+    </div>
 </div>
 
-<div style="margin-top: 15px;">
-    <button onclick="saveGame()">SAVE FILE</button>
-    <button onclick="loadGame()">LOAD FILE</button>
-    <button onclick="resetGame()" style="color: red; border-color: red;">TRUE RESET</button>
-</div>
-
-<div id="achievements-panel">
-    <strong>COLLECTED ENDINGS & MEMORIES:</strong>
-    <div id="ach-list" style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr;"></div>
+<div style="margin-top: 10px;">
+    <button class="choice-btn" onclick="saveGame()">SAVE</button>
+    <button class="choice-btn" onclick="loadGame()">LOAD</button>
+    <button class="choice-btn" style="color:red" onclick="resetGame()">RESET</button>
 </div>
 
 <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const ui = document.getElementById('ui-overlay');
+    const internalView = document.getElementById('internal-view');
+    const diagText = document.getElementById('dialogue-text');
+    const choiceCont = document.getElementById('choice-container');
+
+    // --- GAME STATE ---
     let state = {
+        x: 400, y: 300,
         lv: 1,
-        location: 'Ruins',
-        currentScene: 'start',
-        achievements: [],
-        inventory: []
+        inMenu: false,
+        inInternal: false,
+        currentHost: null,
+        stage: 'mouth', // mouth, throat, stomach
+        achievements: []
     };
 
-    const story = {
-        'start': {
-            text: "You stand before a heavy stone door. Toriel, the caretaker of the Ruins, offers a warm hand. 'Come, Frisk. It is time for your afternoon snack... or perhaps, you are the snack?'",
-            choices: [
-                { text: "[ACT] Hug Toriel", next: 'toriel_mouth' },
-                { text: "[MOVE] To Snowdin", next: 'snowdin' }
-            ]
-        },
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // --- TORIEL ARC ---
-        'toriel_mouth': {
-            text: "Toriel smiles gently, picking you up. Before you can speak, she brings you to her lips. The <span class='internal'>warmth of her breath</span> is overwhelming. With a soft hum, she takes you inside, her <span class='internal'>tongue soothing</span> your skin as she tastes her favorite human.",
-            choices: [
-                { text: "Accept the Swallow", next: 'toriel_throat' },
-                { text: "Squirm Playfully", next: 'toriel_mouth_alt' }
-            ]
-        },
-        'toriel_throat': {
-            text: "With a deliberate, heavy <span class='flavor'>*GULP*</span>, Toriel tilts her head back. You feel the <span class='internal'>walls of her throat tighten</span> around you, rhythmic muscles pulsing as they slowly massage you downward. It's a long, warm slide.",
-            choices: [
-                { text: "Slide into the Stomach", next: 'toriel_stomach' }
-            ]
-        },
-        'toriel_stomach': {
-            text: "You land with a soft splash in the <span class='internal'>deep, pulsing warmth</span> of Toriel's stomach. The walls are thick and incredibly tight, hugging you from all sides. You can hear the steady 'thump-thump' of her heart above.",
-            choices: [
-                { text: "[ACT] Rest in the Heat", next: 'toriel_ending_rest' },
-                { text: "[ACT] Tickle the Walls", next: 'toriel_ending_giggle' },
-                { text: "[REBIRTH] Level Up", next: 'lv_up' }
-            ]
-        },
+    // --- CHARACTERS (NPCs) ---
+    const npcs = [
+        { name: "Toriel", x: 400, y: 100, color: "white", emoji: "🐐", msg: "Oh! Frisk, you look delicious... I mean, lonely!" },
+        { name: "Muffet", x: 100, y: 400, color: "purple", emoji: "🕷️", msg: "Ufufu~ Care for some tea? You're the main ingredient!" },
+        { name: "Undyne", x: 700, y: 150, color: "blue", emoji: "🐟", msg: "NGAAAH! Prepare to be assimilated into my strength!" },
+        { name: "Bunny Lady", x: 150, y: 100, color: "pink", emoji: "🐰", msg: "Welcome to the shop! I have a special spot for you." }
+    ];
 
-        // --- MUFFET ARC ---
-        'snowdin': {
-            text: "The air turns cold. You pass the Snowdin Inn Bunnies and reach the web-covered Waterfall entrance. Muffet hangs upside down, holding a cup of tea.",
-            choices: [
-                { text: "Greet Muffet", next: 'muffet_mouth' },
-                { text: "Visit Catty & Bratty", next: 'junk_shop' }
-            ]
-        },
-        'muffet_mouth': {
-            text: "Muffet giggles, her many eyes sparkling. 'Ufufu~ You look like you'd fit perfectly in my favorite tea set!' She pulls you toward her mandibles, her <span class='internal'>multiple tongues</span> slicking your hair back.",
-            choices: [
-                { text: "Enter the Tea-Chamber", next: 'muffet_throat' }
-            ]
-        },
-        'muffet_throat': {
-            text: "She swallows you with a refined 'sip.' The passage is <span class='internal'>silky and narrow</span>, pushing you down into the depths of her purple bodice.",
-            choices: [
-                { text: "Reach the Core", next: 'muffet_stomach' }
-            ]
-        },
-        'muffet_stomach': {
-            text: "Muffet's stomach is like a luxury silk tent. The walls are <span class='internal'>velvety but incredibly strong</span>, vibrating as she giggles from the outside. You are officially her 'Personal Blend.'",
-            choices: [
-                { text: "[ACT] Nap in the Silk", next: 'muffet_ending' },
-                { text: "[REBIRTH] Level Up", next: 'lv_up' }
-            ]
-        },
+    // --- CORE LOOP ---
+    function update() {
+        if (!state.inMenu && !state.inInternal) {
+            if (keys['ArrowUp'] || keys['KeyW']) state.y -= 4;
+            if (keys['ArrowDown'] || keys['KeyS']) state.y += 4;
+            if (keys['ArrowLeft'] || keys['KeyA']) state.x -= 4;
+            if (keys['ArrowRight'] || keys['KeyD']) state.x += 4;
 
-        // --- SYSTEM SCENES ---
-        'lv_up': {
-            text: "You have been fully absorbed into the monster's soul. Your physical form fades, but your <span class='flavor'>DETERMINATION</span> grows. You feel your power increasing.",
-            script: () => { state.lv++; },
-            choices: [
-                { text: "Return to the Beginning (New Power)", next: 'start' }
-            ]
-        },
-
-        // --- ENDINGS ---
-        'toriel_ending_rest': {
-            text: "You decide this is home now. Toriel pats her tummy contentedly as you fall into a deep sleep in the tight, warm dark. <br><br><span class='system'>ENDING: THE HEART'S PERMANENT RESIDENT</span>",
-            ach: 'Toriel\'s Inner Peace',
-            choices: [{ text: "Reset?", next: 'start' }]
+            // Simple Collision with NPCs
+            npcs.forEach(npc => {
+                let dx = state.x - npc.x;
+                let dy = state.y - npc.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 40) {
+                    startDialogue(npc);
+                }
+            });
         }
-    };
+        draw();
+        requestAnimationFrame(update);
+    }
 
-    function renderScene(sceneKey) {
-        state.currentScene = sceneKey;
-        const scene = story[sceneKey];
-        if (scene.script) scene.script();
+    function draw() {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Update Stats
-        document.getElementById('lv-tag').innerText = `LV ${state.lv}`;
-        document.getElementById('location-tag').innerText = state.location.toUpperCase();
+        // Draw Floor Details
+        ctx.strokeStyle = "#333";
+        for(let i=0; i<800; i+=50) ctx.strokeRect(i, 0, 1, 600);
+
+        // Draw NPCs
+        npcs.forEach(npc => {
+            ctx.font = "40px Arial";
+            ctx.fillText(npc.emoji, npc.x - 20, npc.y + 15);
+            ctx.fillStyle = "white";
+            ctx.font = "14px Courier New";
+            ctx.fillText(npc.name, npc.x - 25, npc.y - 30);
+        });
+
+        // Draw Player (The Soul)
+        ctx.fillStyle = "red";
+        ctx.font = "30px Arial";
+        ctx.fillText("❤️", state.x - 15, state.y + 10);
+    }
+
+    // --- INTERACTION LOGIC ---
+    function startDialogue(npc) {
+        state.inMenu = true;
+        state.currentHost = npc;
+        ui.style.display = "block";
+        diagText.innerHTML = `* ${npc.msg}`;
         
-        // Update Dialogue
-        const diagBox = document.getElementById('dialogue-box');
-        diagBox.innerHTML = scene.text;
+        choiceCont.innerHTML = `
+            <button class="choice-btn" onclick="startInternal()">[ACT] Offer Self</button>
+            <button class="choice-btn" onclick="closeUI()">[MERCY] Run</button>
+        `;
+    }
 
-        // Update Choices
-        const choiceGrid = document.getElementById('choices');
-        choiceGrid.innerHTML = '';
-        scene.choices.forEach(choice => {
-            const btn = document.createElement('button');
-            btn.innerText = choice.text;
-            btn.onclick = () => renderScene(choice.next);
-            choiceGrid.appendChild(btn);
-        });
+    function closeUI() {
+        state.inMenu = false;
+        ui.style.display = "none";
+        state.x += 50; // Push player away so dialogue doesn't loop
+    }
 
-        // Handle Achievements
-        if (scene.ach && !state.achievements.includes(scene.ach)) {
-            state.achievements.push(scene.ach);
-            updateAchievementList();
+    // --- INTERNAL SEQUENCE (The "Gulp" System) ---
+    function startInternal() {
+        state.inInternal = true;
+        state.stage = 'mouth';
+        ui.style.display = "none";
+        internalView.style.display = "flex";
+        updateInternalScene();
+    }
+
+    function updateInternalScene() {
+        const host = state.currentHost.name;
+        const desc = document.getElementById('internal-description');
+        const title = document.getElementById('stage-title');
+        const internalChoices = document.getElementById('internal-choices');
+
+        internalChoices.innerHTML = "";
+
+        if (state.stage === 'mouth') {
+            title.innerText = `INSIDE ${host.toUpperCase()}'S MOUTH`;
+            desc.innerHTML = `${host} gently takes you between her lips. Her <span style="color:pink">warm, wet tongue</span> begins soothing your body, slicking you with saliva as she prepares to swallow. It's incredibly tight and humid.`;
+            
+            addInternalChoice("Relax & Enjoy", () => { state.stage = 'throat'; updateInternalScene(); });
+            addInternalChoice("Struggle Playfully", () => { state.stage = 'throat'; updateInternalScene(); });
+        } 
+        else if (state.stage === 'throat') {
+            title.innerText = `THE DOWNWARD SLOW SWALLOW`;
+            desc.innerHTML = `With a heavy, rhythmic <span style="color:white; font-weight:bold;">*GULP*</span>, you are pulled into the throat. The <span style="color:pink">muscular walls are incredibly tight</span>, massaging you slowly downward. Each pulse of her swallow pushes you deeper into the dark.`;
+            
+            addInternalChoice("Slide Deeper", () => { state.stage = 'stomach'; updateInternalScene(); });
+        } 
+        else if (state.stage === 'stomach') {
+            title.innerText = `THE STOMACH OF ${host.toUpperCase()}`;
+            desc.innerHTML = `You splash softly into the <span style="color:pink">pulsing, tight depths</span> of her stomach. The walls hug you from every side, vibrating with the sound of her heartbeat and satisfied hums. You are now part of her.`;
+            
+            addInternalChoice("[ACT] Rest Forever", () => finishEnding("PERMANENT RESIDENT"));
+            addInternalChoice("[ACT] Absorb & LV UP", () => { state.lv++; finishEnding("SOUL ABSORPTION"); });
         }
     }
 
-    function updateAchievementList() {
-        const list = document.getElementById('ach-list');
-        list.innerHTML = '';
-        state.achievements.forEach(ach => {
-            const item = document.createElement('div');
-            item.innerHTML = `⭐ <span class='system'>${ach}</span>`;
-            list.appendChild(item);
-        });
+    function addInternalChoice(text, callback) {
+        const btn = document.createElement('button');
+        btn.className = "choice-btn";
+        btn.innerText = text;
+        btn.onclick = callback;
+        document.getElementById('internal-choices').appendChild(btn);
     }
 
-    // --- Persistence ---
+    function finishEnding(type) {
+        alert(`ENDING REACHED: ${type}\nYour LV is now ${state.lv}`);
+        state.inInternal = false;
+        internalView.style.display = "none";
+        state.inMenu = false;
+        state.x = 400; state.y = 500; // Reset to safe spot
+        document.getElementById('lv-display').innerText = `LV: ${state.lv}`;
+    }
+
+    // --- SAVE/LOAD ---
     function saveGame() {
-        localStorage.setItem('internal_chronicles_save', JSON.stringify(state));
-        alert("FILE SAVED.");
+        localStorage.setItem('undertale_2d_save', JSON.stringify(state));
+        alert("GAME SAVED!");
     }
 
     function loadGame() {
-        const data = localStorage.getItem('internal_chronicles_save');
-        if (data) {
-            state = JSON.parse(data);
-            renderScene(state.currentScene);
-            updateAchievementList();
+        const saved = localStorage.getItem('undertale_2d_save');
+        if (saved) {
+            state = JSON.parse(saved);
+            document.getElementById('lv-display').innerText = `LV: ${state.lv}`;
+            alert("GAME LOADED!");
         }
     }
 
@@ -263,8 +297,8 @@
         location.reload();
     }
 
-    // Launch
-    renderScene('start');
+    // Start Engine
+    update();
 </script>
 
 </body>
