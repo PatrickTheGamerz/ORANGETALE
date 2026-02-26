@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UNDERTALE: THE COUNCIL TERMINAL</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        h1 { font-size: 40px; margin-bottom: 50px; text-shadow: 4px 4px #f00; }
+        .menu-option { font-size: 24px; margin: 20px; cursor: pointer; display: flex; align-items: center; transition: 0.2s; }
+        .menu-option:hover, .menu-option.active { color: #ffff00; }
+        .heart { width: 20px; height: 20px; background: red; margin-right: 15px; visibility: hidden; clip-path: path('M10,30 A5,5 0,0,1 20,30 A5,5 0,0,1 30,30 L20,40 Z'); transform: scale(2) translate(-10px, -10px); }
+        .active .heart { visibility: visible; }
+        #footer { position: absolute; bottom: 20px; font-size: 12px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h1>UNDERTALE</h1>
+
+    <div class="menu-option active" onclick="location.href='sans_fight.html'">
+        <div class="heart"></div> UNDERTALE: PACIFIST
+    </div>
+    <div class="menu-option">
+        <div class="heart"></div> UNDERTALE: GENOCIDE (LOCKED)
+    </div>
+    <div class="menu-option">
+        <div class="heart"></div> OPTIONS
+    </div>
+
+    <div id="footer">Press [Z] to Select | Arrow Keys to Navigate</div>
+
+    <script>
+        let idx = 0;
+        const options = document.querySelectorAll('.menu-option');
+        window.onkeydown = (e) => {
+            if(e.key === 'ArrowDown') idx = (idx + 1) % options.length;
+            if(e.key === 'ArrowUp') idx = (idx + options.length - 1) % options.length;
+            options.forEach((opt, i) => opt.classList.toggle('active', i === idx));
+            if(e.key === 'z' || e.key === 'Z') options[idx].click();
+        };
+    </script>
+</body>
+</html>
