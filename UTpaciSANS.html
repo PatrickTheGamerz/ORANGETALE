@@ -2,29 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UT PACIFIST: SANS BATTLE</title>
+    <title>UT PACIFIST: THE FINALE</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
         :root { --red: #ff0000; --gold: #ffff00; --cyan: #00ffff; --blue: #0033ff; --purple: #d946ef; --green: #00ff00; }
         
         body { background: #000; color: #fff; font-family: 'Press Start 2P', monospace; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; user-select: none; }
+        
+        /* SCREEN SHAKE */
+        @keyframes shake { 0% {transform: scale(1.4) translate(2px, 1px);} 20% {transform: scale(1.4) translate(-2px, -2px);} 40% {transform: scale(1.4) translate(1px, -1px);} 60% {transform: scale(1.4) translate(-3px, 1px);} 80% {transform: scale(1.4) translate(2px, -2px);} 100% {transform: scale(1.4) translate(0, 0);} }
+        .shake { animation: shake 0.3s; }
+
         #game-window { width: 640px; height: 480px; position: relative; background: #000; overflow: hidden; transform: scale(1.4); transform-origin: center; border: 2px solid #222; }
 
         /* SANS SPRITE */
-        #sans-container { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); text-align: center; transition: transform 0.2s ease-out; z-index: 10; }
+        #sans-container { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); text-align: center; transition: transform 0.2s ease-out, opacity 1s; z-index: 10; }
         .skeleton { width: 70px; height: 80px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><rect x="15" y="5" width="20" height="20" fill="white"/><rect x="20" y="10" width="4" height="6" fill="black"/><rect x="30" y="10" width="4" height="6" fill="black"/><rect x="24" y="18" width="6" height="3" fill="black"/><rect x="10" y="27" width="30" height="15" fill="%23ccc"/><rect x="15" y="42" width="8" height="8" fill="white"/><rect x="27" y="42" width="8" height="8" fill="white"/></svg>') no-repeat center/contain; }
+        .sleeping .skeleton { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><rect x="15" y="10" width="20" height="15" fill="white"/><rect x="18" y="15" width="6" height="2" fill="black"/><rect x="26" y="15" width="6" height="2" fill="black"/><rect x="10" y="27" width="30" height="15" fill="%23ccc"/><rect x="15" y="42" width="8" height="8" fill="white"/><rect x="27" y="42" width="8" height="8" fill="white"/></svg>') no-repeat center/contain; }
         
-        #miss-text { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-family: 'Arial', sans-serif; font-weight: bold; font-size: 24px; color: #ccc; opacity: 0; pointer-events: none; z-index: 100; transition: top 1s ease-out, opacity 0.5s; }
+        #damage-text { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-family: 'Arial', sans-serif; font-weight: bold; font-size: 28px; color: #ccc; opacity: 0; pointer-events: none; z-index: 100; transition: top 1s ease-out, opacity 0.5s; }
+        
+        /* SANS BUBBLE */
         #sans-bubble { position: absolute; top: 20px; left: 360px; width: 180px; min-height: 50px; background: #fff; color: #000; border: 3px solid #000; border-radius: 10px; padding: 10px; font-family: 'Comic Sans MS', sans-serif; font-size: 14px; line-height: 1.2; display: none; z-index: 50; }
         #sans-bubble::before { content: ''; position: absolute; top: 50%; left: -15px; transform: translateY(-50%); border-width: 10px 15px 10px 0; border-style: solid; border-color: transparent #fff transparent transparent; }
 
         /* BATTLE BOX & SOUL */
-        #battle-box { position: absolute; bottom: 125px; left: 50%; transform: translateX(-50%); width: 565px; height: 130px; border: 4px solid #fff; background: #000; overflow: hidden; box-sizing: border-box; }
+        #battle-box { position: absolute; bottom: 125px; left: 50%; transform: translateX(-50%); width: 565px; height: 130px; border: 4px solid #fff; background: #000; overflow: hidden; box-sizing: border-box; transition: height 0.3s, width 0.3s; }
         #soul { width: 14px; height: 14px; position: absolute; z-index: 1000; }
         #projectiles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-        /* MENUS */
+        /* UI TEXT */
         #text-box { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; font-size: 14px; line-height: 24px; display: block; white-space: pre-wrap; }
         #sub-menu { position: absolute; top: 15px; left: 40px; font-size: 14px; line-height: 28px; display: none; }
         .sub-opt { display: inline-block; width: 45%; margin-bottom: 5px; }
@@ -55,6 +63,10 @@
         .blue-bone { background: var(--cyan); }
         .platform { background: var(--green); border: 1px solid #fff; }
         .zone-warn { position: absolute; background: rgba(255,0,0,0.5); border: 2px solid red; z-index: 5; }
+        
+        /* GASTER BLASTER */
+        .blaster-head { position: absolute; width: 40px; height: 50px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 50"><path d="M5,10 Q20,0 35,10 L30,40 L20,50 L10,40 Z" fill="white"/><circle cx="15" cy="20" r="3" fill="black"/><circle cx="25" cy="20" r="3" fill="black"/></svg>') no-repeat center/contain; opacity: 0; transition: opacity 0.3s; z-index: 20; }
+        .blaster-beam { position: absolute; background: var(--cyan); box-shadow: 0 0 15px var(--cyan); border-radius: 0 0 10px 10px; z-index: 15; }
     </style>
 </head>
 <body>
@@ -62,7 +74,7 @@
 <div id="game-window">
     <div id="sans-container"><div class="skeleton"></div></div>
     <div id="sans-bubble"></div>
-    <div id="miss-text">MISS</div>
+    <div id="damage-text">MISS</div>
     <div id="strike-anim"></div>
 
     <div id="battle-box">
@@ -98,7 +110,7 @@
         menuIdx: 0, subIdx: 0, currentMenu: 'MAIN', turn: 0,
         soul: { x: 275, y: 60, vY: 0, gravity: false, jump: -5.5, grounded: false, moving: false },
         fightBar: { x: 0, dir: 1 }, keys: {},
-        dialogueTimer: null, sansTimer: null, friskSkill: 1.0
+        dialogueTimer: null, sansTimer: null, friskSkill: 1.0, isSleeping: false
     };
 
     const elSoul = document.getElementById('soul');
@@ -136,6 +148,12 @@
 
     function clearSansBubble() { clearInterval(STATE.sansTimer); elSansBubble.style.display = 'none'; elSansBubble.innerHTML = ""; }
 
+    function triggerScreenShake() {
+        const gw = document.getElementById('game-window');
+        gw.classList.add('shake');
+        setTimeout(() => gw.classList.remove('shake'), 300);
+    }
+
     /** 💀 UNIFIED PHYSICS ENGINE **/
     function physicsLoop() {
         if (STATE.phase === 'ATTACK') {
@@ -143,7 +161,6 @@
             let speed = 2.5;
             let oldX = STATE.soul.x, oldY = STATE.soul.y;
 
-            // 1. Gather Input (Player vs AI)
             if (STATE.owner === 'PLAYER') {
                 if (STATE.keys['ArrowLeft']) dx -= speed;
                 if (STATE.keys['ArrowRight']) dx += speed;
@@ -158,26 +175,17 @@
                 dx = ai.dx; dy = ai.dy; doJump = ai.jump;
             }
 
-            // 2. Apply X Movement
             STATE.soul.x += dx;
 
-            // 3. Universal Gravity & Jumping
             if (STATE.soul.gravity) {
-                if (doJump && STATE.soul.grounded) {
-                    STATE.soul.vY = STATE.soul.jump;
-                    STATE.soul.grounded = false;
-                }
-                STATE.soul.vY += 0.2; // Gravity constant
+                if (doJump && STATE.soul.grounded) { STATE.soul.vY = STATE.soul.jump; STATE.soul.grounded = false; }
+                STATE.soul.vY += 0.2; 
                 STATE.soul.y += STATE.soul.vY;
-                STATE.soul.grounded = false; // Reset to check against floor/platforms
-            } else {
-                STATE.soul.y += dy;
-            }
+                STATE.soul.grounded = false; 
+            } else STATE.soul.y += dy;
 
-            // 4. Platform Collision Checking
             checkPlatforms();
 
-            // 5. Box Bounds
             STATE.soul.x = Math.max(0, Math.min(elBox.clientWidth - 18, STATE.soul.x));
             STATE.soul.y = Math.max(0, Math.min(elBox.clientHeight - 18, STATE.soul.y));
             if (STATE.soul.y >= elBox.clientHeight - 18) {
@@ -186,8 +194,7 @@
             }
 
             STATE.soul.moving = (Math.abs(oldX - STATE.soul.x) > 0.1 || Math.abs(oldY - STATE.soul.y) > 0.1);
-            elSoul.style.left = STATE.soul.x + 'px';
-            elSoul.style.top = STATE.soul.y + 'px';
+            elSoul.style.left = STATE.soul.x + 'px'; elSoul.style.top = STATE.soul.y + 'px';
             
             checkHitboxes();
         } else if (STATE.phase === 'FIGHT_AIM') {
@@ -199,37 +206,35 @@
     }
 
     function checkPlatforms() {
-        if (!STATE.soul.gravity || STATE.soul.vY < 0) return; // Only collide falling down
+        if (!STATE.soul.gravity || STATE.soul.vY < 0) return; 
         const plats = elProj.querySelectorAll('.platform');
         const sR = elSoul.getBoundingClientRect();
-        
         for (let p of plats) {
             const pR = p.getBoundingClientRect();
-            // Check if soul bottom is hitting platform top
             if (sR.bottom >= pR.top && sR.bottom <= pR.top + 10 && sR.right > pR.left && sR.left < pR.right) {
-                STATE.soul.y = p.offsetTop - 14; // Stand on top
-                STATE.soul.vY = 0;
-                STATE.soul.grounded = true;
-                STATE.soul.x += parseFloat(p.dataset.vx || 0); // Move with platform
+                STATE.soul.y = p.offsetTop - 14; STATE.soul.vY = 0; STATE.soul.grounded = true;
+                STATE.soul.x += parseFloat(p.dataset.vx || 0); 
             }
         }
     }
 
     function checkHitboxes() {
         const sR = elSoul.getBoundingClientRect();
-        const bones = elProj.querySelectorAll('.bone:not(.platform)');
+        const bones = elProj.querySelectorAll('.bone:not(.platform), .blaster-beam');
         for (let b of bones) {
             const eR = b.getBoundingClientRect();
             if (!(sR.right < eR.left || sR.left > eR.right || sR.bottom < eR.top || sR.top > eR.bottom)) {
                 if (b.classList.contains('blue-bone') && !STATE.soul.moving) continue;
-                STATE.hp -= 1; // 1 DMG PER FRAME
+                
+                STATE.hp -= 1; 
+                triggerScreenShake();
                 updateHUD();
-                if (STATE.hp <= 0) { STATE.hp = 0; alert("GAME OVER."); location.reload(); return; }
+                if (STATE.hp <= 0) { STATE.hp = 0; alert("STAY DETERMINED."); location.reload(); return; }
             }
         }
     }
 
-    /** 🤖 AI: FRISK / CHARA CONTROLLER **/
+    /** 🤖 AI: FRISK / CHARA **/
     function toggleQ() {
         if (STATE.owner !== 'PLAYER') return;
         const teammate = localStorage.getItem('teammate') || 'FRISK';
@@ -244,18 +249,14 @@
 
     function aiController() {
         let out = { dx: 0, dy: 0, jump: false };
-        const haz = elProj.querySelectorAll('.bone:not(.platform)');
-        
+        const haz = elProj.querySelectorAll('.bone:not(.platform), .blaster-beam');
         haz.forEach(h => {
             const hR = h.getBoundingClientRect(), sR = elSoul.getBoundingClientRect();
             if (Math.abs(hR.left - sR.left) < 50) {
                 out.dx = sR.left < hR.left ? -2.5 : 2.5;
                 if (h.classList.contains('blue-bone')) { out.dx = 0; out.dy = 0; }
-                else if (STATE.soul.gravity && hR.bottom > sR.bottom - 5) {
-                    out.jump = true; // Jump over floor bones
-                } else if (!STATE.soul.gravity) {
-                    out.dy = sR.top < hR.top ? -2.5 : 2.5;
-                }
+                else if (STATE.soul.gravity && hR.bottom > sR.bottom - 5) out.jump = true; 
+                else if (!STATE.soul.gravity) out.dy = sR.top < hR.top ? -2.5 : 2.5;
             }
         });
         return out;
@@ -263,10 +264,10 @@
 
     function friskThinkAndAct() {
         STATE.phase = 'AI_THINKING';
-        setTimeout(() => { STATE.menuIdx = 1; updateUI(); }, 1000);
+        setTimeout(() => { STATE.menuIdx = STATE.isSleeping ? 3 : 1; updateUI(); }, 1000);
         setTimeout(() => {
-            openSubMenu('ACT');
-            setTimeout(() => { STATE.subIdx = 1; updateUI(); setTimeout(executeSubMenu, 1000); }, 800);
+            openSubMenu(STATE.isSleeping ? 'MERCY' : 'ACT');
+            setTimeout(() => { STATE.subIdx = STATE.isSleeping ? 0 : 1; updateUI(); setTimeout(executeSubMenu, 1000); }, 800);
         }, 1500);
     }
     
@@ -288,49 +289,55 @@
         anim.style.opacity = '1'; setTimeout(() => anim.style.opacity = '0', 200);
         
         setTimeout(() => {
-            const sans = document.getElementById('sans-container'), miss = document.getElementById('miss-text');
-            sans.style.transform = 'translateX(-100px)'; miss.style.opacity = '1'; miss.style.top = '-10px';
-            setTimeout(() => {
-                sans.style.transform = 'translateX(-50%)'; miss.style.opacity = '0'; miss.style.top = '20px';
-                sansSpeak("heh.", triggerAttackSequence);
-            }, 1000);
+            const sans = document.getElementById('sans-container'), dmgText = document.getElementById('damage-text');
+            
+            if (STATE.isSleeping) {
+                // FATAL BLOW
+                dmgText.style.color = "red"; dmgText.innerText = "9999999"; dmgText.style.opacity = '1'; dmgText.style.top = '-10px';
+                sans.style.opacity = '0'; // Dust
+                setTimeout(() => { alert("YOU WON. SANS DEFEATED."); location.reload(); }, 2000);
+            } else {
+                // MISS
+                dmgText.style.color = "#ccc"; dmgText.innerText = "MISS";
+                sans.style.transform = 'translateX(-100px)'; dmgText.style.opacity = '1'; dmgText.style.top = '-10px';
+                setTimeout(() => {
+                    sans.style.transform = 'translateX(-50%)'; dmgText.style.opacity = '0'; dmgText.style.top = '20px';
+                    sansSpeak("heh.", triggerAttackSequence);
+                }, 1000);
+            }
         }, 100);
     }
 
-    /** 🌀 CUSTOM ENEMY ATTACKS **/
+    /** 🌀 ENEMY ATTACK PATTERNS **/
     function triggerAttackSequence() {
         STATE.turn++; STATE.phase = 'ATTACK';
         elText.style.display = 'none'; elSub.style.display = 'none';
         STATE.soul.x = 275; STATE.soul.y = 60; elProj.innerHTML = '';
         
-        if (STATE.turn === 1) attack1_AlternatingBouncers();
-        else if (STATE.turn === 2) attack2_ZoneAndBlue();
-        else attack3_PlatformsAndBlue();
+        if (STATE.turn === 1) attack1_Bouncers();
+        else if (STATE.turn === 2) attack2_ZoneBlue();
+        else if (STATE.turn === 3) attack3_Platforms();
+        else if (STATE.turn === 4) attack4_GasterBlasters();
+        else if (STATE.turn === 5) attack5_ChaosBones();
+        else if (STATE.turn === 6) attack6_SpecialAttack();
+        else sleepPhase(); // Turn 7+
     }
 
-    // Turn 1: 10 Alternating Bones that jump up and down
-    function attack1_AlternatingBouncers() {
+    function attack1_Bouncers() {
         STATE.soul.gravity = false; document.getElementById('soul-svg').setAttribute('fill', 'red');
-        sansSpeak("our reports showed a\nmassive anomaly in the\ntimespace continuum.");
-        
+        sansSpeak("our reports showed a\nmassive anomaly.");
         for (let i = 0; i < 10; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
                 const isLeft = (i % 2 === 0);
                 const b = document.createElement('div');
                 b.className = 'bone'; b.style.width = '12px'; b.style.height = '40px';
-                b.style.left = isLeft ? '-20px' : '580px';
-                b.style.top = '20px';
+                b.style.left = isLeft ? '-20px' : '580px'; b.style.top = '20px';
                 elProj.appendChild(b);
-                
-                let bx = isLeft ? -20 : 580;
-                let by = 20, vY = 0;
-                
+                let bx = isLeft ? -20 : 580; let by = 20, vY = 0;
                 const int = setInterval(() => {
-                    bx += isLeft ? 3 : -3; 
-                    vY += 0.2; by += vY; // Bouncing physics
-                    if (by >= 80) { by = 80; vY = -4; } // Bounce off "floor"
-                    
+                    bx += isLeft ? 3 : -3; vY += 0.2; by += vY; 
+                    if (by >= 80) { by = 80; vY = -4; }
                     b.style.left = bx + 'px'; b.style.top = by + 'px';
                     if ((isLeft && bx > 600) || (!isLeft && bx < -20) || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
                 }, 16);
@@ -339,13 +346,10 @@
         setTimeout(endTurn, 7000);
     }
 
-    // Turn 2: Blue Bones Left->Right with Warning Zones Top/Bottom
-    function attack2_ZoneAndBlue() {
+    function attack2_ZoneBlue() {
         STATE.soul.gravity = false; document.getElementById('soul-svg').setAttribute('fill', 'red');
-        sansSpeak("timelines jumping left\nand right, stopping\nand starting...");
-
-        // Blue Bones L -> R
-        for (let i = 0; i < 12; i++) {
+        sansSpeak("timelines jumping left\nand right...");
+        for (let i = 0; i < 10; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
                 const b = document.createElement('div');
@@ -353,14 +357,9 @@
                 b.style.left = '-20px'; b.style.top = '25px';
                 elProj.appendChild(b);
                 let bx = -20;
-                const int = setInterval(() => {
-                    bx += 3.5; b.style.left = bx + 'px';
-                    if (bx > 600 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
-                }, 16);
-            }, i * 500);
+                const int = setInterval(() => { bx += 4; b.style.left = bx + 'px'; if (bx > 600 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); } }, 16);
+            }, i * 600);
         }
-
-        // Bone Zones Top/Bottom (5 times)
         for (let j = 0; j < 5; j++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
@@ -369,7 +368,6 @@
                 warn.className = 'zone-warn'; warn.style.width = '100%'; warn.style.height = '40px';
                 warn.style.left = '0'; warn.style.top = isTop ? '0' : '90px';
                 elProj.appendChild(warn);
-
                 setTimeout(() => {
                     warn.remove();
                     const thrust = document.createElement('div');
@@ -377,51 +375,103 @@
                     thrust.style.left = '0'; thrust.style.top = isTop ? '0' : '90px';
                     elProj.appendChild(thrust);
                     setTimeout(() => thrust.remove(), 400);
-                }, 600); // 600ms warning
+                }, 600);
             }, j * 1200);
         }
         setTimeout(endTurn, 7000);
     }
 
-    // Turn 3: Platforms + Blue Bones
-    function attack3_PlatformsAndBlue() {
+    function attack3_Platforms() {
         STATE.soul.gravity = true; document.getElementById('soul-svg').setAttribute('fill', 'blue');
         sansSpeak("until suddenly,\neverything ends.");
-
-        // Spawn 4 Platforms
         for (let i = 0; i < 6; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
                 const p = document.createElement('div');
                 p.className = 'bone platform'; p.style.width = '50px'; p.style.height = '10px';
                 p.style.left = '580px'; p.style.top = (40 + Math.random() * 40) + 'px';
-                p.dataset.vx = "-2"; // Speed attached for physics check
-                elProj.appendChild(p);
-                
+                p.dataset.vx = "-2"; elProj.appendChild(p);
                 let px = 580;
-                const int = setInterval(() => {
-                    px -= 2; p.style.left = px + 'px';
-                    if (px < -60 || STATE.phase !== 'ATTACK') { clearInterval(int); p.remove(); }
-                }, 16);
+                const int = setInterval(() => { px -= 2; p.style.left = px + 'px'; if (px < -60 || STATE.phase !== 'ATTACK') { clearInterval(int); p.remove(); } }, 16);
             }, i * 1000);
         }
+        setTimeout(endTurn, 7000);
+    }
 
-        // Tall Blue Bones moving fast
-        for (let i = 0; i < 8; i++) {
+    function attack4_GasterBlasters() {
+        STATE.soul.gravity = false; document.getElementById('soul-svg').setAttribute('fill', 'red');
+        sansSpeak("heh. you're tough.\nlet's test that.");
+        
+        for (let i = 0; i < 5; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
-                const b = document.createElement('div');
-                b.className = 'bone blue-bone'; b.style.width = '15px'; b.style.height = '100px';
-                b.style.left = '580px'; b.style.bottom = '0px';
-                elProj.appendChild(b);
-                let bx = 580;
-                const int = setInterval(() => {
-                    bx -= 4; b.style.left = bx + 'px';
-                    if (bx < -20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
-                }, 16);
-            }, 800 + i * 800);
+                const targetX = STATE.soul.x - 13; // Center on player
+                
+                const head = document.createElement('div');
+                head.className = 'blaster-head';
+                head.style.left = targetX + 'px'; head.style.top = '-60px';
+                elProj.appendChild(head);
+                
+                // Drop in
+                setTimeout(() => { head.style.opacity = '1'; head.style.top = '-10px'; }, 100);
+
+                // Fire
+                setTimeout(() => {
+                    const beam = document.createElement('div');
+                    beam.className = 'blaster-beam';
+                    beam.style.left = (targetX + 10) + 'px'; beam.style.top = '30px';
+                    beam.style.width = '20px'; beam.style.height = '100px';
+                    elProj.appendChild(beam);
+                    
+                    setTimeout(() => { head.remove(); beam.remove(); }, 400);
+                }, 800);
+            }, i * 1200);
         }
         setTimeout(endTurn, 7000);
+    }
+
+    function attack5_ChaosBones() {
+        STATE.soul.gravity = false; document.getElementById('soul-svg').setAttribute('fill', 'red');
+        sansSpeak("ready for the\nreal deal?");
+        for (let i = 0; i < 30; i++) {
+            setTimeout(() => {
+                if (STATE.phase !== 'ATTACK') return;
+                const isLeft = Math.random() > 0.5;
+                const b = document.createElement('div');
+                b.className = 'bone'; b.style.width = '10px'; b.style.height = '20px';
+                b.style.left = isLeft ? '-20px' : '580px'; b.style.top = (Math.random() * 110) + 'px';
+                elProj.appendChild(b);
+                let bx = isLeft ? -20 : 580;
+                const int = setInterval(() => {
+                    bx += isLeft ? 6 : -6; b.style.left = bx + 'px';
+                    if ((isLeft && bx > 600) || (!isLeft && bx < -20) || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
+                }, 16);
+            }, i * 200);
+        }
+        setTimeout(endTurn, 7000);
+    }
+
+    function attack6_SpecialAttack() {
+        STATE.soul.gravity = true; document.getElementById('soul-svg').setAttribute('fill', 'blue');
+        sansSpeak("survive this, and i'll\nshow you my special attack!");
+        
+        // Massive barrage
+        attack3_Platforms();
+        setTimeout(attack2_ZoneBlue, 1000);
+        setTimeout(attack4_GasterBlasters, 3000);
+        
+        setTimeout(endTurn, 9000);
+    }
+
+    function sleepPhase() {
+        STATE.isSleeping = true;
+        document.getElementById('sans-container').classList.add('sleeping');
+        
+        setInterval(() => {
+            if(STATE.isSleeping) sansSpeak("Zzz...", null);
+        }, 3000);
+        
+        endTurn();
     }
 
     function endTurn() {
@@ -430,7 +480,10 @@
         
         if (STATE.owner === 'FRISK') friskThinkAndAct();
         else if (STATE.owner === 'CHARA') charaThinkAndFight();
-        else typeFlavor("* Smells like bone dirt.");
+        else {
+            if (STATE.isSleeping) typeFlavor("* Sans is asleep. Now is your chance.");
+            else typeFlavor("* Smells like bone dirt.");
+        }
     }
 
     /** 🎛️ UI & INPUT **/
@@ -448,10 +501,19 @@
 
     function executeSubMenu() {
         if (STATE.menuIdx === 1) { // ACT
-            if (STATE.subIdx === 1) typeFlavor("* You try to talk to Sans.\n* He ignores you.", () => { sansSpeak("try harder next time.", triggerAttackSequence); });
+            if (STATE.subIdx === 1) typeFlavor("* You try to talk to Sans.", () => { sansSpeak(STATE.isSleeping ? "Zzz..." : "try harder.", triggerAttackSequence); });
             else typeFlavor("* SANS - 1 ATK 1 DEF\n* The easiest enemy.", () => { setTimeout(triggerAttackSequence, 1000); });
         } else if (STATE.menuIdx === 3) { // MERCY
-            typeFlavor("* You are sparing Sans.", () => { sansSpeak("... yeah, ok.", triggerAttackSequence); });
+            if (STATE.isSleeping) {
+                typeFlavor("* You spared Sans.", () => {
+                    document.getElementById('sans-container').classList.remove('sleeping');
+                    sansSpeak("you're sparing me?\n... alright.\ni'm going to grillby's.", () => {
+                        alert("YOU WON. PACIFIST ENDING."); location.reload();
+                    });
+                });
+            } else {
+                typeFlavor("* You are sparing Sans.", () => { sansSpeak("... yeah, ok.", triggerAttackSequence); });
+            }
         } else typeFlavor("* Nothing to use.", () => { setTimeout(triggerAttackSequence, 1000); });
     }
 
@@ -474,7 +536,7 @@
                 }
             } else if (STATE.currentMenu === 'SUB') {
                 if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') STATE.subIdx = (STATE.subIdx === 0 ? 1 : 0);
-                if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; elSub.style.display = 'none'; typeFlavor("* Sans is waiting."); }
+                if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; elSub.style.display = 'none'; typeFlavor(STATE.isSleeping ? "* Sans is asleep." : "* Sans is waiting."); }
                 if (e.key === 'z' || e.key === 'Z') executeSubMenu();
                 updateUI();
             }
