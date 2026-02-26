@@ -2,254 +2,280 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Undertale 3D: Internal Odyssey</title>
+    <title>3D Underground: Internal Odyssey</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; }
-        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; pointer-events: none; }
-        #hud { font-size: 22px; color: #ffff00; text-shadow: 2px 2px #000; }
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
-            background: red; border-radius: 50%; transform: translate(-50%, -50%);
-            border: 1px solid white;
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        #hud { padding: 20px; color: #ffff00; font-size: 20px; text-shadow: 2px 2px #000; }
+        
+        #dialogue-box {
+            position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
+            width: 80%; background: rgba(0,0,0,0.85); border: 4px solid white;
+            padding: 20px; display: none; pointer-events: auto;
         }
-        #dialogue {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 70%; height: 160px; background: rgba(0,0,0,0.9); border: 4px solid #fff;
-            padding: 20px; display: none; z-index: 20;
-        }
+
         #internal-ui {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; display: none; z-index: 30; width: 100%;
-            background: rgba(40, 0, 0, 0.6); padding: 40px;
+            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+            text-align: center; display: none; pointer-events: auto;
         }
+
         .btn {
-            background: #000; color: #fff; border: 2px solid #fff; padding: 12px 24px;
-            margin: 10px; cursor: pointer; pointer-events: auto; font-family: inherit; font-size: 1.1rem;
+            background: black; color: white; border: 2px solid white;
+            padding: 15px 30px; margin: 10px; cursor: pointer; font-size: 1.2rem;
         }
-        .btn:hover { color: #ffff00; border-color: #ffff00; transform: scale(1.1); }
-        .desc { font-size: 1.3rem; line-height: 1.6; color: #ffb6c1; max-width: 700px; margin: 20px auto; }
+        .btn:hover { background: white; color: black; font-weight: bold; }
+        
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+            background: red; border-radius: 50%; transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div id="hud">❤️ FRISK | LV <span id="lv">1</span> | <span id="loc">THE RUINS</span></div>
-        <div style="font-size: 0.9rem; color: #888;">[W,A,S,D] Move | [MOUSE] Look | [E] Interact</div>
-    </div>
+
+<div id="ui-layer">
+    <div id="hud">❤️ FRISK | LV <span id="lv-val">1</span> | <span id="loc-val">RUINS</span></div>
     <div id="crosshair"></div>
-    
-    <div id="dialogue">
-        <div id="diag-text" style="font-size: 1.4rem;"></div>
-        <div id="diag-options" style="margin-top:20px;"></div>
+
+    <div id="dialogue-box">
+        <div id="diag-text" style="color: white; font-size: 1.5rem; margin-bottom: 20px;"></div>
+        <div id="diag-btns"></div>
     </div>
 
     <div id="internal-ui">
-        <h1 id="stage-title" style="font-size: 2.5rem; text-decoration: underline;"></h1>
-        <p id="stage-desc" class="desc"></p>
-        <div id="internal-options"></div>
+        <h1 id="stage-name" style="color: #ff99aa; font-size: 3rem; text-shadow: 2px 2px #000;"></h1>
+        <p id="stage-desc" style="color: white; font-size: 1.2rem; max-width: 600px; margin: 0 auto;"></p>
+        <div id="int-btns" style="margin-top: 30px;"></div>
     </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
-    <script>
-        // --- GAME STATE ---
-        const state = {
-            lv: 1,
-            inMenu: false,
-            inInternal: false,
-            currentNPC: null,
-            stage: 0 // 0: Mouth, 1: Throat, 2: Stomach
-        };
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-        // --- 3D SCENE SETUP ---
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+<script>
+    // --- ENGINE CORE ---
+    let scene, camera, renderer, clock;
+    let state = { lv: 1, inInternal: false, stage: 'world', npc: null };
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+    let yaw = 0, pitch = 0;
+
+    // --- 3D OBJECTS ---
+    let internalMeshes = [];
+    let worldMeshes = [];
+
+    function init() {
+        scene = new THREE.Scene();
+        clock = new THREE.Clock();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0x404040, 2);
-        scene.add(ambientLight);
-        const sun = new THREE.DirectionalLight(0xffffff, 0.5);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
+        setupWorld();
+        setupLights();
+        setupControls();
+        animate();
+    }
 
-        // Floor Grid
-        const grid = new THREE.GridHelper(200, 50, 0x444444, 0x222222);
-        scene.add(grid);
+    function setupLights() {
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(0, 10, 0);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+    }
 
-        // --- CHARACTER DATA ---
-        const characters = [
-            { name: "Toriel", pos: [0, 2, -12], color: 0xffffff, size: [1.5, 4.5, 1.2], msg: "My child, stay safe... inside where it's warm." },
-            { name: "Muffet", pos: [15, 1.5, -8], color: 0x800080, size: [1.2, 3, 1.2], msg: "Ufufu~ You look like the perfect ingredient for my tea." },
-            { name: "Undyne", pos: [-15, 2.5, -20], color: 0x00a2ff, size: [1.4, 5, 1.4], msg: "NGAAAH! You'll fuel the heart of a warrior!" },
-            { name: "Annoying Dog Lady", pos: [12, 1, 12], color: 0xffffff, size: [2.5, 2, 2.5], msg: "(She pants heavily, eyeing you like a treat...)" },
-            { name: "Catty & Bratty", pos: [-12, 2, 15], color: 0x00ff00, size: [1.5, 4, 1.5], msg: "Omigosh! Like, totally join our trash collection!" }
-        ];
+    function setupWorld() {
+        // Floor
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x111111}));
+        floor.rotation.x = -Math.PI/2;
+        scene.add(floor);
 
-        const npcMeshes = [];
-        characters.forEach(char => {
-            const group = new THREE.Group();
-            const bodyGeo = new THREE.BoxGeometry(...char.size);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: char.color });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            group.add(body);
+        // Characters (Placeholders as high-quality blocks)
+        createNPC("Toriel", 0xffffff, 0, 0, -10, "Goat-like and motherly.");
+        createNPC("Muffet", 0x8800ff, 10, 0, -5, "Six arms and five eyes.");
+        createNPC("Undyne", 0x00a2ff, -10, 0, -15, "Armored and intense.");
+    }
 
-            // "Head" for interaction
-            const headGeo = new THREE.SphereGeometry(0.6, 16, 16);
-            const head = new THREE.Mesh(headGeo, bodyMat);
-            head.position.y = char.size[1]/2 + 0.5;
-            group.add(head);
+    function createNPC(name, color, x, y, z, desc) {
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(1, 3, 4, 8), new THREE.MeshStandardMaterial({color: color}));
+        body.position.y = 2;
+        group.add(body);
+        group.position.set(x, y, z);
+        group.userData = { name, desc };
+        scene.add(group);
+        worldMeshes.push(group);
+    }
 
-            group.position.set(...char.pos);
-            group.userData = char;
-            scene.add(group);
-            npcMeshes.push(group);
+    // --- INTERNAL SCENE GENERATORS ---
+    function buildMouth(npcName) {
+        clearScene();
+        scene.background = new THREE.Color(0x220505);
+        
+        // The Mouth Chamber
+        const mouthGeo = new THREE.SphereGeometry(15, 32, 32);
+        const mouthMat = new THREE.MeshStandardMaterial({ color: 0x661111, side: THREE.BackSide, roughness: 0.2 });
+        const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+        scene.add(mouth);
+
+        // The Tongue (Interactive 3D Mesh)
+        const tongueGeo = new THREE.BoxGeometry(10, 2, 15);
+        const tongueMat = new THREE.MeshStandardMaterial({ color: 0xff7788 });
+        const tongue = new THREE.Mesh(tongueGeo, tongueMat);
+        tongue.position.y = -6;
+        tongue.name = "tongue";
+        scene.add(tongue);
+
+        camera.position.set(0, -3, 5);
+        camera.lookAt(0, -3, 0);
+
+        showInternalUI(`INSIDE ${npcName.toUpperCase()}`, 
+            `You are standing on a massive, wet tongue. The roof of the mouth is high above, and the walls are slick with saliva. Every breath from ${npcName} sends a warm gale over you.`);
+        
+        addInternalBtn("Proceed Down the Throat", () => buildThroat(npcName));
+    }
+
+    function buildThroat(npcName) {
+        clearScene();
+        const curve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0, 0, 20),
+            new THREE.Vector3(0, -10, 0),
+            new THREE.Vector3(0, -30, -20)
+        ]);
+        const tubeGeo = new THREE.TubeGeometry(curve, 20, 4, 12, false);
+        const tubeMat = new THREE.MeshStandardMaterial({ color: 0x882233, side: THREE.BackSide });
+        const throat = new THREE.Mesh(tubeGeo, tubeMat);
+        throat.name = "throat";
+        scene.add(throat);
+
+        camera.position.set(0, 0, 18);
+        
+        showInternalUI("THE THROAT PASSAGE", 
+            "The walls are incredibly tight. You feel the rhythmic pulsing of the muscles as you are massaged downward in a heavy, inescapable gulp.");
+        
+        addInternalBtn("Reach the Stomach", () => buildStomach(npcName));
+    }
+
+    function buildStomach(npcName) {
+        clearScene();
+        const stomachGeo = new THREE.SphereGeometry(20, 32, 32);
+        const stomachMat = new THREE.MeshStandardMaterial({ color: 0x440505, side: THREE.BackSide });
+        const stomach = new THREE.Mesh(stomachGeo, stomachMat);
+        stomach.name = "stomach";
+        scene.add(stomach);
+
+        camera.position.set(0, 0, 0);
+
+        showInternalUI(`${npcName.toUpperCase()}'S STOMACH`, 
+            "A vast, pulsing chamber. The walls hug you from all sides, and the deep 'thump-thump' of the heart echoes through the fleshy floor.");
+        
+        addInternalBtn("[ACT] Rest & Rebirth (LV UP)", () => {
+            state.lv++;
+            document.getElementById('lv-val').innerText = state.lv;
+            resetToWorld();
         });
+    }
 
-        // --- PLAYER CONTROLS ---
+    // --- GAME LOGIC ---
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getElapsedTime();
+
+        if (!state.inInternal) {
+            handleMovement();
+        } else {
+            // Pulse animations
+            const throat = scene.getObjectByName("throat");
+            if(throat) throat.scale.set(1 + Math.sin(delta*3)*0.05, 1, 1 + Math.sin(delta*3)*0.05);
+            
+            const stomach = scene.getObjectByName("stomach");
+            if(stomach) stomach.scale.set(1 + Math.sin(delta)*0.03, 1 + Math.sin(delta)*0.03, 1 + Math.sin(delta)*0.03);
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    function checkInteraction() {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera({x:0, y:0}, camera);
+        const intersects = raycaster.intersectObjects(worldMeshes, true);
+        if (intersects.length > 0) {
+            const npc = intersects[0].object.parent.userData;
+            state.npc = npc;
+            showDialogue(npc);
+        }
+    }
+
+    function showDialogue(npc) {
+        const box = document.getElementById('dialogue-box');
+        box.style.display = 'block';
+        document.getElementById('diag-text').innerText = `* ${npc.name}: "${npc.desc} Would you like to... come closer?"`;
+        document.getElementById('diag-btns').innerHTML = `
+            <button class="btn" onclick="state.inInternal=true; buildMouth(state.npc.name)">[ACT] Offer Self</button>
+            <button class="btn" onclick="document.getElementById('dialogue-box').style.display='none'">[MERCY] Run</button>
+        `;
+        document.exitPointerLock();
+    }
+
+    function showInternalUI(title, desc) {
+        document.getElementById('dialogue-box').style.display = 'none';
+        document.getElementById('internal-ui').style.display = 'block';
+        document.getElementById('stage-name').innerText = title;
+        document.getElementById('stage-desc').innerText = desc;
+    }
+
+    function addInternalBtn(text, action) {
+        const btn = document.createElement('button');
+        btn.className = "btn";
+        btn.innerText = text;
+        btn.onclick = action;
+        document.getElementById('int-btns').appendChild(btn);
+    }
+
+    function clearScene() {
+        while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+        setupLights();
+        document.getElementById('int-btns').innerHTML = "";
+    }
+
+    function resetToWorld() {
+        state.inInternal = false;
+        document.getElementById('internal-ui').style.display = 'none';
+        clearScene();
+        setupWorld();
         camera.position.set(0, 1.6, 5);
-        let yaw = 0, pitch = 0;
-        const keys = {};
+        renderer.domElement.requestPointerLock();
+    }
 
-        document.addEventListener('keydown', (e) => { 
-            keys[e.code] = true;
-            if (e.code === 'KeyE') checkInteract();
+    // --- CONTROLS & UTILS ---
+    function setupControls() {
+        document.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyW') moveForward = true;
+            if(e.code === 'KeyS') moveBackward = true;
+            if(e.code === 'KeyE') checkInteraction();
         });
-        document.addEventListener('keyup', (e) => keys[e.code] = false);
-
-        renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
+        document.addEventListener('keyup', (e) => {
+            if(e.code === 'KeyW') moveForward = false;
+            if(e.code === 'KeyS') moveBackward = false;
+        });
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === renderer.domElement) {
                 yaw -= e.movementX * 0.002;
                 pitch -= e.movementY * 0.002;
-                pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+                pitch = Math.max(-Math.PI/2, Math.PI/2, pitch);
+                camera.rotation.order = 'YXZ';
+                camera.rotation.set(pitch, yaw, 0);
             }
         });
+        renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
+    }
 
-        // --- INTERACTION LOGIC ---
-        function checkInteract() {
-            if (state.inMenu || state.inInternal) return;
-            const ray = new THREE.Raycaster();
-            ray.setFromCamera({x:0, y:0}, camera);
-            const hits = ray.intersectObjects(npcMeshes, true);
-            if (hits.length > 0) {
-                let obj = hits[0].object;
-                while(obj.parent && !obj.userData.name) obj = obj.parent;
-                startDialogue(obj.userData);
-            }
-        }
+    function handleMovement() {
+        if (moveForward) camera.translateZ(-0.1);
+        if (moveBackward) camera.translateZ(0.1);
+    }
 
-        function startDialogue(npc) {
-            state.inMenu = true;
-            state.currentNPC = npc;
-            document.getElementById('dialogue').style.display = 'block';
-            document.getElementById('diag-text').innerText = `* ${npc.name}: "${npc.msg}"`;
-            document.getElementById('diag-options').innerHTML = `
-                <button class="btn" onclick="beginGulp()">[ACT] Offer Self</button>
-                <button class="btn" onclick="closeDiag()">[MERCY] Leave</button>
-            `;
-            document.exitPointerLock();
-        }
-
-        function closeDiag() {
-            state.inMenu = false;
-            document.getElementById('dialogue').style.display = 'none';
-            renderer.domElement.requestPointerLock();
-        }
-
-        // --- THE "GULP" 3D SEQUENCE ---
-        function beginGulp() {
-            state.inInternal = true;
-            state.stage = 0;
-            document.getElementById('dialogue').style.display = 'none';
-            document.getElementById('internal-ui').style.display = 'block';
-            updateInternalEnvironment();
-        }
-
-        function updateInternalEnvironment() {
-            const name = state.currentNPC.name;
-            const title = document.getElementById('stage-title');
-            const desc = document.getElementById('stage-desc');
-            const opts = document.getElementById('internal-options');
-            opts.innerHTML = '';
-
-            // Clear Scene for Internal View
-            while(scene.children.length > 0) scene.remove(scene.children[0]);
-            scene.add(new THREE.AmbientLight(0xff99aa, 1.5));
-
-            if (state.stage === 0) {
-                // MOUTH
-                const mouthGeo = new THREE.SphereGeometry(10, 32, 32);
-                const mouthMat = new THREE.MeshStandardMaterial({ color: 0x661111, side: THREE.BackSide });
-                scene.add(new THREE.Mesh(mouthGeo, mouthMat));
-                
-                const tongue = new THREE.Mesh(new THREE.BoxGeometry(8, 1, 12), new THREE.MeshStandardMaterial({ color: 0xff7788 }));
-                tongue.position.y = -4;
-                scene.add(tongue);
-
-                camera.position.set(0, 0, 0);
-                title.innerText = `THE MOUTH OF ${name.toUpperCase()}`;
-                desc.innerHTML = `You are held against a <span style="color:#ff7788">wet, warm tongue</span>. ${name}'s breath is humid as she tastes you. The walls of her cheeks press in tight.`;
-                addIntBtn("Surrender to the Swallow", () => { state.stage = 1; updateInternalEnvironment(); });
-            } 
-            else if (state.stage === 1) {
-                // THROAT
-                const throat = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 40, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x882233, side: THREE.BackSide }));
-                throat.rotation.x = Math.PI / 2;
-                scene.add(throat);
-
-                title.innerText = `THE DOWNWARD GULP`;
-                desc.innerHTML = `A massive <span style="color:#ffff00">*GULP*</span> pulls you into the throat. The <span style="color:#ffb6c1">muscular walls are incredibly tight</span>, pulsing rhythmically as they massage you slowly downward into the dark.`;
-                addIntBtn("Slide into the Stomach", () => { state.stage = 2; updateInternalEnvironment(); });
-            } 
-            else if (state.stage === 2) {
-                // STOMACH
-                const stomach = new THREE.Mesh(new THREE.SphereGeometry(15, 32, 32), new THREE.MeshStandardMaterial({ color: 0x440505, side: THREE.BackSide }));
-                scene.add(stomach);
-
-                title.innerText = `${name.toUpperCase()}'S STOMACH`;
-                desc.innerHTML = `You land with a soft splash. The <span style="color:#ffb6c1">thick walls hug you from every side</span>, vibrating with her heartbeat. You are now officially a part of her.`;
-                addIntBtn("[ACT] Rest Forever", () => { alert("Ending: Permanent Resident"); location.reload(); });
-                addIntBtn("[REBIRTH] Absorb & LV UP", () => { state.lv++; alert(`Ending: Absorbed. LV increased to ${state.lv}`); location.reload(); });
-            }
-        }
-
-        function addIntBtn(txt, cb) {
-            const b = document.createElement('button');
-            b.className = 'btn'; b.innerText = txt; b.onclick = cb;
-            document.getElementById('internal-options').appendChild(b);
-        }
-
-        // --- ANIMATION LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            if (!state.inMenu && !state.inInternal && document.pointerLockElement === renderer.domElement) {
-                const speed = 0.12;
-                const dir = new THREE.Vector3();
-                camera.getWorldDirection(dir);
-                dir.y = 0; dir.normalize();
-                const side = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
-
-                if (keys['KeyW']) camera.position.addScaledVector(dir, speed);
-                if (keys['KeyS']) camera.position.addScaledVector(dir, -speed);
-                if (keys['KeyA']) camera.position.addScaledVector(side, speed);
-                if (keys['KeyD']) camera.position.addScaledVector(side, -speed);
-                
-                camera.rotation.set(0, 0, 0);
-                camera.rotateY(yaw);
-                camera.rotateX(pitch);
-            }
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
+    init();
+</script>
 </body>
 </html>
