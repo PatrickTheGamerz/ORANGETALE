@@ -2,290 +2,254 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Undertale: The Deep Gulp Chronicles</title>
+    <title>Undertale 3D: Internal Odyssey</title>
     <style>
-        :root {
-            --ut-white: #ffffff;
-            --ut-yellow: #ffff00;
-            --ut-red: #ff0000;
-            --ut-pink: #ffb6c1;
-            --ut-purple: #a020f0;
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; }
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; pointer-events: none; }
+        #hud { font-size: 22px; color: #ffff00; text-shadow: 2px 2px #000; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
+            background: red; border-radius: 50%; transform: translate(-50%, -50%);
+            border: 1px solid white;
         }
-
-        body {
-            background-color: #111;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow: hidden;
+        #dialogue {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 70%; height: 160px; background: rgba(0,0,0,0.9); border: 4px solid #fff;
+            padding: 20px; display: none; z-index: 20;
         }
-
-        #game-container {
-            position: relative;
-            width: 900px;
-            height: 650px;
-            border: 6px solid white;
-            background: black;
-            margin-top: 10px;
+        #internal-ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; display: none; z-index: 30; width: 100%;
+            background: rgba(40, 0, 0, 0.6); padding: 40px;
         }
-
-        canvas { display: block; }
-
-        /* UI Elements */
-        #hud {
-            width: 900px;
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            font-size: 1.5rem;
-            color: var(--ut-yellow);
-            border: 2px solid #333;
-            background: #000;
+        .btn {
+            background: #000; color: #fff; border: 2px solid #fff; padding: 12px 24px;
+            margin: 10px; cursor: pointer; pointer-events: auto; font-family: inherit; font-size: 1.1rem;
         }
-
-        #dialogue-overlay {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 840px;
-            height: 200px;
-            background: black;
-            border: 4px solid white;
-            padding: 20px;
-            display: none;
-            z-index: 100;
-        }
-
-        #internal-overlay {
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle, #2b0a0a 0%, #000000 100%);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            z-index: 200;
-            padding: 40px;
-        }
-
-        .choice-btn {
-            background: black;
-            color: white;
-            border: 2px solid white;
-            padding: 12px 24px;
-            margin: 10px;
-            font-family: inherit;
-            font-size: 1.1rem;
-            cursor: pointer;
-        }
-
-        .choice-btn:hover {
-            color: var(--ut-yellow);
-            border-color: var(--ut-yellow);
-            transform: scale(1.05);
-        }
-
-        .internal-desc {
-            font-size: 1.4rem;
-            line-height: 1.6;
-            color: var(--ut-pink);
-            max-width: 800px;
-            text-shadow: 2px 2px #000;
-        }
-
-        .flavor-text { color: var(--ut-yellow); font-style: italic; }
-        .stage-title { font-size: 2rem; color: white; margin-bottom: 20px; text-decoration: underline; }
+        .btn:hover { color: #ffff00; border-color: #ffff00; transform: scale(1.1); }
+        .desc { font-size: 1.3rem; line-height: 1.6; color: #ffb6c1; max-width: 700px; margin: 20px auto; }
     </style>
 </head>
 <body>
-
-<div id="hud">
-    <span>❤️ FRISK</span>
-    <span id="loc-name">THE RUINS</span>
-    <span id="lv-stat">LV 1</span>
-</div>
-
-<div id="game-container">
-    <canvas id="worldCanvas" width="900" height="650"></canvas>
-
-    <div id="dialogue-overlay">
-        <div id="diag-text" style="font-size: 1.4rem; margin-bottom: 20px;"></div>
-        <div id="diag-choices"></div>
+    <div id="ui">
+        <div id="hud">❤️ FRISK | LV <span id="lv">1</span> | <span id="loc">THE RUINS</span></div>
+        <div style="font-size: 0.9rem; color: #888;">[W,A,S,D] Move | [MOUSE] Look | [E] Interact</div>
     </div>
-
-    <div id="internal-overlay">
-        <div id="internal-stage-title" class="stage-title"></div>
-        <div id="internal-msg" class="internal-desc"></div>
-        <div id="internal-choices" style="margin-top: 30px;"></div>
-    </div>
-</div>
-
-<script>
-    const canvas = document.getElementById('worldCanvas');
-    const ctx = canvas.getContext('2d');
+    <div id="crosshair"></div>
     
-    // --- GAME STATE ---
-    let state = {
-        x: 450, y: 550,
-        lv: 1,
-        inMenu: false,
-        inInternal: false,
-        currentNPC: null,
-        internalStage: 0, // 0: Mouth, 1: Throat, 2: Stomach
-        zone: 'Ruins'
-    };
+    <div id="dialogue">
+        <div id="diag-text" style="font-size: 1.4rem;"></div>
+        <div id="diag-options" style="margin-top:20px;"></div>
+    </div>
 
-    const keys = {};
-    window.addEventListener('keydown', e => keys[e.code] = true);
-    window.addEventListener('keyup', e => keys[e.code] = false);
+    <div id="internal-ui">
+        <h1 id="stage-title" style="font-size: 2.5rem; text-decoration: underline;"></h1>
+        <p id="stage-desc" class="desc"></p>
+        <div id="internal-options"></div>
+    </div>
 
-    // --- CHARACTERS ---
-    const npcs = [
-        { name: "Toriel", x: 450, y: 100, emoji: "🐐", color: "white", zone: "Ruins", 
-          msg: "My child, it's dangerous out there. Why not stay... inside where it's warm?" },
-        { name: "Annoying Dog Lady", x: 800, y: 100, emoji: "🐕", color: "white", zone: "Ruins", 
-          msg: "(She looks at you like a delicious chew toy. Her tail wags hungrily.)" },
-        { name: "Bunny Shopkeeper", x: 150, y: 300, emoji: "🐰", color: "pink", zone: "Snowdin", 
-          msg: "Welcome! We're all out of cinnamon buns... but you look just as sweet." },
-        { name: "Bunny Innkeeper", x: 150, y: 150, emoji: "🐇", color: "white", zone: "Snowdin", 
-          msg: "One night's stay? I have a very 'private' room available... in my tummy." },
-        { name: "Lesser Dog Lady", x: 300, y: 450, emoji: "🐶", color: "gray", zone: "Snowdin", 
-          msg: "(She wants to be petted. And then maybe a small snack. You.)" },
-        { name: "Muffet", x: 750, y: 400, emoji: "🕷️", color: "purple", zone: "Waterfall", 
-          msg: "Ufufu~ My pet is hungry, but I think I want to taste you first~" },
-        { name: "Undyne", x: 500, y: 300, emoji: "🐟", color: "blue", zone: "Waterfall", 
-          msg: "Human! You'll be the perfect fuel for a warrior's heart!" },
-        { name: "Catty & Bratty", x: 800, y: 550, emoji: "🐱", color: "green", zone: "Waterfall", 
-          msg: "Omigosh! Like, totally join our trash collection! Literally!" }
-    ];
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        // --- GAME STATE ---
+        const state = {
+            lv: 1,
+            inMenu: false,
+            inInternal: false,
+            currentNPC: null,
+            stage: 0 // 0: Mouth, 1: Throat, 2: Stomach
+        };
 
-    // --- CORE LOOP ---
-    function update() {
-        if (!state.inMenu && !state.inInternal) {
-            if (keys['ArrowUp'] || keys['KeyW']) state.y -= 5;
-            if (keys['ArrowDown'] || keys['KeyS']) state.y += 5;
-            if (keys['ArrowLeft'] || keys['KeyA']) state.x -= 5;
-            if (keys['ArrowRight'] || keys['KeyD']) state.x += 5;
+        // --- 3D SCENE SETUP ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-            // Constrain
-            state.x = Math.max(20, Math.min(880, state.x));
-            state.y = Math.max(20, Math.min(630, state.y));
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        const sun = new THREE.DirectionalLight(0xffffff, 0.5);
+        sun.position.set(5, 10, 7);
+        scene.add(sun);
 
-            // Collision
-            npcs.forEach(n => {
-                let d = Math.hypot(state.x - n.x, state.y - n.y);
-                if (d < 45) triggerDialogue(n);
-            });
-        }
-        draw();
-        requestAnimationFrame(update);
-    }
+        // Floor Grid
+        const grid = new THREE.GridHelper(200, 50, 0x444444, 0x222222);
+        scene.add(grid);
 
-    function draw() {
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // --- CHARACTER DATA ---
+        const characters = [
+            { name: "Toriel", pos: [0, 2, -12], color: 0xffffff, size: [1.5, 4.5, 1.2], msg: "My child, stay safe... inside where it's warm." },
+            { name: "Muffet", pos: [15, 1.5, -8], color: 0x800080, size: [1.2, 3, 1.2], msg: "Ufufu~ You look like the perfect ingredient for my tea." },
+            { name: "Undyne", pos: [-15, 2.5, -20], color: 0x00a2ff, size: [1.4, 5, 1.4], msg: "NGAAAH! You'll fuel the heart of a warrior!" },
+            { name: "Annoying Dog Lady", pos: [12, 1, 12], color: 0xffffff, size: [2.5, 2, 2.5], msg: "(She pants heavily, eyeing you like a treat...)" },
+            { name: "Catty & Bratty", pos: [-12, 2, 15], color: 0x00ff00, size: [1.5, 4, 1.5], msg: "Omigosh! Like, totally join our trash collection!" }
+        ];
 
-        // Draw Map Grid
-        ctx.strokeStyle = "#222";
-        for(let i=0; i<900; i+=50) ctx.strokeRect(i, 0, 1, 650);
+        const npcMeshes = [];
+        characters.forEach(char => {
+            const group = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(...char.size);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: char.color });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            group.add(body);
 
-        // Draw NPCs
-        npcs.forEach(n => {
-            ctx.font = "50px Arial";
-            ctx.fillText(n.emoji, n.x - 25, n.y + 20);
-            ctx.fillStyle = "white";
-            ctx.font = "16px Courier New";
-            ctx.textAlign = "center";
-            ctx.fillText(n.name, n.x, n.y - 40);
+            // "Head" for interaction
+            const headGeo = new THREE.SphereGeometry(0.6, 16, 16);
+            const head = new THREE.Mesh(headGeo, bodyMat);
+            head.position.y = char.size[1]/2 + 0.5;
+            group.add(head);
+
+            group.position.set(...char.pos);
+            group.userData = char;
+            scene.add(group);
+            npcMeshes.push(group);
         });
 
-        // Draw Player
-        ctx.fillStyle = "red";
-        ctx.font = "35px Arial";
-        ctx.fillText("❤️", state.x, state.y + 12);
-    }
+        // --- PLAYER CONTROLS ---
+        camera.position.set(0, 1.6, 5);
+        let yaw = 0, pitch = 0;
+        const keys = {};
 
-    // --- DIALOGUE SYSTEM ---
-    function triggerDialogue(npc) {
-        state.inMenu = true;
-        state.currentNPC = npc;
-        document.getElementById('dialogue-overlay').style.display = "block";
-        document.getElementById('diag-text').innerText = `* ${npc.msg}`;
-        
-        const choices = document.getElementById('diag-choices');
-        choices.innerHTML = `
-            <button class="choice-btn" onclick="enterInternal()">[ACT] Be Eaten</button>
-            <button class="choice-btn" onclick="closeDialogue()">[MERCY] Escape</button>
-        `;
-    }
+        document.addEventListener('keydown', (e) => { 
+            keys[e.code] = true;
+            if (e.code === 'KeyE') checkInteract();
+        });
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    function closeDialogue() {
-        state.inMenu = false;
-        document.getElementById('dialogue-overlay').style.display = "none";
-        state.y += 60; 
-    }
+        renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === renderer.domElement) {
+                yaw -= e.movementX * 0.002;
+                pitch -= e.movementY * 0.002;
+                pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+            }
+        });
 
-    // --- INTERNAL ADVENTURE ENGINE ---
-    function enterInternal() {
-        state.inInternal = true;
-        state.internalStage = 0;
-        document.getElementById('dialogue-overlay').style.display = "none";
-        document.getElementById('internal-overlay').style.display = "flex";
-        renderInternal();
-    }
-
-    function renderInternal() {
-        const title = document.getElementById('internal-stage-title');
-        const msg = document.getElementById('internal-msg');
-        const choices = document.getElementById('internal-choices');
-        const name = state.currentNPC.name;
-        choices.innerHTML = "";
-
-        if (state.internalStage === 0) {
-            title.innerText = `THE MOUTH OF ${name.toUpperCase()}`;
-            msg.innerHTML = `${name} opens wide, her <span class='flavor-text'>breath warm and humid</span>. She takes you in, her heavy <span class='flavor-text'>tongue soothing</span> your skin as she tastes every inch of you. It's slippery, tight, and inescapable.`;
-            addIntBtn("Surrender to the Tongue", () => { state.internalStage = 1; renderInternal(); });
-            addIntBtn("Struggle Playfully", () => { state.internalStage = 1; renderInternal(); });
-        } 
-        else if (state.internalStage === 1) {
-            title.innerText = `THE TIGHT THROAT`;
-            msg.innerHTML = `With a massive, deliberate <span class='flavor-text'>*GULP*</span>, the world goes dark. You feel the <span class='flavor-text'>walls of her throat tighten</span> around your shoulders, pulsing rhythmically. You are being slowly, firmly massaged down the long, wet passage.`;
-            addIntBtn("Slide into the Depths", () => { state.internalStage = 2; renderInternal(); });
-        } 
-        else if (state.internalStage === 2) {
-            title.innerText = `THE STOMACH OF ${name.toUpperCase()}`;
-            msg.innerHTML = `You land with a soft splash. The <span class='flavor-text'>stomach walls are thick, pulsing, and incredibly tight</span>, hugging you from all sides. You can hear the deep 'thump-thump' of her heart. This is your new home.`;
-            addIntBtn("[ACT] Rest & Nap", () => finishInternal("COMPANION ENDING"));
-            addIntBtn("[ACT] Tickle the Walls", () => finishInternal("GIGGLE ENDING"));
-            addIntBtn("[REBIRTH] Absorb & LV UP", () => { state.lv++; finishInternal("POWER ENDING"); });
+        // --- INTERACTION LOGIC ---
+        function checkInteract() {
+            if (state.inMenu || state.inInternal) return;
+            const ray = new THREE.Raycaster();
+            ray.setFromCamera({x:0, y:0}, camera);
+            const hits = ray.intersectObjects(npcMeshes, true);
+            if (hits.length > 0) {
+                let obj = hits[0].object;
+                while(obj.parent && !obj.userData.name) obj = obj.parent;
+                startDialogue(obj.userData);
+            }
         }
-    }
 
-    function addIntBtn(text, cb) {
-        const b = document.createElement('button');
-        b.className = "choice-btn";
-        b.innerText = text;
-        b.onclick = cb;
-        document.getElementById('internal-choices').appendChild(b);
-    }
+        function startDialogue(npc) {
+            state.inMenu = true;
+            state.currentNPC = npc;
+            document.getElementById('dialogue').style.display = 'block';
+            document.getElementById('diag-text').innerText = `* ${npc.name}: "${npc.msg}"`;
+            document.getElementById('diag-options').innerHTML = `
+                <button class="btn" onclick="beginGulp()">[ACT] Offer Self</button>
+                <button class="btn" onclick="closeDiag()">[MERCY] Leave</button>
+            `;
+            document.exitPointerLock();
+        }
 
-    function finishInternal(endType) {
-        alert(`ACHIEVEMENT UNLOCKED: ${state.currentNPC.name}'s ${endType}\nYour LV is now ${state.lv}`);
-        state.inInternal = false;
-        state.inMenu = false;
-        document.getElementById('internal-overlay').style.display = "none";
-        document.getElementById('lv-stat').innerText = `LV ${state.lv}`;
-        state.x = 450; state.y = 550; // Return to start
-    }
+        function closeDiag() {
+            state.inMenu = false;
+            document.getElementById('dialogue').style.display = 'none';
+            renderer.domElement.requestPointerLock();
+        }
 
-    // --- INITIALIZE ---
-    update();
-</script>
+        // --- THE "GULP" 3D SEQUENCE ---
+        function beginGulp() {
+            state.inInternal = true;
+            state.stage = 0;
+            document.getElementById('dialogue').style.display = 'none';
+            document.getElementById('internal-ui').style.display = 'block';
+            updateInternalEnvironment();
+        }
 
+        function updateInternalEnvironment() {
+            const name = state.currentNPC.name;
+            const title = document.getElementById('stage-title');
+            const desc = document.getElementById('stage-desc');
+            const opts = document.getElementById('internal-options');
+            opts.innerHTML = '';
+
+            // Clear Scene for Internal View
+            while(scene.children.length > 0) scene.remove(scene.children[0]);
+            scene.add(new THREE.AmbientLight(0xff99aa, 1.5));
+
+            if (state.stage === 0) {
+                // MOUTH
+                const mouthGeo = new THREE.SphereGeometry(10, 32, 32);
+                const mouthMat = new THREE.MeshStandardMaterial({ color: 0x661111, side: THREE.BackSide });
+                scene.add(new THREE.Mesh(mouthGeo, mouthMat));
+                
+                const tongue = new THREE.Mesh(new THREE.BoxGeometry(8, 1, 12), new THREE.MeshStandardMaterial({ color: 0xff7788 }));
+                tongue.position.y = -4;
+                scene.add(tongue);
+
+                camera.position.set(0, 0, 0);
+                title.innerText = `THE MOUTH OF ${name.toUpperCase()}`;
+                desc.innerHTML = `You are held against a <span style="color:#ff7788">wet, warm tongue</span>. ${name}'s breath is humid as she tastes you. The walls of her cheeks press in tight.`;
+                addIntBtn("Surrender to the Swallow", () => { state.stage = 1; updateInternalEnvironment(); });
+            } 
+            else if (state.stage === 1) {
+                // THROAT
+                const throat = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 40, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x882233, side: THREE.BackSide }));
+                throat.rotation.x = Math.PI / 2;
+                scene.add(throat);
+
+                title.innerText = `THE DOWNWARD GULP`;
+                desc.innerHTML = `A massive <span style="color:#ffff00">*GULP*</span> pulls you into the throat. The <span style="color:#ffb6c1">muscular walls are incredibly tight</span>, pulsing rhythmically as they massage you slowly downward into the dark.`;
+                addIntBtn("Slide into the Stomach", () => { state.stage = 2; updateInternalEnvironment(); });
+            } 
+            else if (state.stage === 2) {
+                // STOMACH
+                const stomach = new THREE.Mesh(new THREE.SphereGeometry(15, 32, 32), new THREE.MeshStandardMaterial({ color: 0x440505, side: THREE.BackSide }));
+                scene.add(stomach);
+
+                title.innerText = `${name.toUpperCase()}'S STOMACH`;
+                desc.innerHTML = `You land with a soft splash. The <span style="color:#ffb6c1">thick walls hug you from every side</span>, vibrating with her heartbeat. You are now officially a part of her.`;
+                addIntBtn("[ACT] Rest Forever", () => { alert("Ending: Permanent Resident"); location.reload(); });
+                addIntBtn("[REBIRTH] Absorb & LV UP", () => { state.lv++; alert(`Ending: Absorbed. LV increased to ${state.lv}`); location.reload(); });
+            }
+        }
+
+        function addIntBtn(txt, cb) {
+            const b = document.createElement('button');
+            b.className = 'btn'; b.innerText = txt; b.onclick = cb;
+            document.getElementById('internal-options').appendChild(b);
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!state.inMenu && !state.inInternal && document.pointerLockElement === renderer.domElement) {
+                const speed = 0.12;
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                dir.y = 0; dir.normalize();
+                const side = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+
+                if (keys['KeyW']) camera.position.addScaledVector(dir, speed);
+                if (keys['KeyS']) camera.position.addScaledVector(dir, -speed);
+                if (keys['KeyA']) camera.position.addScaledVector(side, speed);
+                if (keys['KeyD']) camera.position.addScaledVector(side, -speed);
+                
+                camera.rotation.set(0, 0, 0);
+                camera.rotateY(yaw);
+                camera.rotateX(pitch);
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
