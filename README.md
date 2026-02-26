@@ -2,343 +2,312 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UTD: DUST PARADOX (1:1 MECHANICS)</title>
+    <title>UTD: ABSOLUTE PARADOX (FRISK SOVEREIGNTY)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
         :root { --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --blue: #3b82f6; --purple: #d946ef; --dust: #8a2be2; }
         body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
         
-        #game-frame { width: 1000px; height: 750px; border: 4px solid #fff; position: relative; display: grid; grid-template-columns: 650px 1fr; grid-template-rows: 80px 1fr 220px; gap: 10px; padding: 10px; background: #000; }
+        #nexus { width: 1000px; height: 750px; border: 4px solid #fff; display: grid; grid-template-columns: 650px 1fr; grid-template-rows: 80px 450px 220px; gap: 10px; padding: 10px; background: #000; }
 
-        /* CHARACTER BOX & ENEMY */
-        #arena { grid-column: 1; grid-row: 2; position: relative; border: 2px solid #555; overflow: hidden; background: #000; }
+        /* ARENA */
+        #arena { grid-column: 1; grid-row: 2; position: relative; border: 2px solid #555; background: #000; overflow: hidden; }
         #dust-sans { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
-        #enemy-sprite { font-size: 80px; filter: drop-shadow(0 0 10px var(--dust)); }
+        #enemy-sprite { font-size: 80px; text-shadow: 0 0 20px var(--dust); }
         
-        /* THE SOUL BOX (1:1 UNDER TALE SCALE) */
-        #battle-box { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 300px; height: 160px; border: 5px solid #fff; background: #000; transition: width 0.3s, height 0.3s; }
-        #soul { width: 16px; height: 16px; position: absolute; z-index: 100; pointer-events: none; }
-        #soul svg { width: 100%; height: 100%; }
+        /* BOX (1:1 SCALE) */
+        #battle-box { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 300px; height: 160px; border: 5px solid #fff; background: #000; }
+        #soul { width: 16px; height: 16px; position: absolute; z-index: 100; transition: transform 0.1s; }
 
         /* DASHBOARD */
-        #dashboard { grid-column: 1 / 3; grid-row: 3; display: flex; flex-direction: column; gap: 10px; border-top: 2px solid #fff; padding-top: 10px; }
-        #stat-bar { display: flex; gap: 30px; font-size: 24px; font-weight: bold; }
-        #menu-buttons { display: flex; justify-content: space-between; padding: 0 20px; }
-        .menu-btn { width: 110px; height: 42px; border: 3px solid #ffaa00; background: #000; color: #ffaa00; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; cursor: pointer; }
-        .menu-btn.active { background: #ffaa00; color: #000; box-shadow: 0 0 10px #ffaa00; }
+        #dashboard { grid-column: 1 / 3; grid-row: 3; border-top: 2px solid #fff; padding: 10px; }
+        #menu-btns { display: flex; justify-content: space-around; margin-top: 15px; }
+        .menu-btn { width: 130px; border: 3px solid #ffaa00; padding: 10px; color: #ffaa00; font-size: 24px; font-weight: bold; text-align: center; cursor: pointer; }
+        .menu-btn.active { background: #ffaa00; color: #000; box-shadow: 0 0 15px #ffaa00; }
 
-        /* SIDEBAR (THE COUNCIL) */
-        #sidebar { grid-column: 2; grid-row: 2; border-left: 2px solid #fff; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-        #chat { flex: 1; border: 1px solid #444; background: #050505; font-size: 14px; overflow-y: auto; padding: 5px; }
-        .influence-row { font-size: 12px; margin-bottom: 5px; }
-        .bar-bg { width: 100%; height: 6px; background: #222; border: 1px solid #444; }
-        .bar-fill { height: 100%; transition: width 0.3s; }
-
-        /* VFX */
-        .blaster-beam { position: absolute; background: #fff; box-shadow: 0 0 15px #fff; z-index: 50; }
-        .bone { position: absolute; background: #fff; z-index: 40; }
+        /* SIDEBAR */
+        #sidebar { grid-column: 2; grid-row: 2; border-left: 2px solid #fff; padding: 10px; display: flex; flex-direction: column; }
+        #chat { flex: 1; background: #050505; border: 1px solid #444; font-size: 14px; overflow-y: auto; padding: 8px; margin-bottom: 10px; }
+        .bar-wrap { height: 8px; background: #222; border: 1px solid #444; margin: 4px 0; }
+        .fill { height: 100%; transition: width 0.3s; }
+        
+        /* ATTACKS */
+        .bone { position: absolute; background: #fff; }
+        .blaster-beam { position: absolute; background: #fff; box-shadow: 0 0 20px #fff; z-index: 50; opacity: 0; }
     </style>
 </head>
 <body>
 
-<div id="game-frame">
-    <header style="grid-column: 1 / 3; display: flex; justify-content: space-around; font-size: 20px;">
-        <div id="current-controller">OWNER: PLAYER</div>
-        <div>LV <span id="lv-disp">19</span></div>
-        <div>HP <span id="hp-disp">20 / 20</span></div>
-        <div id="kr-disp" style="color:var(--purple); display:none;">KR</div>
+<div id="nexus">
+    <header style="grid-column: 1/3; display: flex; justify-content: space-around; font-size: 22px; align-items: center;">
+        <div id="status-owner" style="color:var(--cyan)">OWNER: PLAYER</div>
+        <div>LV <span id="lv">19</span></div>
+        <div style="display:flex; align-items:center;">HP <div style="width:100px; height:15px; background:red; margin:0 10px; border:1px solid #fff;"><div id="hp-fill" style="width:100%; height:100%; background:yellow;"></div></div> <span id="hp-text">20/20</span></div>
     </header>
 
     <div id="arena">
         <div id="dust-sans">
             <div id="enemy-sprite">💀</div>
-            <div id="enemy-hp-bar" style="width:200px; height:10px; border:2px solid #fff; margin-top:5px;">
-                <div id="enemy-hp-fill" style="width:100%; height:100%; background:var(--dust);"></div>
-            </div>
+            <div style="width:200px; height:10px; border:2px solid #fff; margin-top:5px;"><div id="e-hp" style="width:100%; height:100%; background:var(--dust);"></div></div>
         </div>
         <div id="battle-box">
-            <div id="soul">
-                <svg viewBox="0 0 32 32"><path id="soul-path" d="M16,28.3L3.7,16c-2.3-2.3-2.3-6.1,0-8.5c2.3-2.3,6.1-2.3,8.5,0l3.8,3.8l3.8-3.8c2.3-2.3,6.1-2.3,8.5,0c2.3,2.3,2.3,6.1,0,8.5L16,28.3z" fill="red"/></svg>
-            </div>
+            <div id="soul"><svg viewBox="0 0 32 32"><path id="soul-svg" d="M16,28.3L3.7,16c-2.3-2.3-2.3-6.1,0-8.5c2.3-2.3,6.1-2.3,8.5,0l3.8,3.8l3.8-3.8c2.3-2.3,6.1-2.3,8.5,0c2.3,2.3,2.3,6.1,0,8.5L16,28.3z" fill="red"/></svg></div>
         </div>
     </div>
 
     <div id="sidebar">
         <div id="chat"></div>
-        <div id="council-data"></div>
+        <div style="font-size:12px;">
+            PLAYER: <div class="bar-wrap"><div id="bar-p" class="fill" style="background:var(--cyan); width:25%"></div></div>
+            FRISK (AI LV: <span id="frisk-skill">1</span>): <div class="bar-wrap"><div id="bar-f" class="fill" style="background:var(--purple); width:25%"></div></div>
+            CHARA: <div class="bar-wrap"><div id="bar-c" class="fill" style="background:var(--red); width:0%"></div></div>
+        </div>
     </div>
 
     <div id="dashboard">
-        <div id="dialogue-box" style="border: 4px solid #fff; height: 100px; padding: 15px; font-size: 24px; background: #000;">
-            * Dust Sans stands in your way.
-        </div>
-        <div id="menu-buttons">
-            <div class="menu-btn active" id="btn-fight">FIGHT</div>
-            <div class="menu-btn" id="btn-act">ACT</div>
-            <div class="menu-btn" id="btn-item">ITEM</div>
-            <div class="menu-btn" id="btn-mercy">MERCY</div>
+        <div id="dialogue" style="border:4px solid #fff; height:80px; padding:15px; font-size:24px;">* Dust Sans stands in your way.</div>
+        <div id="menu-btns">
+            <div class="menu-btn active" id="btn0">FIGHT</div>
+            <div class="menu-btn" id="btn1">ACT</div>
+            <div class="menu-btn" id="btn2">ITEM</div>
+            <div class="menu-btn" id="btn3">MERCY</div>
         </div>
     </div>
 </div>
 
 <script>
-/** ⚙️ THE RESOLUTE ENGINE (1:1 MECHANICS) **/
+/** ⚙️ PHYSICS & STATE ENGINE **/
 const STATE = {
-    hp: 20, maxHp: 20, kr: 0,
-    lv: 19, gold: 600,
-    owner: 'PLAYER', // PLAYER, FRISK, CHARA, SANS, PAPYRUS
-    menuIdx: 0, phase: 'MENU',
-    influence: { player: 25, frisk: 25, sans: 25, papy: 25, chara: 0 },
-    soul: { x: 142, y: 72, color: 'red', gravity: false, vY: 0 },
-    keys: {},
-    enemy: { hp: 5000, max: 5000, name: 'Dust Sans' }
+    hp: 20, maxHp: 20, kr: 0, lv: 19,
+    owner: 'PLAYER', // PLAYER, FRISK, CHARA
+    friskSkill: 1, 
+    phase: 'MENU', menuIdx: 0,
+    soul: { x: 142, y: 72, vY: 0, gravity: false, invuln: 0 },
+    keys: {}, influence: { p: 25, f: 25, c: 0 },
+    enemyHP: 5000
 };
 
-const SOULS_ATTR = {
-    PLAYER: { col: '#ff0000', hp: 20, upside: false },
-    FRISK:  { col: '#ff0000', hp: 20, upside: false },
-    CHARA:  { col: '#000000', stroke: '#ff0000', hp: 99, upside: false },
-    SANS:   { col: '#ffffff', hp: 1, upside: true },
-    PAPYRUS:{ col: '#ffffff', hp: 680, upside: true }
-};
-
-const box = document.getElementById('battle-box');
-const soul = document.getElementById('soul');
 const chat = document.getElementById('chat');
+const soul = document.getElementById('soul');
+const box = document.getElementById('battle-box');
 
-/** 🛠️ UTILS **/
 function log(who, msg) {
-    const color = who === 'SANS' ? 'var(--blue)' : who === 'CHARA' ? 'var(--red)' : who === 'PAPYRUS' ? '#fff' : 'var(--cyan)';
-    chat.innerHTML += `<div style="margin-bottom:5px;"><b style="color:${color}">${who}:</b> ${msg}</div>`;
+    const col = who === 'SANS' ? 'var(--blue)' : who === 'FRISK' ? 'var(--purple)' : 'var(--cyan)';
+    chat.innerHTML += `<div><b style="color:${col}">${who}:</b> ${msg}</div>`;
     chat.scrollTop = chat.scrollHeight;
 }
 
-function updateBars() {
-    const area = document.getElementById('council-data');
-    area.innerHTML = '';
-    Object.keys(STATE.influence).forEach(key => {
-        area.innerHTML += `
-            <div class="influence-row">
-                ${key.toUpperCase()}: ${Math.floor(STATE.influence[key])}%
-                <div class="bar-bg"><div class="bar-fill" style="width:${STATE.influence[key]}%; background:${key==='chara'?'red':key==='sans'?'blue':'cyan'}"></div></div>
-            </div>`;
-    });
-}
+/** 💓 CORE PHYSICS LOOP **/
+function update() {
+    if (STATE.phase === 'ATTACK') {
+        if (STATE.soul.invuln > 0) STATE.soul.invuln--;
 
-/** 💓 SOUL ENGINE **/
-function moveSoul() {
-    if (STATE.phase !== 'ATTACK') return;
-    
-    // AI Control Logic
-    if (STATE.owner !== 'PLAYER') {
-        autoDodge(); // Logic for Frisk/Sans/Papy to move themselves
-    } else {
-        const speed = 3.5;
-        if (!STATE.soul.gravity) {
-            if (STATE.keys['ArrowUp']) STATE.soul.y -= speed;
-            if (STATE.keys['ArrowDown']) STATE.soul.y += speed;
-        } else {
-            // 1:1 Gravity Mechanics
-            if (STATE.keys['z'] || STATE.keys['Z']) {
-                if (STATE.soul.y >= box.clientHeight - 21) STATE.soul.vY = -4.5;
+        if (STATE.owner === 'PLAYER') {
+            const speed = 3.5;
+            if (STATE.soul.gravity) {
+                // 1:1 Jump Arc
+                if ((STATE.keys['z'] || STATE.keys['Z']) && STATE.soul.y >= 144) STATE.soul.vY = -5;
+                STATE.soul.vY += 0.25; // Gravity
+                STATE.soul.y += STATE.soul.vY;
+            } else {
+                if (STATE.keys['ArrowUp']) STATE.soul.y -= speed;
+                if (STATE.keys['ArrowDown']) STATE.soul.y += speed;
             }
-            STATE.soul.vY += 0.2; // Gravity constant
-            STATE.soul.y += STATE.soul.vY;
+            if (STATE.keys['ArrowLeft']) STATE.soul.x -= speed;
+            if (STATE.keys['ArrowRight']) STATE.soul.x += speed;
+        } else if (STATE.owner === 'FRISK') {
+            friskAIDodge();
         }
-        
-        if (STATE.keys['ArrowLeft']) STATE.soul.x -= speed;
-        if (STATE.keys['ArrowRight']) STATE.soul.x += speed;
+
+        // 1:1 Box Collision
+        STATE.soul.x = Math.max(0, Math.min(284, STATE.soul.x));
+        STATE.soul.y = Math.max(0, Math.min(144, STATE.soul.y));
+        if (STATE.soul.y >= 144) STATE.soul.vY = 0;
+
+        soul.style.left = STATE.soul.x + 'px';
+        soul.style.top = STATE.soul.y + 'px';
     }
-
-    // Bounds
-    STATE.soul.x = Math.max(0, Math.min(box.clientWidth - 21, STATE.soul.x));
-    STATE.soul.y = Math.max(0, Math.min(box.clientHeight - 21, STATE.soul.y));
-
-    soul.style.left = STATE.soul.x + 'px';
-    soul.style.top = STATE.soul.y + 'px';
     
-    requestAnimationFrame(moveSoul);
+    // Karma Drain
+    if (STATE.kr > 0) {
+        STATE.kr -= 0.05;
+        STATE.hp -= 0.02;
+    }
+    
+    updateHUD();
+    requestAnimationFrame(update);
 }
 
-function autoDodge() {
-    // Frisk/Sans/Papy/Chara move automatically based on personality
-    // We simulate a basic dodge towards center or away from objects
-    const targets = document.querySelectorAll('.bone, .blaster-beam');
-    if (targets.length > 0) {
-        let t = targets[0].getBoundingClientRect();
-        let s = soul.getBoundingClientRect();
-        if (t.left < s.left + 50 && t.right > s.left - 50) {
-            STATE.soul.y -= (STATE.owner === 'SANS' ? 5 : 2); // Sans teleports/dodges faster
+/** 🤖 FRISK AI DODGING **/
+function friskAIDodge() {
+    // Frisk learns to look for bones/beams
+    const bones = document.querySelectorAll('.bone, .blaster-beam');
+    let safestX = STATE.soul.x;
+    let safestY = STATE.soul.y;
+
+    bones.forEach(b => {
+        const r = b.getBoundingClientRect();
+        const s = soul.getBoundingClientRect();
+        // If dangerous, move away. Skill factor increases "predictive" speed.
+        if (Math.hypot(r.left - s.left, r.top - s.top) < 60) {
+            safestX += (s.left < r.left ? -STATE.friskSkill : STATE.friskSkill);
+            if (!STATE.soul.gravity) safestY += (s.top < r.top ? -STATE.friskSkill : STATE.friskSkill);
+            else if (r.top > s.top + 20) STATE.soul.vY = -5; // Jump!
         }
+    });
+
+    STATE.soul.x += (safestX - STATE.soul.x) * 0.1;
+    if (!STATE.soul.gravity) STATE.soul.y += (safestY - STATE.soul.y) * 0.1;
+    else {
+        STATE.soul.vY += 0.25;
+        STATE.soul.y += STATE.soul.vY;
     }
 }
 
-/** ⚔️ ATTACK SEQUENCES (1:1 DUSTTALE) **/
-function startAttack() {
+/** ⚔️ ATTACK ENGINE (1:1 DUSTTALE) **/
+function startEnemyTurn() {
     STATE.phase = 'ATTACK';
-    document.getElementById('dialogue-box').style.display = 'none';
     box.style.display = 'block';
-    moveSoul();
+    document.getElementById('dialogue').style.display = 'none';
 
-    const pattern = Math.random();
-    if (pattern < 0.3) patternGasterRain();
-    else if (pattern < 0.6) patternBoneJumps();
-    else patternXYCross();
-
-    setTimeout(endAttack, 6000);
-}
-
-function patternGasterRain() {
-    for (let i = 0; i < 6; i++) {
-        setTimeout(() => {
-            spawnBlaster(Math.random() * 260, 0, 'down');
-        }, i * 800);
-    }
-}
-
-function patternBoneJumps() {
-    STATE.soul.gravity = true;
-    soul.style.fill = 'blue';
-    for (let i = 0; i < 15; i++) {
-        setTimeout(() => {
-            spawnBone(300, 130, 20, 30, -4);
-        }, i * 400);
-    }
-}
-
-function patternXYCross() {
-    spawnBlaster(150, 0, 'down');
-    setTimeout(() => spawnBlaster(0, 80, 'right'), 1000);
-}
-
-function spawnBlaster(x, y, dir) {
-    const flash = document.createElement('div');
-    flash.className = 'blaster-beam';
-    flash.style.left = (dir === 'down' ? x : 0) + 'px';
-    flash.style.top = (dir === 'down' ? 0 : y) + 'px';
-    flash.style.width = (dir === 'down' ? '30px' : '300px') + 'px';
-    flash.style.height = (dir === 'down' ? '160px' : '30px') + 'px';
-    flash.style.opacity = '0.2'; // Telegraph
-    box.appendChild(flash);
+    const rand = Math.random();
+    if (rand < 0.4) spawnGasterCircle();
+    else if (rand < 0.7) spawnBoneStalks();
+    else spawnBlueJumpPattern();
 
     setTimeout(() => {
-        flash.style.opacity = '1';
-        flash.style.background = '#00ffff';
-        const blastInterval = setInterval(() => checkHit(flash, 5), 16);
-        setTimeout(() => {
-            clearInterval(blastInterval);
-            flash.remove();
-        }, 400);
-    }, 600);
+        STATE.phase = 'MENU';
+        box.style.display = 'none';
+        document.getElementById('dialogue').style.display = 'block';
+        if (STATE.owner === 'FRISK') friskThinkMenu();
+    }, 6000);
 }
 
-function spawnBone(x, y, w, h, vx) {
+function spawnGasterCircle() {
+    for (let i = 0; i < 8; i++) {
+        setTimeout(() => {
+            if (STATE.phase !== 'ATTACK') return;
+            createBlaster(Math.random() * 250, 0, 'V');
+        }, i * 700);
+    }
+}
+
+function spawnBoneStalks() {
+    for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+            if (STATE.phase !== 'ATTACK') return;
+            createBone(300, 100, 15, 60, -4);
+        }, i * 300);
+    }
+}
+
+function spawnBlueJumpPattern() {
+    STATE.soul.gravity = true;
+    document.getElementById('soul-svg').setAttribute('fill', 'blue');
+    for (let i = 0; i < 10; i++) {
+        setTimeout(() => createBone(300, 140, 20, 20, -3), i * 600);
+    }
+}
+
+function createBlaster(x, y, dir) {
+    const beam = document.createElement('div');
+    beam.className = 'blaster-beam';
+    beam.style.left = x + 'px'; beam.style.top = '0px';
+    beam.style.width = '30px'; beam.style.height = '160px';
+    box.appendChild(beam);
+    
+    // Telegraph
+    setTimeout(() => beam.style.opacity = '0.3', 100);
+    setTimeout(() => {
+        beam.style.opacity = '1';
+        beam.style.background = '#00ffff';
+        const hit = setInterval(() => checkCollision(beam, 4), 16);
+        setTimeout(() => { clearInterval(hit); beam.remove(); }, 400);
+    }, 800);
+}
+
+function createBone(x, y, w, h, vx) {
     const b = document.createElement('div');
     b.className = 'bone';
-    b.style.width = w+'px'; b.style.height = h+'px';
     b.style.left = x+'px'; b.style.top = y+'px';
+    b.style.width = w+'px'; b.style.height = h+'px';
     box.appendChild(b);
-    
-    let curX = x;
     const move = setInterval(() => {
-        curX += vx;
-        b.style.left = curX + 'px';
-        checkHit(b, 2);
-        if (curX < -50) { clearInterval(move); b.remove(); }
+        x += vx; b.style.left = x+'px';
+        checkCollision(b, 2);
+        if (x < -50) { clearInterval(move); b.remove(); }
     }, 16);
 }
 
-function checkHit(el, dmg) {
+function checkCollision(el, dmg) {
+    if (STATE.soul.invuln > 0) return;
     const sR = soul.getBoundingClientRect();
     const eR = el.getBoundingClientRect();
     if (!(sR.right < eR.left || sR.left > eR.right || sR.bottom < eR.top || sR.top > eR.bottom)) {
-        if (STATE.owner === 'SANS' && Math.random() > 0.1) return; // Sans Dodge
-        STATE.hp -= (dmg / 10); // Karma-style drain
-        updateHUD();
-        if (STATE.hp <= 0) alert("STAY DETERMINED...");
+        STATE.hp -= 1;
+        STATE.kr += dmg;
+        STATE.soul.invuln = 30; // 0.5s i-frames
+        if (STATE.hp <= 0) { alert("YOU DIED. FRISK FAILED."); location.reload(); }
     }
 }
 
-function endAttack() {
-    STATE.phase = 'MENU';
-    STATE.soul.gravity = false;
-    STATE.soul.vY = 0;
-    document.getElementById('soul-path').setAttribute('fill', SOULS_ATTR[STATE.owner].col);
-    box.style.display = 'none';
-    document.getElementById('dialogue-box').style.display = 'block';
+/** 🕹️ MENU & SOVEREIGNTY **/
+function toggleSovereignty() {
+    if (STATE.owner === 'FRISK') return; // Frisk won't let go
+    STATE.owner = 'FRISK';
+    document.getElementById('status-owner').innerText = "OWNER: FRISK";
+    document.getElementById('status-owner').style.color = "var(--purple)";
+    log("SYS", "Control transferred to Frisk. You are now a spectator.");
+    if (STATE.phase === 'MENU') friskThinkMenu();
 }
 
-/** 🕹️ MENU SYSTEM **/
+function friskThinkMenu() {
+    // Frisk simulates thinking and choosing
+    log("FRISK", "... I'll handle this.");
+    setTimeout(() => {
+        STATE.menuIdx = Math.random() > 0.5 ? 0 : 1; // Fight or Act
+        updateMenu();
+        setTimeout(() => confirmSelection(), 1000);
+    }, 1500);
+}
+
+function confirmSelection() {
+    if (STATE.menuIdx === 0) {
+        STATE.enemyHP -= 100;
+        STATE.friskSkill += 0.2; // Learning!
+        log("SYS", "Frisk attacked! Skill increased.");
+    } else {
+        log("FRISK", "* You called for help.");
+    }
+    startEnemyTurn();
+}
+
 function updateMenu() {
-    const btns = ['fight', 'act', 'item', 'mercy'];
-    btns.forEach((b, i) => {
-        document.getElementById('btn-'+b).classList.toggle('active', i === STATE.menuIdx);
-    });
+    for(let i=0; i<4; i++) document.getElementById('btn'+i).classList.toggle('active', i === STATE.menuIdx);
 }
 
-function confirmMenu() {
-    if (STATE.phase !== 'MENU') return;
-    
-    if (STATE.menuIdx === 0) { // FIGHT
-        STATE.enemy.hp -= (STATE.owner === 'CHARA' ? 999 : 100);
-        STATE.influence.chara = Math.min(100, STATE.influence.chara + 10);
-        STATE.influence.player = Math.max(0, STATE.influence.player - 5);
-        log("CHARA", "Strike. Again.");
-    } else if (STATE.menuIdx === 1) { // ACT
-        STATE.influence.papy = Math.min(100, STATE.influence.papy + 5);
-        log("PAPYRUS", "I BELIEVE IN YOU, HUMAN!");
-    }
-    
-    updateBars();
-    startAttack();
-}
-
-/** 🧠 SOUL SOVEREIGNTY SWITCHING **/
-function switchOwner(target) {
-    if (STATE.owner === 'CHARA') return; // Chara never lets go
-    STATE.owner = target;
-    const attr = SOULS_ATTR[target];
-    STATE.maxHp = attr.hp;
-    STATE.hp = attr.hp;
-    document.getElementById('soul-path').setAttribute('fill', attr.col);
-    document.getElementById('soul-path').setAttribute('stroke', attr.stroke || 'none');
-    document.getElementById('current-controller').innerText = `OWNER: ${target}`;
-    updateHUD();
-}
-
-/** 🖱️ EVENT LISTENERS **/
 window.onkeydown = (e) => {
     STATE.keys[e.key] = true;
-    if (STATE.phase === 'MENU') {
-        if (e.key === 'ArrowLeft') { STATE.menuIdx = (STATE.menuIdx + 3) % 4; updateMenu(); }
-        if (e.key === 'ArrowRight') { STATE.menuIdx = (STATE.menuIdx + 1) % 4; updateMenu(); }
-        if (e.key === 'z' || e.key === 'Z') confirmMenu();
-    }
-    if (e.key === 's' || e.key === 'S') {
-        // Toggle between Player and Council
-        if (STATE.owner === 'PLAYER') switchOwner('FRISK');
-        else if (STATE.owner === 'FRISK') switchOwner('PLAYER');
+    if (e.key === 's' || e.key === 'S') toggleSovereignty();
+    
+    if (STATE.owner === 'PLAYER') {
+        if (STATE.phase === 'MENU') {
+            if (e.key === 'ArrowLeft') { STATE.menuIdx = (STATE.menuIdx + 3) % 4; updateMenu(); }
+            if (e.key === 'ArrowRight') { STATE.menuIdx = (STATE.menuIdx + 1) % 4; updateMenu(); }
+            if (e.key === 'z' || e.key === 'Z') confirmSelection();
+        }
     }
 };
 window.onkeyup = (e) => STATE.keys[e.key] = false;
 
 function updateHUD() {
-    document.getElementById('hp-disp').innerText = `${Math.ceil(STATE.hp)} / ${STATE.maxHp}`;
-    document.getElementById('enemy-hp-fill').style.width = (STATE.enemy.hp / STATE.enemy.max * 100) + '%';
+    document.getElementById('hp-text').innerText = `${Math.ceil(STATE.hp)} / ${STATE.maxHp}`;
+    document.getElementById('hp-fill').style.width = (STATE.hp / STATE.maxHp * 100) + '%';
+    document.getElementById('frisk-skill').innerText = Math.floor(STATE.friskSkill);
 }
 
-// Minute Auto-save
-setInterval(() => {
-    localStorage.setItem('dust_nexus_memory', JSON.stringify(STATE.influence));
-    log("SYS", "Timeline metadata synchronized.");
-}, 60000);
-
-// Init
+update();
 log("SANS", "it's a beautiful day outside.");
-log("PAPYRUS", "NYEH HEH HEH!");
-updateBars();
-updateHUD();
-
 </script>
 </body>
 </html>
