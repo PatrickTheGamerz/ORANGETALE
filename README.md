@@ -1,302 +1,270 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>UTD: THE COUNCIL TERMINAL</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        :root { --red: #ff0000; --gold: #ffcc00; --cyan: #00ffff; --purple: #d946ef; --green: #22c55e; --blue: #3b82f6; --white: #ffffff; }
-        
-        body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        
-        #game-interface { width: 1200px; height: 850px; display: grid; grid-template-columns: 850px 350px; grid-template-rows: 80px 1fr 250px; gap: 10px; border: 5px double #fff; padding: 10px; background: #000; position: relative; }
+  <meta charset="UTF-8">
+  <title>UTD: Council Paradox</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+    body { margin: 0; background: #050008; color: white; font-family: "Courier Prime", monospace; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+    
+    #container { display: flex; gap: 10px; border: 4px solid white; padding: 10px; background: black; }
+    
+    #game { width: 650px; height: 600px; border: 2px solid #444; position: relative; overflow: hidden; background: radial-gradient(circle at top, #1a0f2e 0, #000 70%); }
 
-        /* THE BOARD */
-        canvas { grid-column: 1; grid-row: 2; background: #050505; border: 2px solid #333; cursor: crosshair; }
+    /* COUNCIL SIDEBAR */
+    #sidebar { width: 280px; display: flex; flex-direction: column; gap: 10px; border-left: 2px solid white; padding-left: 10px; }
+    #chat-log { flex: 1; border: 1px solid #444; padding: 10px; font-size: 14px; overflow-y: auto; background: #000; color: #aaa; }
+    .influence-box { border: 1px solid #666; padding: 5px; font-size: 12px; }
+    .bar-bg { width: 100%; height: 8px; background: #222; margin-top: 4px; border: 1px solid #555; }
+    .bar-fill { height: 100%; width: 25%; transition: width 0.4s; }
 
-        /* THE CHAT BOX (META) */
-        #meta-chat { grid-column: 2; grid-row: 2; border: 2px solid #fff; background: #0a0a0a; display: flex; flex-direction: column; padding: 10px; overflow: hidden; }
-        #chat-log { flex: 1; overflow-y: auto; font-size: 0.85rem; padding-right: 5px; border-bottom: 1px solid #333; margin-bottom: 5px; }
-        #chat-log div { margin-bottom: 8px; line-height: 1.2; }
-        .ch-s { color: var(--blue); } .ch-p { color: var(--white); } .ch-c { color: var(--red); font-weight: bold; } .ch-f { color: var(--purple); } .ch-sys { color: #555; font-style: italic; }
+    /* ORIGINAL ASSETS */
+    #enemy-area { position: absolute; top: 20px; width: 100%; text-align: center; }
+    #enemy-sprite { font-size: 40px; margin: 10px 0; color: white; text-shadow: 0 0 10px #fff; }
+    #enemy-hp-container { width: 200px; height: 10px; border: 2px solid white; margin: 0 auto; }
+    #enemy-hp-bar { height: 100%; background: cyan; width: 100%; }
+    
+    #soul-box { position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%); width: 200px; height: 150px; border: 4px solid white; background: rgba(0,0,0,0.8); display: none; }
+    #soul { width: 16px; height: 16px; background: red; position: absolute; box-shadow: 0 0 8px red; }
+    
+    #dialogue-box { position: absolute; bottom: 180px; left: 20px; right: 20px; height: 150px; border: 4px solid white; padding: 15px; font-size: 20px; background: black; box-sizing: border-box; display: block; }
+    
+    #ui-bar { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 15px; }
+    .menu-item { border: 2px solid white; padding: 10px 20px; cursor: pointer; font-size: 20px; }
+    .menu-item.selected { color: yellow; border-color: yellow; }
 
-        /* THE SOUL COUNCIL (DASHBOARD) */
-        #council-dashboard { grid-column: 1 / 3; grid-row: 3; border: 2px solid #fff; display: flex; padding: 15px; gap: 20px; }
-        .soul-card { flex: 1; border-right: 1px solid #444; padding: 0 10px; }
-        .influence-bg { width: 100%; height: 8px; background: #111; border: 1px solid #666; margin: 5px 0; overflow: hidden; }
-        .influence-fill { height: 100%; width: 25%; transition: width 0.5s ease; }
-
-        /* BUTTONS */
-        .cmd-btn { background: #000; border: 2px solid #fff; color: #fff; padding: 8px; cursor: pointer; font-family: inherit; width: 100%; font-size: 0.8rem; margin-top: 5px; }
-        .cmd-btn:hover { background: #fff; color: #000; }
-        .btn-red { border-color: var(--red); color: var(--red); }
-
-        header { grid-column: 1 / 3; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid #fff; font-size: 1.2rem; }
-        
-        /* OVERLAYS */
-        #glitch-overlay { position: fixed; inset: 0; pointer-events: none; background: rgba(255,0,0,0); z-index: 1000; transition: background 0.1s; }
-        .glitch-active { background: rgba(255,0,0,0.1) !important; animation: flicker 0.1s infinite; }
-        @keyframes flicker { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-    </style>
+    .bone { position: absolute; background: white; }
+    .glitch { animation: gl 0.1s infinite; }
+    @keyframes gl { 0%{transform:translate(2px)} 50%{transform:translate(-2px)} }
+  </style>
 </head>
 <body>
 
-    <div id="glitch-overlay"></div>
-
-    <div id="game-interface">
-        <header>
-            <div>DT: <span id="hp-val" style="color:var(--red)">999</span></div>
-            <div>GOLD: <span id="gold-val" style="color:var(--gold)">600</span></div>
-            <div>LV: <span id="lv-val">1</span></div>
-            <button id="main-fight-btn" class="cmd-btn" style="width:120px;">READY?</button>
-        </header>
-
-        <canvas id="gameCanvas"></canvas>
-
-        <aside id="meta-chat">
-            <div id="chat-log"></div>
-            <div id="whisper-box" style="font-size:0.7rem; color:var(--purple);"><i>[Whispering to Frisk...]</i></div>
-        </aside>
-
-        <footer id="council-dashboard">
-            <div class="soul-card">
-                <b style="color:var(--cyan)">PLAYER/FRISK</b>
-                <div class="influence-bg"><div id="bar-p" class="influence-fill" style="background:var(--cyan)"></div></div>
-                <button class="cmd-btn" onclick="playerMove('ACT')">ACT</button>
-                <button class="cmd-btn" onclick="playerMove('FIGHT')">FIGHT</button>
-            </div>
-            <div class="soul-card">
-                <b style="color:var(--blue)">SANS</b>
-                <div class="influence-bg"><div id="bar-s" class="influence-fill" style="background:var(--blue)"></div></div>
-                <button class="cmd-btn" id="sans-special" onclick="sansMove()">SHORTCUT</button>
-            </div>
-            <div class="soul-card">
-                <b style="color:var(--white)">PAPYRUS</b>
-                <div class="influence-bg"><div id="bar-papy" class="influence-fill" style="background:var(--white)"></div></div>
-                <button class="cmd-btn" id="papy-special" onclick="papyMove()">GIFT</button>
-            </div>
-            <div class="soul-card">
-                <b style="color:var(--red)">CHARA</b>
-                <div class="influence-bg"><div id="bar-c" class="influence-fill" style="background:var(--red)"></div></div>
-                <button class="cmd-btn btn-red" id="chara-special" onclick="charaMove()">ERASE</button>
-            </div>
-        </footer>
+<div id="container">
+  <div id="game">
+    <div id="enemy-area">
+      <div>sans</div>
+      <div id="enemy-sprite">S A N S</div>
+      <div id="enemy-hp-container"><div id="enemy-hp-bar"></div></div>
     </div>
 
+    <div id="dialogue-box"></div>
+    <div id="soul-box"><div id="soul"></div></div>
+
+    <div id="ui-bar">
+      <div class="menu-item selected" id="m0">FIGHT</div>
+      <div class="menu-item" id="m1">ACT</div>
+      <div class="menu-item" id="m2">ITEM</div>
+      <div class="menu-item" id="m3">MERCY</div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="influence-box">
+        <div style="color:var(--cyan)">PLAYER/FRISK: <span id="v-p">25</span>%</div>
+        <div class="bar-bg"><div id="b-p" class="bar-fill" style="background:cyan"></div></div>
+    </div>
+    <div class="influence-box">
+        <div style="color:red">CHARA: <span id="v-c">25</span>%</div>
+        <div class="bar-bg"><div id="b-c" class="bar-fill" style="background:red"></div></div>
+    </div>
+    <div class="influence-box">
+        <div style="color:blue">SANS: <span id="v-s">25</span>%</div>
+        <div class="bar-bg"><div id="b-s" class="bar-fill" style="background:blue"></div></div>
+    </div>
+    <div class="influence-box">
+        <div style="color:white">PAPYRUS: <span id="v-papy">25</span>%</div>
+        <div class="bar-bg"><div id="b-papy" class="bar-fill" style="background:white"></div></div>
+    </div>
+    <div id="chat-log"></div>
+  </div>
+</div>
+
 <script>
-/** 💾 MEMORY & PERSISTENCE **/
-let state = {
-    gold: 600, lv: 1, hp: 999, wave: 0,
-    p: 25, s: 25, papy: 25, c: 25,
-    history: [],
-    mouse: { tx: 0, ty: 0 }
-};
+  // ========= COUNCIL STATE =========
+  let influence = { p: 25, c: 25, s: 25, papy: 25 };
+  let playerHP = 20, enemyHP = 1, menuIdx = 0, isSoulMode = false;
+  let phase = "TURN";
+  
+  const chatLog = document.getElementById("chat-log");
+  const dialogueBox = document.getElementById("dialogue-box");
+  const soul = document.getElementById("soul");
+  const soulBox = document.getElementById("soul-box");
+  
+  // ========= AUTO-SAVE SYSTEM =========
+  function saveState() {
+    localStorage.setItem('utd_paradox_save', JSON.stringify(influence));
+    addChat("SYS", "Influence auto-saved.");
+  }
+  setInterval(saveState, 60000);
 
-const TOWERS = {
-    frisk: { name: "Protagonist", cost: 200, color: "#ff00ff" },
-    sans:  { name: "Sans", cost: 600, color: "#008cff" },
-    papy:  { name: "Papyrus", cost: 150, color: "#fff" }
-};
-
-/** 🎨 ENGINE SETUP **/
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const TILE = 50;
-canvas.width = 850; canvas.height = 450;
-
-let units = [], enemies = [], path = [], bullets = [];
-let activePlacement = null;
-
-function init() {
-    // Load Memory
-    const memory = localStorage.getItem('council_memory_v2');
-    if(memory) {
-        const d = JSON.parse(memory);
-        state.p = d.p; state.s = d.s; state.papy = d.papy; state.c = d.c;
-        log("SYS", "Memory loaded. The souls remember you.");
+  function loadState() {
+    const saved = localStorage.getItem('utd_paradox_save');
+    if(saved) {
+        influence = JSON.parse(saved);
+        updateBars();
+        addChat("SYS", "Timeline memory loaded.");
     }
+  }
 
-    // Auto-Save
-    setInterval(() => {
-        localStorage.setItem('council_memory_v2', JSON.stringify({
-            p: state.p, s: state.s, papy: state.papy, c: state.c
-        }));
-        log("SYS", "Timeline progress auto-saved.");
-    }, 60000);
-
-    genPath();
-    loop();
+  // ========= CHAT SYSTEM =========
+  function addChat(who, msg) {
+    let color = "#aaa";
+    if(who === "SANS") color = "blue";
+    if(who === "CHARA") color = "red";
+    if(who === "PAPYRUS") color = "white";
+    if(who === "FRISK") color = "cyan";
     
-    // Initial Banter
-    setTimeout(() => log("SANS", "hey. nice terminal you got here."), 1000);
-    setTimeout(() => log("PAPYRUS", "SANS!! STOP SLACKING!! WE HAVE SOULS TO PROTECT!!"), 2500);
-}
+    chatLog.innerHTML += `<div><b style="color:${color}">${who}:</b> ${msg}</div>`;
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
 
-function genPath() {
-    let x = 0, y = 4;
-    while(x < 17) {
-        path.push({x, y});
-        if(Math.random() < 0.2 && y > 1) y--; else if(Math.random() < 0.2 && y < 7) y++; else x++;
-    }
-}
+  // ========= GAME LOGIC =========
+  function updateBars() {
+    document.getElementById('b-p').style.width = influence.p + "%";
+    document.getElementById('v-p').innerText = Math.floor(influence.p);
+    document.getElementById('b-c').style.width = influence.c + "%";
+    document.getElementById('v-c').innerText = Math.floor(influence.c);
+    document.getElementById('b-s').style.width = influence.s + "%";
+    document.getElementById('v-s').innerText = Math.floor(influence.s);
+    document.getElementById('b-papy').style.width = influence.papy + "%";
+    document.getElementById('v-papy').innerText = Math.floor(influence.papy);
+  }
 
-/** 🤖 AI BEHAVIOR & TALKING **/
-function loop() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    path.forEach(p => { ctx.fillStyle = '#111'; ctx.fillRect(p.x*TILE, p.y*TILE, TILE, TILE); });
-
-    // META-BEHAVIOR: Random Council Actions
-    if(Math.random() > 0.997) {
-        const roll = Math.random();
-        if(roll < 0.3) sansAI();
-        else if(roll < 0.6) papyAI();
-        else charaAI();
-    }
-
-    units.forEach(u => {
-        u.cd = u.cd > 0 ? u.cd - 1 : 0;
-        let target = enemies.find(e => Math.hypot(e.x - (u.tx*50+25), e.y - (u.ty*50+25)) < 150);
-        if(target && u.cd <= 0) {
-            target.hp -= (u.id === 'frisk' ? state.lv * 100 : 50);
-            bullets.push({x1: u.tx*50+25, y1: u.ty*50+25, x2: target.x, y2: target.y, life: 5, col: u.id === 'sans' ? 'cyan' : 'white'});
-            u.cd = 40;
-        }
-        ctx.fillStyle = TOWERS[u.id].color;
-        ctx.fillRect(u.tx*TILE+5, u.ty*TILE+5, TILE-10, TILE-10);
-    });
-
-    for(let i=enemies.length-1; i>=0; i--) {
-        let e = enemies[i];
-        let target = path[e.pIdx];
-        if(!target) { 
-            log("CHARA", "Too slow."); 
-            location.reload(); 
-            return; 
-        }
-        let d = Math.hypot(target.x*TILE+25-e.x, target.y*TILE+25-e.y);
-        if(d < 2) e.pIdx++; else { e.x += ((target.x*TILE+25-e.x)/d)*1.5; e.y += ((target.y*TILE+25-e.y)/d)*1.5; }
-        if(e.hp <= 0) { state.gold += 30; enemies.splice(i,1); }
-        else { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x, e.y, 10, 0, Math.PI*2); ctx.fill(); }
-    }
-
-    bullets.forEach((b,i) => {
-        ctx.strokeStyle = b.col; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
-        b.life--; if(b.life <= 0) bullets.splice(i,1);
-    });
-
-    updateUI();
-    requestAnimationFrame(loop);
-}
-
-/** 🗣️ DIALOGUE ENGINE **/
-function log(who, msg) {
-    const log = document.getElementById('chat-log');
-    let cls = "ch-sys";
-    if(who === "SANS") cls = "ch-s";
-    if(who === "PAPYRUS") cls = "ch-p";
-    if(who === "CHARA") cls = "ch-c";
-    if(who === "FRISK") cls = "ch-f";
+  function handleFight() {
+    // Chara Gains Influence on Attack
+    influence.c = Math.min(100, influence.c + 5);
+    influence.p = Math.max(0, influence.p - 2);
+    influence.s = Math.min(100, influence.s + 1); // Sans gets "Ready"
+    updateBars();
     
-    log.innerHTML += `<div><b class="${cls}">${who}:</b> ${msg}</div>`;
-    log.scrollTop = log.scrollHeight;
+    addChat("CHARA", "Good choice, partner. Keep swinging.");
+    if(influence.c > 75) addChat("SANS", "you're really going through with this, huh?");
+    
+    startEnemyAttack();
+  }
 
-    // Logic for characters responding to each other
-    if(who === "CHARA" && Math.random() > 0.5) setTimeout(() => log("SANS", "hey, kid. chill."), 1000);
-    if(who === "SYS" && msg.includes("auto-saved")) setTimeout(() => log("PAPYRUS", "THE TIMELINE IS SECURE!!"), 800);
-}
+  function handleAct() {
+    influence.p = Math.min(100, influence.p + 5);
+    influence.papy = Math.min(100, influence.papy + 5);
+    influence.c = Math.max(0, influence.c - 3);
+    updateBars();
+    
+    addChat("PAPYRUS", "NYEH HEH HEH! A FRIENDLY GESTURE!");
+    addChat("FRISK", "* You reached out. It feels warm.");
+    startEnemyAttack();
+  }
 
-/** 🕹️ CHARACTER MOVES **/
-function playerMove(type) {
-    if(type === 'FIGHT') {
-        state.c += 2; state.p -= 2;
-        log("CHARA", "Good choice.");
-    } else {
-        state.papy += 1; state.c -= 1;
-        log("FRISK", "* You reached out. Chara sighs.");
+  let soulX = 90, soulY = 70;
+  function soulLoop() {
+    if(isSoulMode) {
+        let speed = 3;
+        
+        // CHARA HIJACK (90% Influence)
+        if(influence.c >= 90) {
+            // Chara drifts the soul towards any active "bones"
+            const bones = document.querySelectorAll('.bone');
+            if(bones.length > 0) {
+                let b = bones[0].getBoundingClientRect();
+                let s = soul.getBoundingClientRect();
+                if(b.left > s.left) soulX += 0.5; else soulX -= 0.5;
+                if(b.top > s.top) soulY += 0.5; else soulY -= 0.5;
+            }
+        }
+
+        if(keys['ArrowUp']) soulY -= speed;
+        if(keys['ArrowDown']) soulY += speed;
+        if(keys['ArrowLeft']) soulX -= speed;
+        if(keys['ArrowRight']) soulX += speed;
+
+        // Bounds
+        soulX = Math.max(0, Math.min(184, soulX));
+        soulY = Math.max(0, Math.min(134, soulY));
+        
+        soul.style.left = soulX + "px";
+        soul.style.top = soulY + "px";
+        
+        checkCollision();
     }
-}
+    requestAnimationFrame(soulLoop);
+  }
 
-function sansMove() {
-    if(state.gold < 100) return;
-    state.gold -= 100;
-    enemies.forEach(e => e.pIdx = Math.max(0, e.pIdx - 2));
-    log("SANS", "shortcut. don't mention it.");
-}
+  function checkCollision() {
+    const sRect = soul.getBoundingClientRect();
+    document.querySelectorAll('.bone').forEach(b => {
+        const bRect = b.getBoundingClientRect();
+        if(!(sRect.right < bRect.left || sRect.left > bRect.right || sRect.bottom < bRect.top || sRect.top > bRect.bottom)) {
+            playerHP -= 0.1; // Sans KR damage
+            if(playerHP <= 0) alert("GAME OVER");
+        }
+    });
+  }
 
-function papyMove() {
-    state.gold += 100;
-    log("PAPYRUS", "I MADE SPAGHETTI!! HAVE SOME EXTRA GOLD!!");
-}
-
-function charaMove() {
-    if(state.c < 50) {
-        log("CHARA", "Not enough power... yet.");
-        return;
+  function startEnemyAttack() {
+    phase = "ATTACK";
+    dialogueBox.style.display = "none";
+    soulBox.style.display = "block";
+    isSoulMode = true;
+    
+    // Spawn simple bones
+    for(let i=0; i<3; i++) {
+        const b = document.createElement('div');
+        b.className = 'bone';
+        b.style.width = "10px"; b.style.height = "40px";
+        b.style.left = "200px"; b.style.bottom = "0";
+        soulBox.appendChild(b);
+        
+        let bx = 200;
+        let bInt = setInterval(() => {
+            bx -= 2;
+            b.style.left = bx + "px";
+            if(bx < -20) { b.remove(); clearInterval(bInt); }
+        }, 10);
     }
-    document.getElementById('glitch-overlay').classList.add('glitch-active');
+
     setTimeout(() => {
-        enemies = [];
-        document.getElementById('glitch-overlay').classList.remove('glitch-active');
-        log("CHARA", "E R A S E D.");
-    }, 500);
-}
+        isSoulMode = false;
+        soulBox.style.display = "none";
+        dialogueBox.style.display = "block";
+        phase = "TURN";
+        dialogueBox.innerText = "* Sans is sweating.";
+    }, 4000);
+  }
 
-/** 🤖 AUTOMATED AI EVENTS **/
-function sansAI() {
-    if(state.s > 60) {
-        log("SANS", "i'm bored. let's skip ahead.");
-        document.getElementById('main-fight-btn').click();
+  // ========= INPUTS =========
+  const keys = {};
+  window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if(phase === "TURN") {
+        if(e.key === 'ArrowRight') { menuIdx = (menuIdx+1)%4; updateMenu(); }
+        if(e.key === 'ArrowLeft') { menuIdx = (menuIdx+3)%4; updateMenu(); }
+        if(e.key === 'z') {
+            if(menuIdx === 0) handleFight();
+            if(menuIdx === 1) handleAct();
+        }
     }
-}
+  });
+  window.addEventListener('keyup', e => keys[e.key] = false);
 
-function papyAI() {
-    if(state.gold < 150) {
-        state.gold += 50;
-        log("PAPYRUS", "YOU LOOKED BROKE! I HELPED!");
-    }
-}
+  function updateMenu() {
+    for(let i=0; i<4; i++) document.getElementById('m'+i).classList.remove('selected');
+    document.getElementById('m'+menuIdx).classList.add('selected');
+  }
 
-function charaAI() {
-    if(state.lv > 5 && Math.random() > 0.8) {
-        log("CHARA", "Why place towers when I can just... delete?");
-        if(enemies.length > 0) enemies[0].hp = 0;
-    }
-}
+  function typeWriter(txt) {
+    dialogueBox.innerText = "";
+    let i = 0;
+    let int = setInterval(() => {
+        dialogueBox.innerText += txt[i];
+        i++;
+        if(i >= txt.length) clearInterval(int);
+    }, 50);
+  }
 
-/** 🖱️ INPUTS **/
-canvas.onmousedown = (e) => {
-    let rect = canvas.getBoundingClientRect();
-    let tx = Math.floor((e.clientX - rect.left)/TILE);
-    let ty = Math.floor((e.clientY - rect.top)/TILE);
-    
-    if(state.gold >= 200) {
-        state.gold -= 200;
-        units.push({ id: 'frisk', tx, ty, cd: 0 });
-    }
-};
+  loadState();
+  typeWriter("* You feel your sins crawling on your back.");
+  requestAnimationFrame(soulLoop);
 
-document.getElementById('main-fight-btn').onclick = () => {
-    state.wave++;
-    log("SYS", `Wave ${state.wave} incoming.`);
-    for(let i=0; i<5+state.wave; i++) {
-        setTimeout(() => {
-            enemies.push({ x: path[0].x*TILE+25, y: path[0].y*TILE+25, pIdx: 0, hp: 300 + (state.wave*100) });
-        }, i * 1200);
-    }
-};
-
-function updateUI() {
-    document.getElementById('gold-val').innerText = Math.floor(state.gold);
-    document.getElementById('hp-val').innerText = state.hp;
-    document.getElementById('lv-val').innerText = state.lv;
-    document.getElementById('bar-p').style.width = state.p + "%";
-    document.getElementById('bar-s').style.width = state.s + "%";
-    document.getElementById('bar-papy').style.width = state.papy + "%";
-    document.getElementById('bar-c').style.width = state.c + "%";
-}
-
-init();
 </script>
 </body>
 </html>
