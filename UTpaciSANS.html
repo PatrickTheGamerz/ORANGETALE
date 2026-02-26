@@ -6,7 +6,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
-        :root { --red: #ff0000; --gold: #ffff00; --cyan: #00ffff; --blue: #0033ff; --purple: #d946ef; }
+        :root { --red: #ff0000; --gold: #ffff00; --cyan: #00ffff; --blue: #0033ff; --purple: #d946ef; --green: #00ff00; }
         
         body { background: #000; color: #fff; font-family: 'Press Start 2P', monospace; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; user-select: none; }
         #game-window { width: 640px; height: 480px; position: relative; background: #000; overflow: hidden; transform: scale(1.4); transform-origin: center; border: 2px solid #222; }
@@ -15,10 +15,7 @@
         #sans-container { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); text-align: center; transition: transform 0.2s ease-out; z-index: 10; }
         .skeleton { width: 70px; height: 80px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><rect x="15" y="5" width="20" height="20" fill="white"/><rect x="20" y="10" width="4" height="6" fill="black"/><rect x="30" y="10" width="4" height="6" fill="black"/><rect x="24" y="18" width="6" height="3" fill="black"/><rect x="10" y="27" width="30" height="15" fill="%23ccc"/><rect x="15" y="42" width="8" height="8" fill="white"/><rect x="27" y="42" width="8" height="8" fill="white"/></svg>') no-repeat center/contain; }
         
-        /* MISS ANIMATION */
         #miss-text { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-family: 'Arial', sans-serif; font-weight: bold; font-size: 24px; color: #ccc; opacity: 0; pointer-events: none; z-index: 100; transition: top 1s ease-out, opacity 0.5s; }
-
-        /* SANS DIALOGUE BUBBLE */
         #sans-bubble { position: absolute; top: 20px; left: 360px; width: 180px; min-height: 50px; background: #fff; color: #000; border: 3px solid #000; border-radius: 10px; padding: 10px; font-family: 'Comic Sans MS', sans-serif; font-size: 14px; line-height: 1.2; display: none; z-index: 50; }
         #sans-bubble::before { content: ''; position: absolute; top: 50%; left: -15px; transform: translateY(-50%); border-width: 10px 15px 10px 0; border-style: solid; border-color: transparent #fff transparent transparent; }
 
@@ -27,13 +24,13 @@
         #soul { width: 14px; height: 14px; position: absolute; z-index: 1000; }
         #projectiles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-        /* FLAVOR TEXT BOX */
+        /* MENUS */
         #text-box { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; font-size: 14px; line-height: 24px; display: block; white-space: pre-wrap; }
         #sub-menu { position: absolute; top: 15px; left: 40px; font-size: 14px; line-height: 28px; display: none; }
         .sub-opt { display: inline-block; width: 45%; margin-bottom: 5px; }
         
-        /* FIGHT BAR MINI-GAME (Pure CSS) */
-        #fight-target { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 10; border-image: linear-gradient(to right, black, #333, black) 1; }
+        /* FIGHT BAR */
+        #fight-target { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 10; }
         #fight-target::after { content: ''; position: absolute; left: 250px; top: 0; width: 65px; height: 100%; background: rgba(0,255,0,0.4); border-left: 2px solid #0f0; border-right: 2px solid #0f0; }
         #fight-cursor { position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: #fff; box-shadow: 0 0 5px #fff; z-index: 11; }
         #strike-anim { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 100px; background: #fff; opacity: 0; z-index: 50; }
@@ -56,14 +53,14 @@
         /* PROJECTILES */
         .bone { position: absolute; background: #fff; border-radius: 2px; }
         .blue-bone { background: var(--cyan); }
+        .platform { background: var(--green); border: 1px solid #fff; }
+        .zone-warn { position: absolute; background: rgba(255,0,0,0.5); border: 2px solid red; z-index: 5; }
     </style>
 </head>
 <body>
 
 <div id="game-window">
-    <div id="sans-container">
-        <div class="skeleton"></div>
-    </div>
+    <div id="sans-container"><div class="skeleton"></div></div>
     <div id="sans-bubble"></div>
     <div id="miss-text">MISS</div>
     <div id="strike-anim"></div>
@@ -71,7 +68,7 @@
     <div id="battle-box">
         <div id="text-box"></div>
         <div id="sub-menu"></div>
-        <div id="fight-target"><div id="fight-cursor" id="f-cursor"></div></div>
+        <div id="fight-target"><div id="fight-cursor"></div></div>
         
         <div id="projectiles"></div>
         <div id="soul">
@@ -95,43 +92,33 @@
 </div>
 
 <script>
-    /** ⚙️ CORE STATE **/
+    /** ⚙️ CORE ENGINE **/
     const STATE = {
         hp: 20, max: 20, owner: 'PLAYER', phase: 'SANS_TALK',
         menuIdx: 0, subIdx: 0, currentMenu: 'MAIN', turn: 0,
         soul: { x: 275, y: 60, vY: 0, gravity: false, jump: -5.5, grounded: false, moving: false },
-        fightBar: { x: 0, dir: 1 },
-        keys: {},
-        dialogueTimer: null, sansTimer: null,
-        friskSkill: 1.0
+        fightBar: { x: 0, dir: 1 }, keys: {},
+        dialogueTimer: null, sansTimer: null, friskSkill: 1.0
     };
 
-    // DOM Elements cached so they are never lost
     const elSoul = document.getElementById('soul');
     const elBox = document.getElementById('battle-box');
     const elText = document.getElementById('text-box');
     const elSub = document.getElementById('sub-menu');
     const elProj = document.getElementById('projectiles');
-    const elTarget = document.getElementById('fight-target');
-    const elCursor = document.getElementById('fight-cursor');
     const elSansBubble = document.getElementById('sans-bubble');
 
-    /** 🗣️ DIALOGUE ENGINES **/
+    /** 🗣️ DIALOGUE **/
     function typeFlavor(text, callback) {
         clearInterval(STATE.dialogueTimer);
-        elText.innerHTML = "";
-        elText.style.display = 'block';
-        elSub.style.display = 'none';
-        elTarget.style.display = 'none';
-        
+        elText.innerHTML = ""; elText.style.display = 'block';
+        elSub.style.display = 'none'; document.getElementById('fight-target').style.display = 'none';
         STATE.phase = 'TYPING';
         let i = 0;
         STATE.dialogueTimer = setInterval(() => {
             elText.innerHTML += text[i]; i++;
             if (i >= text.length) {
-                clearInterval(STATE.dialogueTimer);
-                STATE.phase = 'MENU';
-                STATE.currentMenu = 'MAIN';
+                clearInterval(STATE.dialogueTimer); STATE.phase = 'MENU'; STATE.currentMenu = 'MAIN';
                 if(callback) callback();
             }
         }, 30);
@@ -139,55 +126,63 @@
 
     function sansSpeak(text, callback) {
         clearInterval(STATE.sansTimer);
-        elSansBubble.innerHTML = "";
-        elSansBubble.style.display = 'block';
+        elSansBubble.innerHTML = ""; elSansBubble.style.display = 'block';
         let i = 0;
         STATE.sansTimer = setInterval(() => {
             elSansBubble.innerHTML += text[i]; i++;
-            if (i >= text.length) {
-                clearInterval(STATE.sansTimer);
-                if(callback) setTimeout(callback, 1000);
-            }
+            if (i >= text.length) { clearInterval(STATE.sansTimer); if(callback) setTimeout(callback, 800); }
         }, 40);
     }
 
-    function clearSansBubble() {
-        clearInterval(STATE.sansTimer);
-        elSansBubble.style.display = 'none';
-        elSansBubble.innerHTML = "";
-    }
+    function clearSansBubble() { clearInterval(STATE.sansTimer); elSansBubble.style.display = 'none'; elSansBubble.innerHTML = ""; }
 
-    /** 💀 COMBAT PHYSICS ENGINE **/
+    /** 💀 UNIFIED PHYSICS ENGINE **/
     function physicsLoop() {
         if (STATE.phase === 'ATTACK') {
+            let dx = 0, dy = 0, doJump = false;
             let speed = 2.5;
             let oldX = STATE.soul.x, oldY = STATE.soul.y;
 
+            // 1. Gather Input (Player vs AI)
             if (STATE.owner === 'PLAYER') {
+                if (STATE.keys['ArrowLeft']) dx -= speed;
+                if (STATE.keys['ArrowRight']) dx += speed;
                 if (STATE.soul.gravity) {
-                    if ((STATE.keys['ArrowUp'] || STATE.keys['z']) && STATE.soul.grounded) {
-                        STATE.soul.vY = STATE.soul.jump;
-                        STATE.soul.grounded = false;
-                    }
-                    STATE.soul.vY += 0.2; 
-                    STATE.soul.y += STATE.soul.vY;
+                    if (STATE.keys['ArrowUp'] || STATE.keys['z']) doJump = true;
                 } else {
-                    if (STATE.keys['ArrowUp']) STATE.soul.y -= speed;
-                    if (STATE.keys['ArrowDown']) STATE.soul.y += speed;
+                    if (STATE.keys['ArrowUp']) dy -= speed;
+                    if (STATE.keys['ArrowDown']) dy += speed;
                 }
-                if (STATE.keys['ArrowLeft']) STATE.soul.x -= speed;
-                if (STATE.keys['ArrowRight']) STATE.soul.x += speed;
             } else {
-                friskDodgingAI();
+                let ai = aiController();
+                dx = ai.dx; dy = ai.dy; doJump = ai.jump;
             }
 
-            // Box Bounds
+            // 2. Apply X Movement
+            STATE.soul.x += dx;
+
+            // 3. Universal Gravity & Jumping
+            if (STATE.soul.gravity) {
+                if (doJump && STATE.soul.grounded) {
+                    STATE.soul.vY = STATE.soul.jump;
+                    STATE.soul.grounded = false;
+                }
+                STATE.soul.vY += 0.2; // Gravity constant
+                STATE.soul.y += STATE.soul.vY;
+                STATE.soul.grounded = false; // Reset to check against floor/platforms
+            } else {
+                STATE.soul.y += dy;
+            }
+
+            // 4. Platform Collision Checking
+            checkPlatforms();
+
+            // 5. Box Bounds
             STATE.soul.x = Math.max(0, Math.min(elBox.clientWidth - 18, STATE.soul.x));
             STATE.soul.y = Math.max(0, Math.min(elBox.clientHeight - 18, STATE.soul.y));
             if (STATE.soul.y >= elBox.clientHeight - 18) {
                 STATE.soul.y = elBox.clientHeight - 18;
-                STATE.soul.vY = 0;
-                STATE.soul.grounded = true;
+                if (STATE.soul.gravity) { STATE.soul.vY = 0; STATE.soul.grounded = true; }
             }
 
             STATE.soul.moving = (Math.abs(oldX - STATE.soul.x) > 0.1 || Math.abs(oldY - STATE.soul.y) > 0.1);
@@ -195,253 +190,269 @@
             elSoul.style.top = STATE.soul.y + 'px';
             
             checkHitboxes();
-
         } else if (STATE.phase === 'FIGHT_AIM') {
             STATE.fightBar.x += 6 * STATE.fightBar.dir;
             if (STATE.fightBar.x >= elBox.clientWidth - 6 || STATE.fightBar.x <= 0) STATE.fightBar.dir *= -1;
-            elCursor.style.left = STATE.fightBar.x + 'px';
+            document.getElementById('fight-cursor').style.left = STATE.fightBar.x + 'px';
         }
         requestAnimationFrame(physicsLoop);
     }
 
-    function checkHitboxes() {
+    function checkPlatforms() {
+        if (!STATE.soul.gravity || STATE.soul.vY < 0) return; // Only collide falling down
+        const plats = elProj.querySelectorAll('.platform');
         const sR = elSoul.getBoundingClientRect();
-        const bones = elProj.querySelectorAll('.bone');
-        for (let b of bones) {
-            const eR = b.getBoundingClientRect();
-            if (!(sR.right < eR.left || sR.left > eR.right || sR.bottom < eR.top || sR.top > eR.bottom)) {
-                if (b.classList.contains('blue-bone') && !STATE.soul.moving) continue; // Blue bone logic
-                
-                STATE.hp -= 1; // 1 DMG PER FRAME
-                updateHUD();
-                if (STATE.hp <= 0) { 
-                    STATE.hp = 0; 
-                    alert("GAME OVER."); 
-                    location.reload(); 
-                    return; 
-                }
+        
+        for (let p of plats) {
+            const pR = p.getBoundingClientRect();
+            // Check if soul bottom is hitting platform top
+            if (sR.bottom >= pR.top && sR.bottom <= pR.top + 10 && sR.right > pR.left && sR.left < pR.right) {
+                STATE.soul.y = p.offsetTop - 14; // Stand on top
+                STATE.soul.vY = 0;
+                STATE.soul.grounded = true;
+                STATE.soul.x += parseFloat(p.dataset.vx || 0); // Move with platform
             }
         }
     }
 
-    /** 🤖 AI: FRISK SOVEREIGNTY **/
-    function toggleQ() {
-        if (STATE.owner === 'FRISK') return; // Cannot take control back
-        STATE.owner = 'FRISK';
-        document.getElementById('p-name').innerText = "FRISK";
-        document.getElementById('p-name').style.color = "var(--purple)";
-        
-        if (STATE.phase === 'MENU' && STATE.currentMenu === 'MAIN') {
-            friskThinkAndAct();
+    function checkHitboxes() {
+        const sR = elSoul.getBoundingClientRect();
+        const bones = elProj.querySelectorAll('.bone:not(.platform)');
+        for (let b of bones) {
+            const eR = b.getBoundingClientRect();
+            if (!(sR.right < eR.left || sR.left > eR.right || sR.bottom < eR.top || sR.top > eR.bottom)) {
+                if (b.classList.contains('blue-bone') && !STATE.soul.moving) continue;
+                STATE.hp -= 1; // 1 DMG PER FRAME
+                updateHUD();
+                if (STATE.hp <= 0) { STATE.hp = 0; alert("GAME OVER."); location.reload(); return; }
+            }
         }
+    }
+
+    /** 🤖 AI: FRISK / CHARA CONTROLLER **/
+    function toggleQ() {
+        if (STATE.owner !== 'PLAYER') return;
+        const teammate = localStorage.getItem('teammate') || 'FRISK';
+        STATE.owner = teammate;
+        document.getElementById('p-name').innerText = teammate;
+        document.getElementById('p-name').style.color = teammate === 'FRISK' ? 'var(--purple)' : 'red';
+        if (STATE.phase === 'MENU' && STATE.currentMenu === 'MAIN') {
+            if (teammate === 'FRISK') friskThinkAndAct();
+            if (teammate === 'CHARA') charaThinkAndFight();
+        }
+    }
+
+    function aiController() {
+        let out = { dx: 0, dy: 0, jump: false };
+        const haz = elProj.querySelectorAll('.bone:not(.platform)');
+        
+        haz.forEach(h => {
+            const hR = h.getBoundingClientRect(), sR = elSoul.getBoundingClientRect();
+            if (Math.abs(hR.left - sR.left) < 50) {
+                out.dx = sR.left < hR.left ? -2.5 : 2.5;
+                if (h.classList.contains('blue-bone')) { out.dx = 0; out.dy = 0; }
+                else if (STATE.soul.gravity && hR.bottom > sR.bottom - 5) {
+                    out.jump = true; // Jump over floor bones
+                } else if (!STATE.soul.gravity) {
+                    out.dy = sR.top < hR.top ? -2.5 : 2.5;
+                }
+            }
+        });
+        return out;
     }
 
     function friskThinkAndAct() {
         STATE.phase = 'AI_THINKING';
+        setTimeout(() => { STATE.menuIdx = 1; updateUI(); }, 1000);
         setTimeout(() => {
-            STATE.menuIdx = 1; updateUI(); // Switch to ACT
-            setTimeout(() => {
-                openSubMenu('ACT');
-                setTimeout(() => {
-                    STATE.subIdx = 1; updateUI(); // Switch to Talk
-                    setTimeout(executeSubMenu, 1000);
-                }, 800);
-            }, 800);
-        }, 1500); // Hesitation
+            openSubMenu('ACT');
+            setTimeout(() => { STATE.subIdx = 1; updateUI(); setTimeout(executeSubMenu, 1000); }, 800);
+        }, 1500);
     }
-
-    function friskDodgingAI() {
-        const haz = elProj.querySelectorAll('.bone');
-        let dangerX = 0, dangerY = 0;
-        
-        haz.forEach(h => {
-            const hR = h.getBoundingClientRect(), sR = elSoul.getBoundingClientRect();
-            if (Math.abs(hR.left - sR.left) < 40) {
-                dangerX = sR.left < hR.left ? -2.5 : 2.5;
-                if (h.classList.contains('blue-bone')) { dangerX = 0; dangerY = 0; } // Stop for blue
-                else if (STATE.soul.gravity && STATE.soul.grounded) STATE.soul.vY = STATE.soul.jump;
-                else if (!STATE.soul.gravity) dangerY = sR.top < hR.top ? -2.5 : 2.5;
-            }
-        });
-
-        STATE.soul.x += dangerX;
-        STATE.soul.y += dangerY;
+    
+    function charaThinkAndFight() {
+        STATE.phase = 'AI_THINKING';
+        setTimeout(() => {
+            STATE.menuIdx = 0; updateUI();
+            setTimeout(() => {
+                STATE.phase = 'FIGHT_AIM'; document.getElementById('fight-target').style.display = 'block';
+                setTimeout(executeStrike, 600);
+            }, 500);
+        }, 1000);
     }
 
     /** ⚔️ FIGHT SEQUENCE **/
-    function startFightBar() {
-        STATE.phase = 'FIGHT_AIM';
-        elText.style.display = 'none';
-        elTarget.style.display = 'block';
-        STATE.fightBar.x = 0;
-    }
-
     function executeStrike() {
-        STATE.phase = 'ANIMATION';
-        elTarget.style.display = 'none';
-        
+        STATE.phase = 'ANIMATION'; document.getElementById('fight-target').style.display = 'none';
         const anim = document.getElementById('strike-anim');
-        anim.style.opacity = '1';
-        setTimeout(() => { anim.style.opacity = '0'; }, 200);
-
+        anim.style.opacity = '1'; setTimeout(() => anim.style.opacity = '0', 200);
+        
         setTimeout(() => {
-            const sans = document.getElementById('sans-container');
-            const miss = document.getElementById('miss-text');
-            sans.style.transform = 'translateX(-100px)'; // Slide left
-            miss.style.opacity = '1'; miss.style.top = '-10px';
-
+            const sans = document.getElementById('sans-container'), miss = document.getElementById('miss-text');
+            sans.style.transform = 'translateX(-100px)'; miss.style.opacity = '1'; miss.style.top = '-10px';
             setTimeout(() => {
-                sans.style.transform = 'translateX(-50%)'; // Slide back
-                miss.style.opacity = '0'; miss.style.top = '20px';
-                
-                sansSpeak("what? you think i'm just \ngonna stand there?", () => {
-                    clearSansBubble();
-                    triggerAttackSequence();
-                });
+                sans.style.transform = 'translateX(-50%)'; miss.style.opacity = '0'; miss.style.top = '20px';
+                sansSpeak("heh.", triggerAttackSequence);
             }, 1000);
         }, 100);
     }
 
-    /** 🌀 ENEMY ATTACK PATTERNS **/
+    /** 🌀 CUSTOM ENEMY ATTACKS **/
     function triggerAttackSequence() {
-        STATE.turn++;
-        STATE.phase = 'ATTACK';
-        elText.style.display = 'none';
-        elSub.style.display = 'none';
-        STATE.soul.x = 275; STATE.soul.y = 60;
-        elProj.innerHTML = ''; // Clear previous bones safely
+        STATE.turn++; STATE.phase = 'ATTACK';
+        elText.style.display = 'none'; elSub.style.display = 'none';
+        STATE.soul.x = 275; STATE.soul.y = 60; elProj.innerHTML = '';
         
-        if (STATE.turn === 1) attack1_SmallBones();
-        else if (STATE.turn === 2) attack2_SlowBlueBone();
-        else attack3_RandomBones(); // Fallback for turn 3+
+        if (STATE.turn === 1) attack1_AlternatingBouncers();
+        else if (STATE.turn === 2) attack2_ZoneAndBlue();
+        else attack3_PlatformsAndBlue();
     }
 
-    // Turn 1: 10 small bones left to right
-    function attack1_SmallBones() {
-        STATE.soul.gravity = false;
-        document.getElementById('soul-svg').setAttribute('fill', 'red');
+    // Turn 1: 10 Alternating Bones that jump up and down
+    function attack1_AlternatingBouncers() {
+        STATE.soul.gravity = false; document.getElementById('soul-svg').setAttribute('fill', 'red');
+        sansSpeak("our reports showed a\nmassive anomaly in the\ntimespace continuum.");
         
-        for(let i=0; i<10; i++) {
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                if (STATE.phase !== 'ATTACK') return;
+                const isLeft = (i % 2 === 0);
+                const b = document.createElement('div');
+                b.className = 'bone'; b.style.width = '12px'; b.style.height = '40px';
+                b.style.left = isLeft ? '-20px' : '580px';
+                b.style.top = '20px';
+                elProj.appendChild(b);
+                
+                let bx = isLeft ? -20 : 580;
+                let by = 20, vY = 0;
+                
+                const int = setInterval(() => {
+                    bx += isLeft ? 3 : -3; 
+                    vY += 0.2; by += vY; // Bouncing physics
+                    if (by >= 80) { by = 80; vY = -4; } // Bounce off "floor"
+                    
+                    b.style.left = bx + 'px'; b.style.top = by + 'px';
+                    if ((isLeft && bx > 600) || (!isLeft && bx < -20) || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
+                }, 16);
+            }, i * 600);
+        }
+        setTimeout(endTurn, 7000);
+    }
+
+    // Turn 2: Blue Bones Left->Right with Warning Zones Top/Bottom
+    function attack2_ZoneAndBlue() {
+        STATE.soul.gravity = false; document.getElementById('soul-svg').setAttribute('fill', 'red');
+        sansSpeak("timelines jumping left\nand right, stopping\nand starting...");
+
+        // Blue Bones L -> R
+        for (let i = 0; i < 12; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
                 const b = document.createElement('div');
-                b.className = 'bone';
-                b.style.width = '12px'; b.style.height = '40px';
-                b.style.left = '-20px'; b.style.bottom = (10 + Math.random()*60) + 'px';
+                b.className = 'bone blue-bone'; b.style.width = '12px'; b.style.height = '80px';
+                b.style.left = '-20px'; b.style.top = '25px';
                 elProj.appendChild(b);
                 let bx = -20;
                 const int = setInterval(() => {
-                    bx += 3.5; b.style.left = bx + 'px'; // Move right
-                    if (bx > elBox.clientWidth + 20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
+                    bx += 3.5; b.style.left = bx + 'px';
+                    if (bx > 600 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
                 }, 16);
             }, i * 500);
         }
-        setTimeout(endTurn, 6500);
+
+        // Bone Zones Top/Bottom (5 times)
+        for (let j = 0; j < 5; j++) {
+            setTimeout(() => {
+                if (STATE.phase !== 'ATTACK') return;
+                const isTop = Math.random() > 0.5;
+                const warn = document.createElement('div');
+                warn.className = 'zone-warn'; warn.style.width = '100%'; warn.style.height = '40px';
+                warn.style.left = '0'; warn.style.top = isTop ? '0' : '90px';
+                elProj.appendChild(warn);
+
+                setTimeout(() => {
+                    warn.remove();
+                    const thrust = document.createElement('div');
+                    thrust.className = 'bone'; thrust.style.width = '100%'; thrust.style.height = '40px';
+                    thrust.style.left = '0'; thrust.style.top = isTop ? '0' : '90px';
+                    elProj.appendChild(thrust);
+                    setTimeout(() => thrust.remove(), 400);
+                }, 600); // 600ms warning
+            }, j * 1200);
+        }
+        setTimeout(endTurn, 7000);
     }
 
-    // Turn 2: Giant slow blue bone + Sans talking
-    function attack2_SlowBlueBone() {
-        STATE.soul.gravity = false; 
-        document.getElementById('soul-svg').setAttribute('fill', 'red');
-        
-        const b = document.createElement('div');
-        b.className = 'bone blue-bone';
-        b.style.width = '25px'; b.style.height = '140px'; 
-        b.style.left = '-30px'; b.style.bottom = '0px';
-        elProj.appendChild(b);
-        
-        let bx = -30;
-        const int = setInterval(() => {
-            bx += 1.2; b.style.left = bx + 'px'; 
-            if (bx > elBox.clientWidth + 20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
-        }, 16);
+    // Turn 3: Platforms + Blue Bones
+    function attack3_PlatformsAndBlue() {
+        STATE.soul.gravity = true; document.getElementById('soul-svg').setAttribute('fill', 'blue');
+        sansSpeak("until suddenly,\neverything ends.");
 
-        sansSpeak("so.\nyou're still here.\njust standing around.\ntaking it all in.", () => {
-            setTimeout(() => sansSpeak("i gotta respect the\ncommitment to doing\nabsolutely nothing.", null), 1000);
-        });
+        // Spawn 4 Platforms
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => {
+                if (STATE.phase !== 'ATTACK') return;
+                const p = document.createElement('div');
+                p.className = 'bone platform'; p.style.width = '50px'; p.style.height = '10px';
+                p.style.left = '580px'; p.style.top = (40 + Math.random() * 40) + 'px';
+                p.dataset.vx = "-2"; // Speed attached for physics check
+                elProj.appendChild(p);
+                
+                let px = 580;
+                const int = setInterval(() => {
+                    px -= 2; p.style.left = px + 'px';
+                    if (px < -60 || STATE.phase !== 'ATTACK') { clearInterval(int); p.remove(); }
+                }, 16);
+            }, i * 1000);
+        }
 
-        setTimeout(endTurn, 8000);
-    }
-
-    function attack3_RandomBones() {
-        STATE.soul.gravity = true;
-        document.getElementById('soul-svg').setAttribute('fill', 'blue');
-        for(let i=0; i<8; i++) {
+        // Tall Blue Bones moving fast
+        for (let i = 0; i < 8; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
                 const b = document.createElement('div');
-                b.className = 'bone';
-                b.style.width = '12px'; b.style.height = '60px';
-                b.style.left = '560px'; b.style.bottom = '0px';
+                b.className = 'bone blue-bone'; b.style.width = '15px'; b.style.height = '100px';
+                b.style.left = '580px'; b.style.bottom = '0px';
                 elProj.appendChild(b);
-                let bx = 560;
+                let bx = 580;
                 const int = setInterval(() => {
                     bx -= 4; b.style.left = bx + 'px';
                     if (bx < -20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
                 }, 16);
-            }, i * 600);
+            }, 800 + i * 800);
         }
-        setTimeout(endTurn, 5000);
+        setTimeout(endTurn, 7000);
     }
 
     function endTurn() {
-        STATE.phase = 'MENU';
-        STATE.currentMenu = 'MAIN';
-        clearSansBubble();
-        elProj.innerHTML = ''; // Clean up arena
-        
-        const flavorTexts = [
-            "* The wind is howling.",
-            "* Smells like bone dirt.",
-            "* Sans is staring right through you."
-        ];
+        STATE.phase = 'MENU'; STATE.currentMenu = 'MAIN';
+        clearSansBubble(); elProj.innerHTML = '';
         
         if (STATE.owner === 'FRISK') friskThinkAndAct();
-        else typeFlavor(flavorTexts[Math.floor(Math.random()*flavorTexts.length)]);
+        else if (STATE.owner === 'CHARA') charaThinkAndFight();
+        else typeFlavor("* Smells like bone dirt.");
     }
 
-    /** 🎛️ UI LOGIC **/
+    /** 🎛️ UI & INPUT **/
     function updateUI() {
-        if (STATE.currentMenu === 'MAIN') {
-            document.querySelectorAll('.btn').forEach((b,i) => b.classList.toggle('selected', i === STATE.menuIdx));
-        } else if (STATE.currentMenu === 'SUB') {
-            document.querySelectorAll('.sub-opt').forEach((opt,i) => {
-                opt.style.color = (i === STATE.subIdx ? 'var(--gold)' : '#fff');
-            });
-        }
+        if (STATE.currentMenu === 'MAIN') document.querySelectorAll('.btn').forEach((b,i) => b.classList.toggle('selected', i === STATE.menuIdx));
+        else document.querySelectorAll('.sub-opt').forEach((opt,i) => opt.style.color = (i === STATE.subIdx ? 'var(--gold)' : '#fff'));
     }
 
     function openSubMenu(type) {
-        STATE.currentMenu = 'SUB';
-        STATE.subIdx = 0;
-        elText.style.display = 'none';
-        elSub.style.display = 'block';
-
-        if (type === 'ACT') {
-            elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Check</div><div class="sub-opt">* Talk</div>`;
-        } else if (type === 'ITEM') {
-            elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* No Items</div>`;
-        } else if (type === 'MERCY') {
-            elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Spare</div>`;
-        }
+        STATE.currentMenu = 'SUB'; STATE.subIdx = 0; elText.style.display = 'none'; elSub.style.display = 'block';
+        if (type === 'ACT') elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Check</div><div class="sub-opt">* Talk</div>`;
+        else if (type === 'MERCY') elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Spare</div>`;
+        else elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* No Items</div>`;
     }
 
     function executeSubMenu() {
         if (STATE.menuIdx === 1) { // ACT
-            if (STATE.subIdx === 1) { // Talk
-                typeFlavor("* You try to talk to Sans.\n* He ignores you.", () => {
-                    sansSpeak("try harder next time.", triggerAttackSequence);
-                });
-            } else { // Check
-                typeFlavor("* SANS - 1 ATK 1 DEF\n* The easiest enemy.", () => { setTimeout(triggerAttackSequence, 1000); });
-            }
-        } else if (STATE.menuIdx === 2) { // ITEM
-            typeFlavor("* You don't have any items.", () => { setTimeout(triggerAttackSequence, 1000); });
+            if (STATE.subIdx === 1) typeFlavor("* You try to talk to Sans.\n* He ignores you.", () => { sansSpeak("try harder next time.", triggerAttackSequence); });
+            else typeFlavor("* SANS - 1 ATK 1 DEF\n* The easiest enemy.", () => { setTimeout(triggerAttackSequence, 1000); });
         } else if (STATE.menuIdx === 3) { // MERCY
-            typeFlavor("* You are sparing Sans.", () => {
-                sansSpeak("... yeah, ok.", triggerAttackSequence);
-            });
-        }
+            typeFlavor("* You are sparing Sans.", () => { sansSpeak("... yeah, ok.", triggerAttackSequence); });
+        } else typeFlavor("* Nothing to use.", () => { setTimeout(triggerAttackSequence, 1000); });
     }
 
     function updateHUD() {
@@ -452,36 +463,27 @@
     window.onkeydown = (e) => {
         STATE.keys[e.key] = true;
         if (e.key === 'q' || e.key === 'Q') toggleQ();
-
-        if (STATE.owner === 'PLAYER') {
-            if (STATE.phase === 'MENU') {
-                if (STATE.currentMenu === 'MAIN') {
-                    if (e.key === 'ArrowLeft') STATE.menuIdx = (STATE.menuIdx + 3) % 4;
-                    if (e.key === 'ArrowRight') STATE.menuIdx = (STATE.menuIdx + 1) % 4;
-                    updateUI();
-                    if (e.key === 'z' || e.key === 'Z') {
-                        if (STATE.menuIdx === 0) startFightBar();
-                        else if (STATE.menuIdx === 1) openSubMenu('ACT');
-                        else if (STATE.menuIdx === 2) openSubMenu('ITEM');
-                        else if (STATE.menuIdx === 3) openSubMenu('MERCY');
-                    }
-                } else if (STATE.currentMenu === 'SUB') {
-                    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') STATE.subIdx = (STATE.subIdx === 0 ? 1 : 0);
-                    if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; elSub.style.display = 'none'; typeFlavor("* Sans is waiting."); }
-                    if (e.key === 'z' || e.key === 'Z') executeSubMenu();
-                    updateUI();
+        if (STATE.owner === 'PLAYER' && STATE.phase === 'MENU') {
+            if (STATE.currentMenu === 'MAIN') {
+                if (e.key === 'ArrowLeft') STATE.menuIdx = (STATE.menuIdx + 3) % 4;
+                if (e.key === 'ArrowRight') STATE.menuIdx = (STATE.menuIdx + 1) % 4;
+                updateUI();
+                if (e.key === 'z' || e.key === 'Z') {
+                    if (STATE.menuIdx === 0) startFightBar();
+                    else openSubMenu(STATE.menuIdx === 1 ? 'ACT' : STATE.menuIdx === 2 ? 'ITEM' : 'MERCY');
                 }
-            } else if (STATE.phase === 'FIGHT_AIM') {
-                if (e.key === 'z' || e.key === 'Z') executeStrike();
+            } else if (STATE.currentMenu === 'SUB') {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') STATE.subIdx = (STATE.subIdx === 0 ? 1 : 0);
+                if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; elSub.style.display = 'none'; typeFlavor("* Sans is waiting."); }
+                if (e.key === 'z' || e.key === 'Z') executeSubMenu();
+                updateUI();
             }
-        }
+        } else if (STATE.owner === 'PLAYER' && STATE.phase === 'FIGHT_AIM' && (e.key === 'z' || e.key === 'Z')) executeStrike();
     };
     window.onkeyup = (e) => STATE.keys[e.key] = false;
 
-    // Start Sequence
-    STATE.phase = 'SANS_TALK';
-    sansSpeak("heya.\nready?", () => { clearSansBubble(); typeFlavor("* The wind is howling."); });
-    physicsLoop();
+    // Start
+    STATE.phase = 'SANS_TALK'; sansSpeak("heya.\nready?", () => { clearSansBubble(); typeFlavor("* The wind is howling."); }); physicsLoop();
 </script>
 </body>
 </html>
