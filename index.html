@@ -2,42 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UNDERTALE: THE COUNCIL TERMINAL</title>
+    <title>UNDERTALE: THE COUNCIL</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        h1 { font-size: 40px; margin-bottom: 50px; text-shadow: 4px 4px #f00; }
-        .menu-option { font-size: 24px; margin: 20px; cursor: pointer; display: flex; align-items: center; transition: 0.2s; }
-        .menu-option:hover, .menu-option.active { color: #ffff00; }
-        .heart { width: 20px; height: 20px; background: red; margin-right: 15px; visibility: hidden; clip-path: path('M10,30 A5,5 0,0,1 20,30 A5,5 0,0,1 30,30 L20,40 Z'); transform: scale(2) translate(-10px, -10px); }
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        #menu-box { text-align: center; opacity: 0; animation: fadeIn 2s forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        h1 { font-size: 64px; margin-bottom: 60px; letter-spacing: 10px; }
+        .option { font-size: 32px; margin: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
+        .option.active { color: #ffff00; } /* Selected is yellow */
+        .heart { width: 20px; height: 20px; background: red; margin-right: 20px; visibility: hidden; clip-path: path('M10,30 A5,5 0,0,1 20,30 A5,5 0,0,1 30,30 L20,40 Z'); transform: scale(2.5); }
         .active .heart { visibility: visible; }
-        #footer { position: absolute; bottom: 20px; font-size: 12px; color: #555; }
+        
+        #sub-menu { display: none; margin-top: 40px; border: 4px solid #fff; padding: 20px; width: 400px; }
     </style>
 </head>
 <body>
 
-    <h1>UNDERTALE</h1>
+    <div id="menu-box">
+        <h1 id="title">UNDERTALE</h1>
+        
+        <div id="main-options">
+            <div class="option active" data-type="start"><div class="heart"></div> START</div>
+            <div class="option" data-type="options"><div class="heart"></div> SETTINGS</div>
+        </div>
 
-    <div class="menu-option active" onclick="location.href='sans_fight.html'">
-        <div class="heart"></div> UNDERTALE: PACIFIST
+        <div id="sub-menu">
+            <h2 style="font-size: 20px;">CHOOSE YOUR TEAMMATE</h2>
+            <div class="option active" data-char="FRISK"><div class="heart"></div> FRISK</div>
+            <div class="option" data-char="CHARA"><div class="heart"></div> CHARA</div>
+        </div>
     </div>
-    <div class="menu-option">
-        <div class="heart"></div> UNDERTALE: GENOCIDE (LOCKED)
-    </div>
-    <div class="menu-option">
-        <div class="heart"></div> OPTIONS
-    </div>
-
-    <div id="footer">Press [Z] to Select | Arrow Keys to Navigate</div>
 
     <script>
-        let idx = 0;
-        const options = document.querySelectorAll('.menu-option');
+        let view = "main";
+        let mainIdx = 0;
+        let subIdx = 0;
+
         window.onkeydown = (e) => {
-            if(e.key === 'ArrowDown') idx = (idx + 1) % options.length;
-            if(e.key === 'ArrowUp') idx = (idx + options.length - 1) % options.length;
-            options.forEach((opt, i) => opt.classList.toggle('active', i === idx));
-            if(e.key === 'z' || e.key === 'Z') options[idx].click();
+            const currentOptions = view === "main" ? document.querySelectorAll('#main-options .option') : document.querySelectorAll('#sub-menu .option');
+            let idx = view === "main" ? mainIdx : subIdx;
+
+            if(e.key === 'ArrowDown') idx = (idx + 1) % currentOptions.length;
+            if(e.key === 'ArrowUp') idx = (idx + currentOptions.length - 1) % currentOptions.length;
+
+            if(view === "main") mainIdx = idx; else subIdx = idx;
+
+            currentOptions.forEach((opt, i) => opt.classList.toggle('active', i === idx));
+
+            if(e.key === 'z' || e.key === 'Z') {
+                const selected = currentOptions[idx];
+                if(view === "main" && selected.dataset.type === "start") {
+                    view = "sub";
+                    document.getElementById('main-options').style.display = 'none';
+                    document.getElementById('sub-menu').style.display = 'block';
+                } else if(view === "sub") {
+                    const teammate = selected.dataset.char;
+                    sessionStorage.setItem('teammate', teammate);
+                    location.href = 'UTpaciSANS.html';
+                }
+            }
         };
     </script>
 </body>
