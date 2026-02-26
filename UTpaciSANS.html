@@ -4,50 +4,57 @@
     <meta charset="UTF-8">
     <title>UT PACIFIST: SANS BATTLE</title>
     <style>
-        @font-face { font-family: 'MarsNeedsCunnilingus'; src: url('https://db.onlinewebfonts.com/t/332a6e92f5d94bc6f01df2f6f50b44b8.woff2') format('woff2'); }
+        /* Importing an Undertale-style font */
+        @font-face { font-family: 'DeterminationSans'; src: url('https://db.onlinewebfonts.com/t/332a6e92f5d94bc6f01df2f6f50b44b8.woff2') format('woff2'); }
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
-        :root { --red: #ff0000; --gold: #ffff00; --cyan: #00ffff; --blue: #0033ff; }
+        :root { --red: #ff0000; --gold: #ffff00; --cyan: #00ffff; --blue: #0033ff; --purple: #d946ef; }
         
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', monospace; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; user-select: none; }
+        body { background: #000; color: #fff; font-family: 'DeterminationSans', 'Press Start 2P', sans-serif; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; user-select: none; }
         #game-window { width: 640px; height: 480px; position: relative; background: #000; overflow: hidden; transform: scale(1.5); transform-origin: center; border: 2px solid #222; }
 
-        /* SANS SPRITE & MISS ANIMATION */
+        /* SANS SPRITE */
         #sans-container { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); text-align: center; transition: transform 0.2s ease-out; z-index: 10; }
         .skeleton { width: 70px; height: 80px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><rect x="15" y="5" width="20" height="20" fill="white"/><rect x="20" y="10" width="4" height="6" fill="black"/><rect x="30" y="10" width="4" height="6" fill="black"/><rect x="24" y="18" width="6" height="3" fill="black"/><rect x="10" y="27" width="30" height="15" fill="%23ccc"/><rect x="15" y="42" width="8" height="8" fill="white"/><rect x="27" y="42" width="8" height="8" fill="white"/></svg>') no-repeat center/contain; }
+        
+        /* MISS ANIMATION */
         #miss-text { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-family: 'Arial', sans-serif; font-weight: bold; font-size: 24px; color: #ccc; opacity: 0; pointer-events: none; z-index: 100; transition: top 1s ease-out, opacity 0.5s; }
+
+        /* SANS DIALOGUE BUBBLE */
+        #sans-bubble { position: absolute; top: 20px; left: 360px; width: 180px; min-height: 50px; background: #fff; color: #000; border: 3px solid #000; border-radius: 10px; padding: 10px; font-family: 'Comic Sans MS', sans-serif; font-size: 14px; line-height: 1.2; display: none; z-index: 50; }
+        #sans-bubble::before { content: ''; position: absolute; top: 50%; left: -15px; transform: translateY(-50%); border-width: 10px 15px 10px 0; border-style: solid; border-color: transparent #fff transparent transparent; }
 
         /* BATTLE BOX & SOUL */
         #battle-box { position: absolute; bottom: 125px; left: 50%; transform: translateX(-50%); width: 565px; height: 130px; border: 4px solid #fff; background: #000; overflow: hidden; box-sizing: border-box; }
         #soul { width: 14px; height: 14px; position: absolute; z-index: 1000; }
 
-        /* UI MENUS & TEXT */
-        #text-box { position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; font-size: 14px; line-height: 24px; display: block; white-space: pre-wrap; font-family: 'Press Start 2P', monospace; }
-        #sub-menu { position: absolute; top: 10px; left: 30px; font-size: 14px; line-height: 28px; display: none; }
-        .sub-opt { display: inline-block; width: 45%; margin-bottom: 10px; }
+        /* FLAVOR TEXT BOX */
+        #text-box { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; font-size: 22px; line-height: 30px; display: block; white-space: pre-wrap; font-family: 'DeterminationSans', monospace; }
+        #sub-menu { position: absolute; top: 15px; left: 40px; font-size: 22px; line-height: 35px; display: none; }
+        .sub-opt { display: inline-block; width: 45%; margin-bottom: 5px; }
         
-        /* HUD (1:1 Alignment) */
-        #hud { position: absolute; bottom: 85px; left: 30px; display: flex; align-items: center; font-size: 12px; font-weight: bold; width: 580px; }
+        /* FIGHT BAR MINI-GAME */
+        #fight-target { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect width="100%" height="100%" fill="black"/><image href="https://i.imgur.com/Bf98S0D.png" width="100%" height="100%" preserveAspectRatio="none"/></svg>'); display: none; z-index: 10; }
+        #fight-cursor { position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: #fff; box-shadow: 0 0 5px #fff; }
+        #strike-anim { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25px; height: 110px; background: #fff; opacity: 0; z-index: 50; }
+
+        /* HUD */
+        #hud { position: absolute; bottom: 85px; left: 30px; display: flex; align-items: center; font-size: 20px; font-weight: bold; width: 580px; }
         #name-lv { width: 200px; }
-        .hp-label { margin-right: 10px; font-size: 10px; }
-        .hp-bar-bg { width: 30px; height: 14px; background: red; position: relative; margin-right: 10px; }
+        .hp-label { margin-right: 10px; font-size: 14px; }
+        .hp-bar-bg { width: 35px; height: 18px; background: red; position: relative; margin-right: 10px; }
         #hp-fill { height: 100%; background: var(--gold); width: 100%; }
         #hp-text { width: 100px; }
 
         /* BUTTONS */
         #menu-bar { position: absolute; bottom: 15px; left: 0; width: 100%; display: flex; justify-content: center; gap: 15px; }
-        .btn { width: 110px; height: 42px; border: 2px solid #ff8000; color: #ff8000; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; gap: 8px; }
+        .btn { width: 110px; height: 42px; border: 2px solid #ff8000; color: #ff8000; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; gap: 8px; }
         .btn.selected { color: var(--gold); border-color: var(--gold); }
-        .btn-icon { width: 14px; height: 14px; background: #ff8000; clip-path: path('M7,14 A3.5,3.5 0,0,1 14,14 A3.5,3.5 0,0,1 21,14 L14,21 Z'); transform: scale(1.5) translate(-4px, -10px); }
+        .btn-icon { width: 14px; height: 14px; background: #ff8000; clip-path: path('M7,14 A3.5,3.5 0,0,1 14,14 A3.5,3.5 0,0,1 21,14 L14,21 Z'); transform: scale(1.2); }
         .btn.selected .btn-icon { background: var(--gold); }
 
-        /* FIGHT BAR MINI-GAME */
-        #fight-target { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect width="100%" height="100%" fill="black"/><rect x="45%" y="0" width="10%" height="100%" fill="%2300ff00" opacity="0.5"/></svg>'); display: none; z-index: 10; }
-        #fight-cursor { position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #fff; box-shadow: 0 0 5px #fff; }
-        #strike-anim { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 100px; background: #fff; opacity: 0; z-index: 50; }
-
         /* PROJECTILES */
-        .bone { position: absolute; background: #fff; border-radius: 2px; }
+        .bone { position: absolute; background: #fff; border-radius: 4px; }
         .blue-bone { background: var(--cyan); }
     </style>
 </head>
@@ -57,6 +64,7 @@
     <div id="sans-container">
         <div class="skeleton"></div>
     </div>
+    <div id="sans-bubble"></div>
     <div id="miss-text">MISS</div>
     <div id="strike-anim"></div>
 
@@ -87,39 +95,58 @@
 
 <script>
     const STATE = {
-        hp: 20, max: 20, owner: 'PLAYER', phase: 'MENU',
-        menuIdx: 0, subIdx: 0, currentMenu: 'MAIN',
+        hp: 20, max: 20, owner: 'PLAYER', phase: 'SANS_TALK',
+        menuIdx: 0, subIdx: 0, currentMenu: 'MAIN', turn: 0,
         soul: { x: 275, y: 60, vY: 0, gravity: false, jump: -5.5, grounded: false, moving: false },
         fightBar: { x: 0, dir: 1 },
         keys: {},
-        dialogueTimer: null
+        dialogueTimer: null, sansTimer: null,
+        friskSkill: parseFloat(localStorage.getItem('frisk_skill')) || 1.0
     };
 
     const soul = document.getElementById('soul');
     const box = document.getElementById('battle-box');
     const textBox = document.getElementById('text-box');
-    const subMenu = document.getElementById('sub-menu');
+    const sansBubble = document.getElementById('sans-bubble');
 
-    /** 🗣️ TYPEWRITER **/
-    function typeWriter(text, instant = false) {
+    /** 🗣️ TYPEWRITERS **/
+    function typeFlavor(text, callback) {
         clearInterval(STATE.dialogueTimer);
         textBox.innerHTML = "";
-        STATE.phase = 'MENU';
-        STATE.currentMenu = 'MAIN';
-        
-        if (instant) {
-            textBox.innerHTML = text;
-            return;
-        }
-
+        STATE.phase = 'TYPING';
         let i = 0;
         STATE.dialogueTimer = setInterval(() => {
             textBox.innerHTML += text[i]; i++;
-            if (i >= text.length) clearInterval(STATE.dialogueTimer);
+            if (i >= text.length) {
+                clearInterval(STATE.dialogueTimer);
+                STATE.phase = 'MENU';
+                STATE.currentMenu = 'MAIN';
+                if(callback) callback();
+            }
         }, 30);
     }
 
-    /** 💀 COMBAT PHYSICS & 1 DMG/FRAME **/
+    function sansSpeak(text, callback) {
+        clearInterval(STATE.sansTimer);
+        sansBubble.innerHTML = "";
+        sansBubble.style.display = 'block';
+        let i = 0;
+        STATE.sansTimer = setInterval(() => {
+            sansBubble.innerHTML += text[i]; i++;
+            if (i >= text.length) {
+                clearInterval(STATE.sansTimer);
+                if(callback) setTimeout(callback, 1000);
+            }
+        }, 40);
+    }
+
+    function clearSansBubble() {
+        clearInterval(STATE.sansTimer);
+        sansBubble.style.display = 'none';
+        sansBubble.innerHTML = "";
+    }
+
+    /** 💀 COMBAT PHYSICS **/
     function physicsLoop() {
         if (STATE.phase === 'ATTACK') {
             let speed = 2.5;
@@ -131,7 +158,7 @@
                         STATE.soul.vY = STATE.soul.jump;
                         STATE.soul.grounded = false;
                     }
-                    STATE.soul.vY += 0.2; // 1:1 Gravity acceleration
+                    STATE.soul.vY += 0.2; 
                     STATE.soul.y += STATE.soul.vY;
                 } else {
                     if (STATE.keys['ArrowUp']) STATE.soul.y -= speed;
@@ -140,13 +167,12 @@
                 if (STATE.keys['ArrowLeft']) STATE.soul.x -= speed;
                 if (STATE.keys['ArrowRight']) STATE.soul.x += speed;
             } else {
-                friskAI();
+                friskDodgingAI();
             }
 
             // Box Bounds
             STATE.soul.x = Math.max(0, Math.min(box.clientWidth - 18, STATE.soul.x));
             STATE.soul.y = Math.max(0, Math.min(box.clientHeight - 18, STATE.soul.y));
-            
             if (STATE.soul.y >= box.clientHeight - 18) {
                 STATE.soul.y = box.clientHeight - 18;
                 STATE.soul.vY = 0;
@@ -163,177 +189,203 @@
             if (STATE.fightBar.x >= box.clientWidth || STATE.fightBar.x <= 0) STATE.fightBar.dir *= -1;
             document.getElementById('fight-cursor').style.left = STATE.fightBar.x + 'px';
         }
-
         requestAnimationFrame(physicsLoop);
     }
 
     function checkHitboxes() {
         const sR = soul.getBoundingClientRect();
         const bones = document.querySelectorAll('.bone');
-        
         for (let b of bones) {
             const eR = b.getBoundingClientRect();
             if (!(sR.right < eR.left || sR.left > eR.right || sR.bottom < eR.top || sR.top > eR.bottom)) {
                 if (b.classList.contains('blue-bone') && !STATE.soul.moving) continue;
-                
-                // 1 DMG PER FRAME (Instant Death Mechanics)
-                STATE.hp -= 1;
+                STATE.hp -= 1; // 1 DMG PER FRAME
                 updateHUD();
-                if (STATE.hp <= 0) {
-                    STATE.hp = 0;
-                    alert("GAME OVER. STAY DETERMINED.");
-                    location.reload();
-                    return;
-                }
+                if (STATE.hp <= 0) { STATE.hp = 0; alert("GAME OVER."); location.reload(); return; }
             }
         }
     }
 
-    /** 🤖 FRISK SOVEREIGNTY AI **/
+    /** 🤖 AI: FRISK / CHARA SOVEREIGNTY **/
     function toggleQ() {
-        if (STATE.owner === 'FRISK') return; // Cannot take control back
-        STATE.owner = 'FRISK';
-        document.getElementById('p-name').innerText = "FRISK";
-        document.getElementById('p-name').style.color = "var(--purple)";
+        if (STATE.owner !== 'PLAYER') return; 
+        const teammate = localStorage.getItem('teammate') || 'FRISK';
+        STATE.owner = teammate;
+        document.getElementById('p-name').innerText = teammate;
+        document.getElementById('p-name').style.color = teammate === 'FRISK' ? 'var(--purple)' : 'red';
         
-        if (STATE.phase === 'MENU' && STATE.currentMenu === 'MAIN') {
-            setTimeout(() => {
-                STATE.menuIdx = 1; // ACT
-                updateUI();
-                setTimeout(() => openSubMenu('ACT'), 500);
-            }, 500);
+        if (STATE.phase === 'MENU') {
+            if (teammate === 'FRISK') friskThinkAndAct();
+            if (teammate === 'CHARA') charaThinkAndFight();
         }
     }
 
-    function friskAI() {
-        // Pixel-perfect AI Dodge
+    // Frisk hesitates, then acts peacefully.
+    function friskThinkAndAct() {
+        STATE.phase = 'AI_THINKING';
+        setTimeout(() => {
+            STATE.menuIdx = 1; updateUI(); // Switch to ACT
+            setTimeout(() => {
+                openSubMenu('ACT');
+                setTimeout(() => {
+                    STATE.subIdx = 1; updateUI(); // Switch to Talk
+                    setTimeout(executeSubMenu, 1000);
+                }, 800);
+            }, 800);
+        }, 1500); // 1.5s Hesitation
+    }
+
+    // Chara is aggressive.
+    function charaThinkAndFight() {
+        STATE.phase = 'AI_THINKING';
+        setTimeout(() => {
+            STATE.menuIdx = 0; updateUI();
+            setTimeout(() => {
+                STATE.phase = 'FIGHT_AIM';
+                textBox.innerHTML = '';
+                document.getElementById('fight-target').style.display = 'block';
+                // Chara perfectly stops the bar in the middle
+                setTimeout(() => executeStrike(), 500);
+            }, 500);
+        }, 1000);
+    }
+
+    function friskDodgingAI() {
+        // Frisk's dodging isn't perfect immediately. Scaled by friskSkill.
         const haz = document.querySelectorAll('.bone');
         let dangerX = 0, dangerY = 0;
         
         haz.forEach(h => {
             const hR = h.getBoundingClientRect(), sR = soul.getBoundingClientRect();
-            if (Math.abs(hR.left - sR.left) < 40) {
-                dangerX = sR.left < hR.left ? -3 : 3;
-                if (STATE.soul.gravity && STATE.soul.grounded) STATE.soul.vY = STATE.soul.jump;
-                else if (!STATE.soul.gravity) dangerY = sR.top < hR.top ? -3 : 3;
+            if (Math.abs(hR.left - sR.left) < (40 * STATE.friskSkill)) {
+                dangerX = sR.left < hR.left ? -2.5 : 2.5;
+                if (h.classList.contains('blue-bone')) { dangerX = 0; dangerY = 0; } // Stop for blue
+                else if (STATE.soul.gravity && STATE.soul.grounded) STATE.soul.vY = STATE.soul.jump;
             }
         });
 
         STATE.soul.x += dangerX;
         STATE.soul.y += dangerY;
+        
+        // Save skill improvement slightly each frame she survives
+        STATE.friskSkill = Math.min(2.0, STATE.friskSkill + 0.0001);
+        localStorage.setItem('frisk_skill', STATE.friskSkill);
     }
 
-    /** ⚔️ FIGHT & MISS ANIMATION **/
+    /** ⚔️ FIGHT SEQUENCE **/
     function executeStrike() {
         STATE.phase = 'ANIMATION';
         document.getElementById('fight-target').style.display = 'none';
         
-        // Slice Animation
         const anim = document.getElementById('strike-anim');
         anim.style.opacity = '1';
         setTimeout(() => { anim.style.opacity = '0'; }, 200);
 
-        // Sans Dodge
         setTimeout(() => {
             const sans = document.getElementById('sans-container');
             const miss = document.getElementById('miss-text');
-            
-            sans.style.transform = 'translateX(-100px)'; // Slide left
-            miss.style.opacity = '1';
-            miss.style.top = '-10px'; // Float up
+            sans.style.transform = 'translateX(-100px)';
+            miss.style.opacity = '1'; miss.style.top = '-10px';
 
             setTimeout(() => {
-                sans.style.transform = 'translateX(-50%)'; // Slide back
-                miss.style.opacity = '0';
-                miss.style.top = '20px';
+                sans.style.transform = 'translateX(-50%)';
+                miss.style.opacity = '0'; miss.style.top = '20px';
                 
-                typeWriter("* what? you think i'm just \n  gonna stand there and take it?", true);
-                setTimeout(startAttack, 2000);
+                sansSpeak("what? you think i'm just \ngonna stand there?", () => {
+                    clearSansBubble();
+                    triggerAttackSequence();
+                });
             }, 1000);
         }, 100);
     }
 
-    /** 🌀 ENEMY ATTACK PATTERNS **/
-    function startAttack() {
+    /** 🌀 CUSTOM ENEMY ATTACKS **/
+    function triggerAttackSequence() {
+        STATE.turn++;
         STATE.phase = 'ATTACK';
         textBox.innerHTML = '';
         subMenu.style.display = 'none';
-        
-        // Reset Soul Position
         STATE.soul.x = 275; STATE.soul.y = 60;
         
-        if (Math.random() > 0.5) {
-            STATE.soul.gravity = true;
-            document.getElementById('soul-svg').setAttribute('fill', 'blue');
-            blueBoneWave();
-        } else {
-            STATE.soul.gravity = false;
-            document.getElementById('soul-svg').setAttribute('fill', 'red');
-            platformBones();
-        }
-
-        setTimeout(() => {
-            STATE.phase = 'MENU';
-            STATE.currentMenu = 'MAIN';
-            STATE.soul.gravity = false;
-            document.getElementById('soul-svg').setAttribute('fill', 'red');
-            box.innerHTML = '<div id="text-box"></div><div id="sub-menu"></div><div id="fight-target"><div id="fight-cursor"></div></div><div id="soul">' + soul.innerHTML + '</div>';
-            
-            // Re-bind elements after innerHTML wipe
-            Object.assign(window, {
-                soul: document.getElementById('soul'),
-                textBox: document.getElementById('text-box'),
-                subMenu: document.getElementById('sub-menu')
-            });
-
-            if (STATE.owner === 'FRISK') {
-                typeWriter("* Frisk is calculating \n  the next move.", true);
-                setTimeout(() => { STATE.menuIdx = 1; updateUI(); setTimeout(() => openSubMenu('ACT'), 500); }, 1000);
-            } else {
-                typeWriter("* Sans is preparing his next \n  attack.");
-            }
-        }, 6000);
+        if (STATE.turn === 1) attack1_SmallBones();
+        else attack2_SlowBlueBone();
     }
 
-    function blueBoneWave() {
-        for(let i=0; i<15; i++) {
-            setTimeout(() => {
-                if (STATE.phase !== 'ATTACK') return;
-                const b = document.createElement('div');
-                b.className = (i % 2 === 0) ? 'bone blue-bone' : 'bone';
-                b.style.width = '12px'; b.style.height = (40 + Math.random()*30) + 'px';
-                b.style.left = '560px'; b.style.bottom = '0px';
-                box.appendChild(b);
-                let bx = 560;
-                const int = setInterval(() => {
-                    bx -= 4.5; b.style.left = bx + 'px';
-                    if (bx < -20) { clearInterval(int); b.remove(); }
-                }, 16);
-            }, i * 350);
-        }
-    }
-
-    function platformBones() {
-        for(let i=0; i<20; i++) {
+    // Turn 1: 10 small bones left to right
+    function attack1_SmallBones() {
+        STATE.soul.gravity = false;
+        document.getElementById('soul-svg').setAttribute('fill', 'red');
+        
+        for(let i=0; i<10; i++) {
             setTimeout(() => {
                 if (STATE.phase !== 'ATTACK') return;
                 const b = document.createElement('div');
                 b.className = 'bone';
-                b.style.width = '12px'; b.style.height = '100px';
-                b.style.left = '560px'; 
-                b.style.top = (Math.random() > 0.5 ? '0px' : 'auto');
-                b.style.bottom = (b.style.top === '0px' ? 'auto' : '0px');
+                b.style.width = '12px'; b.style.height = '40px';
+                b.style.left = '-20px'; b.style.bottom = (20 + Math.random()*50) + 'px';
                 box.appendChild(b);
-                let bx = 560;
+                let bx = -20;
                 const int = setInterval(() => {
-                    bx -= 4; b.style.left = bx + 'px';
-                    if (bx < -20) { clearInterval(int); b.remove(); }
+                    bx += 3.5; b.style.left = bx + 'px'; // Move right
+                    if (bx > box.clientWidth + 20) { clearInterval(int); b.remove(); }
                 }, 16);
-            }, i * 250);
+            }, i * 500);
         }
+
+        setTimeout(endTurn, 6500);
     }
 
-    /** 🎛️ UI & NAVIGATION **/
+    // Turn 2: Giant slow blue bone + Sans talking
+    function attack2_SlowBlueBone() {
+        STATE.soul.gravity = false; // Easier to stand still if gravity is off, or can make it gravity
+        document.getElementById('soul-svg').setAttribute('fill', 'red');
+        
+        const b = document.createElement('div');
+        b.className = 'bone blue-bone';
+        b.style.width = '25px'; b.style.height = '140px'; // Fills height
+        b.style.left = '-30px'; b.style.bottom = '0px';
+        box.appendChild(b);
+        
+        let bx = -30;
+        const int = setInterval(() => {
+            bx += 1.2; b.style.left = bx + 'px'; // Very slow
+            if (bx > box.clientWidth + 20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
+        }, 16);
+
+        // Sans talks DURING attack
+        sansSpeak("so.\nyou're still here.\njust standing around.\ntaking it all in.", () => {
+            setTimeout(() => sansSpeak("i gotta respect the\ncommitment to doing\nabsolutely nothing.", null), 1000);
+        });
+
+        setTimeout(endTurn, 8000);
+    }
+
+    function endTurn() {
+        STATE.phase = 'MENU';
+        STATE.currentMenu = 'MAIN';
+        clearSansBubble();
+        
+        // Reset Box contents safely
+        box.innerHTML = '<div id="text-box"></div><div id="sub-menu"></div><div id="fight-target"><div id="fight-cursor"></div></div><div id="soul">' + soul.innerHTML + '</div>';
+        
+        Object.assign(window, {
+            soul: document.getElementById('soul'),
+            textBox: document.getElementById('text-box'),
+            subMenu: document.getElementById('sub-menu')
+        });
+
+        const flavorTexts = [
+            "* The wind is howling.",
+            "* Smells like bone dirt.",
+            "* Sans is staring right through you."
+        ];
+        
+        if (STATE.owner === 'FRISK') friskThinkAndAct();
+        else if (STATE.owner === 'CHARA') charaThinkAndFight();
+        else typeFlavor(flavorTexts[Math.floor(Math.random()*flavorTexts.length)]);
+    }
+
+    /** 🎛️ UI LOGIC **/
     function updateUI() {
         if (STATE.currentMenu === 'MAIN') {
             document.querySelectorAll('.btn').forEach((b,i) => b.classList.toggle('selected', i === STATE.menuIdx));
@@ -351,31 +403,27 @@
         subMenu.style.display = 'block';
 
         if (type === 'ACT') {
-            subMenu.innerHTML = `
-                <div class="sub-opt" style="color:var(--gold)">* Check</div>
-                <div class="sub-opt">* Talk</div>
-            `;
-            if (STATE.owner === 'FRISK') {
-                setTimeout(() => { STATE.subIdx = 1; updateUI(); setTimeout(executeSubMenu, 500); }, 500);
-            }
+            subMenu.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Check</div><div class="sub-opt">* Talk</div>`;
         } else if (type === 'MERCY') {
-            subMenu.innerHTML = `
-                <div class="sub-opt" style="color:var(--gold)">* Spare</div>
-            `;
-            if (STATE.owner === 'FRISK') {
-                setTimeout(() => { executeSubMenu(); }, 500);
-            }
+            subMenu.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Spare</div>`;
         }
     }
 
     function executeSubMenu() {
         subMenu.style.display = 'none';
-        if (STATE.subIdx === 1) { // Talk
-            typeWriter("* You try to talk to Sans.\n* He ignores you.", true);
-        } else { // Check/Spare
-            typeWriter("* SANS - 1 ATK 1 DEF\n* Can't keep dodging forever.", true);
+        if (STATE.menuIdx === 1) {
+            if (STATE.subIdx === 1) { // Talk
+                typeFlavor("* You tell Sans a bad joke.\n* He didn't laugh.", () => {
+                    sansSpeak("try harder next time.", triggerAttackSequence);
+                });
+            } else { // Check
+                typeFlavor("* SANS - 1 ATK 1 DEF\n* The easiest enemy.", () => { setTimeout(triggerAttackSequence, 1000); });
+            }
+        } else if (STATE.menuIdx === 3) {
+            typeFlavor("* You are sparing Sans.", () => {
+                sansSpeak("... yeah, ok.", triggerAttackSequence);
+            });
         }
-        setTimeout(startAttack, 2000);
     }
 
     function updateHUD() {
@@ -385,7 +433,6 @@
 
     window.onkeydown = (e) => {
         STATE.keys[e.key] = true;
-        
         if (e.key === 'q' || e.key === 'Q') toggleQ();
 
         if (STATE.owner === 'PLAYER') {
@@ -394,7 +441,6 @@
                     if (e.key === 'ArrowLeft') STATE.menuIdx = (STATE.menuIdx + 3) % 4;
                     if (e.key === 'ArrowRight') STATE.menuIdx = (STATE.menuIdx + 1) % 4;
                     updateUI();
-                    
                     if (e.key === 'z' || e.key === 'Z') {
                         if (STATE.menuIdx === 0) {
                             STATE.phase = 'FIGHT_AIM';
@@ -405,7 +451,7 @@
                     }
                 } else if (STATE.currentMenu === 'SUB') {
                     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') STATE.subIdx = (STATE.subIdx === 0 ? 1 : 0);
-                    if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; subMenu.style.display = 'none'; typeWriter("* Sans is waiting.", true); }
+                    if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; subMenu.style.display = 'none'; typeFlavor("* Sans is waiting."); }
                     if (e.key === 'z' || e.key === 'Z') executeSubMenu();
                     updateUI();
                 }
@@ -417,7 +463,8 @@
     window.onkeyup = (e) => STATE.keys[e.key] = false;
 
     // Start
-    typeWriter("* You feel your sins crawling \n  on your back.");
+    STATE.phase = 'SANS_TALK';
+    sansSpeak("heya.\nready?", () => { clearSansBubble(); typeFlavor("* The wind is howling."); });
     physicsLoop();
 </script>
 </body>
