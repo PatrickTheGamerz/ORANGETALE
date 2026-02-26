@@ -2,64 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UNDERTALE: THE COUNCIL</title>
+    <title>UNDERTALE: THE COUNCIL HUB</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
         
-        #loading-screen { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .heart-load { width: 30px; height: 30px; background: red; clip-path: path('M15,30 A10,10 0,0,1 25,20 A10,10 0,0,1 35,20 L25,35 Z'); transform: scale(3); animation: beat 0.8s infinite; }
-        @keyframes beat { 0% { transform: scale(3); } 50% { transform: scale(3.5); } 100% { transform: scale(3); } }
+        body { background: #000; color: #fff; font-family: 'Courier Prime', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        #title-container { margin-bottom: 50px; height: 80px; }
+        .glitch-text { font-size: 60px; letter-spacing: 15px; font-weight: bold; cursor: default; }
+        
+        #menu-container { width: 500px; display: flex; flex-direction: column; gap: 20px; border: 2px solid transparent; padding: 20px; }
+        .menu-option { font-size: 28px; cursor: pointer; display: flex; align-items: center; transition: 0.1s; color: #fff; text-decoration: none; }
+        .menu-option.selected { color: #ffff00; } /* 1:1 Yellow selection */
+        
+        .soul-cursor { width: 20px; height: 20px; background: red; margin-right: 20px; visibility: hidden; clip-path: path('M10,30 A5,5 0,0,1 20,30 A5,5 0,0,1 30,30 L20,40 Z'); transform: scale(2.5) translate(-4px, -4px); }
+        .selected .soul-cursor { visibility: visible; }
 
-        #menu { display: none; text-align: center; }
-        .title { font-size: 60px; letter-spacing: 15px; margin-bottom: 50px; }
-        .option { font-size: 30px; margin: 20px; display: flex; align-items: center; justify-content: center; }
-        .option.active { color: #ffff00; } /* Yellow selection */
-        .heart-cursor { width: 20px; height: 20px; background: red; margin-right: 20px; visibility: hidden; clip-path: path('M10,30 A5,5 0,0,1 20,30 A5,5 0,0,1 30,30 L20,40 Z'); transform: scale(2); }
-        .active .heart-cursor { visibility: visible; }
+        .locked { opacity: 0.3; }
+        .sub-header { font-size: 14px; color: #555; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 10px; }
+        
+        #hint { position: absolute; bottom: 20px; color: #333; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen"><div class="heart-load"></div></div>
+    <div id="title-container">
+        <div class="glitch-text" id="main-title">UNDERTALE</div>
+    </div>
 
-    <div id="menu">
-        <div class="title">UNDERTALE</div>
-        <div id="main-list">
-            <div class="option active" data-action="start"><div class="heart-cursor"></div> START</div>
-            <div class="option" data-action="none"><div class="heart-cursor"></div> SETTINGS</div>
+    <div id="menu-container">
+        <div id="view-main">
+            <div class="menu-option selected" data-target="TIMELINE"><div class="soul-cursor"></div>FIGHT</div>
+            <div class="menu-option" data-target="SOULS"><div class="soul-cursor"></div>SOULS</div>
+            <div class="menu-option" data-target="SETTINGS"><div class="soul-cursor"></div>SETTINGS</div>
         </div>
-        <div id="teammate-list" style="display:none;">
-            <div style="font-size: 18px; margin-bottom: 20px;">CHOOSE YOUR TEAMMATE</div>
-            <div class="option active" data-char="FRISK"><div class="heart-cursor"></div> FRISK</div>
-            <div class="option" data-char="CHARA"><div class="heart-cursor"></div> CHARA</div>
+
+        <div id="view-timeline" style="display:none;">
+            <div class="sub-header">Select Timeline</div>
+            <div class="menu-option selected" data-action="LAUNCH_SANS"><div class="soul-cursor"></div>UNDERTALE: PACIFIST</div>
+            <div class="menu-option locked"><div class="soul-cursor"></div>UNDERTALE: PRE-PACIFIST</div>
+            <div class="menu-option locked"><div class="soul-cursor"></div>UNDERTALE: GENOCIDE</div>
+        </div>
+
+        <div id="view-souls" style="display:none;">
+            <div class="sub-header">Select Teammate</div>
+            <div class="menu-option selected" data-soul="FRISK"><div class="soul-cursor"></div>FRISK</div>
+            <div class="menu-option" data-soul="CHARA"><div class="soul-cursor"></div>CHARA</div>
         </div>
     </div>
 
-    <script>
-        setTimeout(() => {
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('menu').style.display = 'block';
-        }, 2000);
+    <div id="hint">PRESS [Z] TO SELECT | [X] TO GO BACK</div>
 
-        let view = "main";
-        let idx = 0;
+    <script>
+        const wingdings = ["\u2720", "\u2632", "\u2616", "\u2604", "\u261B", "\u2744", "\u2641"];
+        const titleEl = document.getElementById('main-title');
+        const originalText = "UNDERTALE";
+
+        // Gaster/Wingding Glitch Effect
+        setInterval(() => {
+            let chars = originalText.split('');
+            if (Math.random() > 0.8) {
+                let idx = Math.floor(Math.random() * chars.length);
+                chars[idx] = wingdings[Math.floor(Math.random() * wingdings.length)];
+                titleEl.innerText = chars.join('');
+                setTimeout(() => { titleEl.innerText = originalText; }, 100);
+            }
+        }, 500);
+
+        let currentView = "main";
+        let menuIdx = 0;
+
+        function updateMenu() {
+            const views = ["main", "timeline", "souls"];
+            views.forEach(v => document.getElementById(`view-${v}`).style.display = (v === currentView ? "block" : "none"));
+            
+            const options = document.querySelectorAll(`#view-${currentView} .menu-option:not(.locked)`);
+            options.forEach((opt, i) => opt.classList.toggle('selected', i === menuIdx));
+        }
 
         window.onkeydown = (e) => {
-            const list = view === "main" ? document.querySelectorAll('#main-list .option') : document.querySelectorAll('#teammate-list .option');
-            if(e.key === 'ArrowDown') idx = (idx + 1) % list.length;
-            if(e.key === 'ArrowUp') idx = (idx + list.length - 1) % list.length;
+            const options = document.querySelectorAll(`#view-${currentView} .menu-option:not(.locked)`);
+            
+            if (e.key === "ArrowDown") {
+                menuIdx = (menuIdx + 1) % options.length;
+                updateMenu();
+            }
+            if (e.key === "ArrowUp") {
+                menuIdx = (menuIdx + options.length - 1) % options.length;
+                updateMenu();
+            }
+            if (e.key === "x" || e.key === "X") {
+                currentView = "main"; menuIdx = 0; updateMenu();
+            }
+            if (e.key === "z" || e.key === "Z") {
+                const sel = options[menuIdx];
+                const target = sel.dataset.target;
+                const action = sel.dataset.action;
+                const soul = sel.dataset.soul;
 
-            list.forEach((opt, i) => opt.classList.toggle('active', i === idx));
-
-            if(e.key === 'z' || e.key === 'Z') {
-                if(view === "main") {
-                    view = "team"; idx = 0;
-                    document.getElementById('main-list').style.display = 'none';
-                    document.getElementById('teammate-list').style.display = 'block';
-                } else {
-                    sessionStorage.setItem('team', list[idx].dataset.char);
-                    location.href = 'UTpaciSANS.html';
+                if (target) {
+                    currentView = target.toLowerCase();
+                    menuIdx = 0;
+                    updateMenu();
+                } else if (action === "LAUNCH_SANS") {
+                    location.href = "UTpaciSANS.html";
+                } else if (soul) {
+                    localStorage.setItem('teammate', soul);
+                    currentView = "main";
+                    menuIdx = 0;
+                    updateMenu();
+                    alert("Soul Bound: " + soul);
                 }
             }
         };
