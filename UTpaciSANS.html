@@ -2,164 +2,319 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dinner in the Underground</title>
+    <title>The Great Underground Gulp</title>
     <style>
+        :root {
+            --ut-white: #ffffff;
+            --ut-red: #ff0000;
+            --ut-yellow: #ffff00;
+            --ut-bg: #000000;
+        }
+
         body {
-            background-color: #1a1a1a;
-            color: #ffffff;
+            background-color: #111;
+            color: var(--ut-white);
             font-family: 'Courier New', Courier, monospace;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        #game-container {
-            width: 600px;
-            background: #000;
-            border: 4px solid #fff;
             padding: 20px;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-            text-align: center;
         }
 
-        #scene-image {
-            width: 100%;
-            height: 200px;
-            background: #222;
-            margin-bottom: 20px;
+        #game-window {
+            width: 700px;
+            background: var(--ut-bg);
+            border: 6px solid var(--ut-white);
+            padding: 20px;
+            position: relative;
+        }
+
+        #stats-bar {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 2px solid #444;
-            font-style: italic;
-            color: #888;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--ut-white);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: var(--ut-yellow);
         }
 
-        #text-display {
-            font-size: 1.2rem;
-            line-height: 1.5;
-            margin-bottom: 30px;
-            min-height: 100px;
+        #dialogue-box {
+            font-size: 1.3rem;
+            min-height: 150px;
+            margin-bottom: 20px;
+            line-height: 1.4;
         }
 
-        .button-container {
+        .choice-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 15px;
         }
 
         button {
-            background: #000;
-            color: #fff;
-            border: 2px solid #fff;
-            padding: 10px;
-            font-family: 'Courier New', Courier, monospace;
-            cursor: pointer;
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 12px;
+            font-family: inherit;
             font-size: 1rem;
-            transition: all 0.2s;
+            cursor: pointer;
+            text-align: left;
         }
 
         button:hover {
-            background: #fff;
-            color: #000;
+            color: var(--ut-yellow);
+            border-color: var(--ut-yellow);
         }
 
-        .flavor-text {
-            color: #ffff00;
-            font-weight: bold;
+        button:before {
+            content: "❤ ";
+            opacity: 0;
         }
+
+        button:hover:before {
+            opacity: 1;
+        }
+
+        #achievements-panel, #save-panel {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #444;
+            width: 670px;
+        }
+
+        .unlocked { color: var(--ut-yellow); font-weight: bold; }
+        .locked { color: #555; }
+
+        .flavor-text { color: #ff00ff; } /* Muffet Purple */
+        .system-text { color: #00ff00; } /* Save Green */
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="scene-image">Visualizing the Underground...</div>
-    <div id="text-display">
-        You wake up on a bed of golden flowers. Your stomach growls. This might be a problem.
+<div id="game-window">
+    <div id="stats-bar">
+        <span>LV 1</span>
+        <span id="location-display">The Ruins</span>
+        <span id="gold-display">G: 0</span>
     </div>
-    <div class="button-container" id="choices">
+    
+    <div id="dialogue-box">
+        </div>
+
+    <div class="choice-grid" id="choices">
         </div>
 </div>
 
+<div id="save-panel">
+    <button onclick="saveGame()">SAVE DATA</button>
+    <button onclick="loadGame()">LOAD DATA</button>
+    <button onclick="resetGame()" style="border-color: red; color: red;">RESET ALL</button>
+    <span id="save-msg" class="system-text"></span>
+</div>
+
+<div id="achievements-panel">
+    <h3>ACHIEVEMENTS</h3>
+    <div id="ach-list"></div>
+</div>
+
 <script>
-    const textDisplay = document.getElementById('text-display');
-    const choicesContainer = document.getElementById('choices');
-    const sceneDisplay = document.getElementById('scene-image');
-
-    const gameState = {
-        currentScene: 'start'
+    // --- GAME ENGINE DATA ---
+    let state = {
+        location: 'Ruins',
+        gold: 0,
+        unlockedAch: [],
+        currentScene: 'intro'
     };
 
+    const achievements = {
+        'pie_thief': 'Pie-Filling: Got "stored" by Toriel.',
+        'expensive_snack': 'Gourmet Meal: Fed Muffet\'s pet (as the meal).',
+        'fish_food': 'Fish Food: Caught by Undyne.',
+        'trash_collector': 'Recycled: Became junk for Catty & Bratty.',
+        'hotel_guest': 'Overnight Stay: Never left the Snowdin Inn.'
+    };
+
+    // --- SCENE DATABASE ---
     const scenes = {
-        'start': {
-            text: "You wander into a cozy, purple-brick hallway. The smell of <span class='flavor-text'>Butterscotch Pie</span> is overwhelming. Toriel stands there, smiling widely.",
-            image: "",
+        'intro': {
+            loc: 'The Ruins',
+            text: "You fall into the Underground. It's soft, but you're hungry. Suddenly, a goat-like woman with a kind face approaches.",
             choices: [
-                { text: "Ask for a slice", next: 'toriel_pie' },
-                { text: "Tell her YOU are hungry", next: 'toriel_hungry' }
+                { text: "Go to Toriel's Home", next: 'toriel_home' },
+                { text: "Wander into the Dark", next: 'ruins_dark' }
             ]
         },
-        'toriel_pie': {
-            text: "Toriel beams. 'Oh, little one! I have just the thing.' She brings out a pie, but it's massive. She watches you eat with a strange, hungry intensity.",
-            image: "",
+        'toriel_home': {
+            loc: 'Toriel\'s House',
+            text: "Toriel brings you a slice of pie. 'Stay here, my child. I shall keep you safe... inside.' She looks at you with a curious hunger.",
             choices: [
-                { text: "Finish every last bite", next: 'toriel_full' },
-                { text: "Compliment the chef", next: 'toriel_hug' }
+                { text: "Eat the pie and nap", next: 'toriel_ending' },
+                { text: "Sneak into the basement", next: 'snowdin_forest' }
             ]
         },
-        'toriel_hungry': {
-            text: "Toriel tilts her head. 'Hungry? Well, a growing human needs to be... contained.' She opens her arms for a 'hug' that looks a bit too much like an enclosure.",
-            image: "",
+        'toriel_ending': {
+            loc: 'The Ruins - Ending',
+            text: "Toriel tucks you in... to her apron pocket. Then, with a gentle 'gulp,' she decides you're much safer inside her tummy where it's warm. You're never going to leave this house.",
+            ach: 'pie_thief',
+            choices: [{ text: "Start Over", next: 'intro' }]
+        },
+        'ruins_dark': {
+            loc: 'The Ruins - Depths',
+            text: "You find the Annoying Dog Lady. She's chewing on a bone, but looks at you like a much better treat.",
             choices: [
-                { text: "Accept the 'hug'", next: 'toriel_gulp' },
-                { text: "Run toward the basement", next: 'muffet_encounter' }
+                { text: "Pet her", next: 'dog_ending' },
+                { text: "Run away", next: 'intro' }
             ]
         },
-        'toriel_gulp': {
-            text: "Toriel's hug is... all-encompassing. You realize too late that she doesn't want you to leave the house. Ever. In fact, you're becoming part of the 'inner circle' of her heart. Literally. <br><br><span class='flavor-text'>ENDING: HOME IS WHERE THE HEART (AND STOMACH) IS.</span>",
-            image: "",
-            choices: [{ text: "Restart?", next: 'start' }]
+        'dog_ending': {
+            loc: 'Ending',
+            text: "The Annoying Dog Lady doesn't bark. She just opens her mouth and—gulp. You are now dog food. Arf!",
+            choices: [{ text: "Start Over", next: 'intro' }]
         },
-        'muffet_encounter': {
-            text: "You sprint away and find yourself caught in a giant purple web. Muffet descends on a strand, giggling. 'Ufufu~ Did I hear someone wanted to be part of our tea party?'",
-            image: "",
+        'snowdin_forest': {
+            loc: 'Snowdin Forest',
+            text: "You reach the cold forest. You see a Shopkeeper Bunny and an Innkeeper Bunny waving at you.",
             choices: [
-                { text: "Offer her 500G", next: 'muffet_greedy' },
-                { text: "Tell her she looks 'tasty'", next: 'muffet_gulp' }
+                { text: "Visit Snowdin Shop", next: 'snowdin_shop' },
+                { text: "Visit Snowdin Inn", next: 'snowdin_inn' },
+                { text: "Go deeper (Waterfall)", next: 'waterfall_entry' }
             ]
         },
-        'muffet_gulp': {
-            text: "Muffet blushes with all five eyes. 'How forward! I think I'll start with your toes.' The spiders wrap you up like a delicious croissant. You are the main course! <br><br><span class='flavor-text'>ENDING: THE EXPENSIVE ENTREE.</span>",
-            image: "",
-            choices: [{ text: "Restart?", next: 'start' }]
+        'snowdin_shop': {
+            loc: 'Snowdin Shop',
+            text: "The Bunny Shopkeeper smiles. 'Everything is expensive! If you can't pay, maybe you can be the store's new mascot?'",
+            choices: [
+                { text: "Offer yourself as payment", next: 'shop_ending' },
+                { text: "Leave quickly", next: 'snowdin_forest' }
+            ]
         },
-        'toriel_full': {
-            text: "You're so full of pie you can't move. Toriel sighs happily. 'Now you'll stay put while I fetch the tea.' You're effectively a decorative (and edible) furniture piece now.",
-            image: "",
-            choices: [{ text: "Restart?", next: 'start' }]
+        'shop_ending': {
+            loc: 'Ending',
+            text: "She swallows you whole to keep you safe from the cold. You're the best-selling item she's ever had.",
+            choices: [{ text: "Start Over", next: 'intro' }]
+        },
+        'waterfall_entry': {
+            loc: 'Waterfall',
+            text: "The glowing water is beautiful. Undyne stands on a cliff, her spear glowing. Behind her, Muffet has set up a tea shop.",
+            choices: [
+                { text: "Challenge Undyne", next: 'undyne_fight' },
+                { text: "Buy Muffet's Tea (9999G)", next: 'muffet_tea' }
+            ]
+        },
+        'undyne_fight': {
+            loc: 'Waterfall - Arena',
+            text: "Undyne laughs. 'A human! You'll be the fuel for our revolution!' She doesn't use a spear; she just lunges at you.",
+            choices: [
+                { text: "Surrender", next: 'undyne_ending' },
+                { text: "Try to run", next: 'waterfall_entry' }
+            ]
+        },
+        'undyne_ending': {
+            loc: 'Ending',
+            text: "Undyne suplexes you... straight into her mouth. 'You'll make a fine addition to my strength!' she bellows.",
+            ach: 'fish_food',
+            choices: [{ text: "Start Over", next: 'intro' }]
+        },
+        'muffet_tea': {
+            loc: 'Muffet\'s Web',
+            text: "Muffet giggles. 'You don't have the money? My pet is very, very hungry for a snack.'",
+            choices: [
+                { text: "Become the snack", next: 'muffet_ending' },
+                { text: "Run to the Trash Zone", next: 'trash_zone' }
+            ]
+        },
+        'muffet_ending': {
+            loc: 'Ending',
+            text: "Muffet pours you into a cup and gulps you down. 'Ufufu~ So sweet!'",
+            ach: 'expensive_snack',
+            choices: [{ text: "Start Over", next: 'intro' }]
+        },
+        'trash_zone': {
+            loc: 'Trash Zone',
+            text: "You find Catty and Bratty digging through garbage. 'Omigosh! A human! We like, totally need a new accessory!'",
+            choices: [
+                { text: "Join their collection", next: 'catty_ending' },
+                { text: "Back away slowly", next: 'waterfall_entry' }
+            ]
+        },
+        'catty_ending': {
+            loc: 'Ending',
+            text: "Catty gulps you down while Bratty cheers. 'You're like, totally a part of us now!'",
+            ach: 'trash_collector',
+            choices: [{ text: "Start Over", next: 'intro' }]
         }
-        // More scenes can be added here
     };
+
+    // --- GAME LOGIC ---
 
     function renderScene(sceneKey) {
+        state.currentScene = sceneKey;
         const scene = scenes[sceneKey];
-        textDisplay.innerHTML = scene.text;
-        sceneDisplay.innerText = scene.image;
-        choicesContainer.innerHTML = '';
+        
+        // Update UI
+        document.getElementById('location-display').innerText = scene.loc;
+        document.getElementById('dialogue-box').innerHTML = scene.text;
+        
+        const choicesDiv = document.getElementById('choices');
+        choicesDiv.innerHTML = '';
 
-        scene.choices.forEach(choice => {
+        scene.choices.forEach(c => {
             const btn = document.createElement('button');
-            btn.innerText = choice.text;
-            btn.onclick = () => renderScene(choice.next);
-            choicesContainer.appendChild(btn);
+            btn.innerText = c.text;
+            btn.onclick = () => renderScene(c.next);
+            choicesDiv.appendChild(btn);
         });
+
+        // Check for achievements
+        if (scene.ach && !state.unlockedAch.includes(scene.ach)) {
+            state.unlockedAch.push(scene.ach);
+            updateAchievements();
+        }
     }
 
-    // Initialize
-    renderScene('start');
+    function updateAchievements() {
+        const list = document.getElementById('ach-list');
+        list.innerHTML = '';
+        for (let key in achievements) {
+            const div = document.createElement('div');
+            if (state.unlockedAch.includes(key)) {
+                div.className = 'unlocked';
+                div.innerText = "[★] " + achievements[key];
+            } else {
+                div.className = 'locked';
+                div.innerText = "[ ] ??????";
+            }
+            list.appendChild(div);
+        }
+    }
+
+    // --- SAVE/LOAD SYSTEM ---
+    function saveGame() {
+        localStorage.setItem('undertale_save', JSON.stringify(state));
+        document.getElementById('save-msg').innerText = "PROGRESS SAVED!";
+        setTimeout(() => document.getElementById('save-msg').innerText = "", 2000);
+    }
+
+    function loadGame() {
+        const saved = localStorage.getItem('undertale_save');
+        if (saved) {
+            state = JSON.parse(saved);
+            renderScene(state.currentScene);
+            updateAchievements();
+            document.getElementById('save-msg').innerText = "LOADED!";
+        }
+    }
+
+    function resetGame() {
+        localStorage.removeItem('undertale_save');
+        location.reload();
+    }
+
+    // Initial Start
+    updateAchievements();
+    renderScene('intro');
+
 </script>
 
 </body>
