@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <title>UT PACIFIST: SANS BATTLE</title>
     <style>
-        /* Importing an Undertale-style font */
-        @font-face { font-family: 'DeterminationSans'; src: url('https://db.onlinewebfonts.com/t/332a6e92f5d94bc6f01df2f6f50b44b8.woff2') format('woff2'); }
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
         :root { --red: #ff0000; --gold: #ffff00; --cyan: #00ffff; --blue: #0033ff; --purple: #d946ef; }
         
-        body { background: #000; color: #fff; font-family: 'DeterminationSans', 'Press Start 2P', sans-serif; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; user-select: none; }
-        #game-window { width: 640px; height: 480px; position: relative; background: #000; overflow: hidden; transform: scale(1.5); transform-origin: center; border: 2px solid #222; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', monospace; margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; user-select: none; }
+        #game-window { width: 640px; height: 480px; position: relative; background: #000; overflow: hidden; transform: scale(1.4); transform-origin: center; border: 2px solid #222; }
 
         /* SANS SPRITE */
         #sans-container { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); text-align: center; transition: transform 0.2s ease-out; z-index: 10; }
@@ -27,34 +25,36 @@
         /* BATTLE BOX & SOUL */
         #battle-box { position: absolute; bottom: 125px; left: 50%; transform: translateX(-50%); width: 565px; height: 130px; border: 4px solid #fff; background: #000; overflow: hidden; box-sizing: border-box; }
         #soul { width: 14px; height: 14px; position: absolute; z-index: 1000; }
+        #projectiles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
         /* FLAVOR TEXT BOX */
-        #text-box { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; font-size: 22px; line-height: 30px; display: block; white-space: pre-wrap; font-family: 'DeterminationSans', monospace; }
-        #sub-menu { position: absolute; top: 15px; left: 40px; font-size: 22px; line-height: 35px; display: none; }
+        #text-box { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; font-size: 14px; line-height: 24px; display: block; white-space: pre-wrap; }
+        #sub-menu { position: absolute; top: 15px; left: 40px; font-size: 14px; line-height: 28px; display: none; }
         .sub-opt { display: inline-block; width: 45%; margin-bottom: 5px; }
         
-        /* FIGHT BAR MINI-GAME */
-        #fight-target { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect width="100%" height="100%" fill="black"/><image href="https://i.imgur.com/Bf98S0D.png" width="100%" height="100%" preserveAspectRatio="none"/></svg>'); display: none; z-index: 10; }
-        #fight-cursor { position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: #fff; box-shadow: 0 0 5px #fff; }
-        #strike-anim { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25px; height: 110px; background: #fff; opacity: 0; z-index: 50; }
+        /* FIGHT BAR MINI-GAME (Pure CSS) */
+        #fight-target { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 10; border-image: linear-gradient(to right, black, #333, black) 1; }
+        #fight-target::after { content: ''; position: absolute; left: 250px; top: 0; width: 65px; height: 100%; background: rgba(0,255,0,0.4); border-left: 2px solid #0f0; border-right: 2px solid #0f0; }
+        #fight-cursor { position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: #fff; box-shadow: 0 0 5px #fff; z-index: 11; }
+        #strike-anim { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 100px; background: #fff; opacity: 0; z-index: 50; }
 
         /* HUD */
-        #hud { position: absolute; bottom: 85px; left: 30px; display: flex; align-items: center; font-size: 20px; font-weight: bold; width: 580px; }
+        #hud { position: absolute; bottom: 85px; left: 30px; display: flex; align-items: center; font-size: 12px; font-weight: bold; width: 580px; }
         #name-lv { width: 200px; }
-        .hp-label { margin-right: 10px; font-size: 14px; }
-        .hp-bar-bg { width: 35px; height: 18px; background: red; position: relative; margin-right: 10px; }
+        .hp-label { margin-right: 10px; font-size: 10px; }
+        .hp-bar-bg { width: 35px; height: 14px; background: red; position: relative; margin-right: 10px; }
         #hp-fill { height: 100%; background: var(--gold); width: 100%; }
         #hp-text { width: 100px; }
 
         /* BUTTONS */
         #menu-bar { position: absolute; bottom: 15px; left: 0; width: 100%; display: flex; justify-content: center; gap: 15px; }
-        .btn { width: 110px; height: 42px; border: 2px solid #ff8000; color: #ff8000; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; gap: 8px; }
+        .btn { width: 110px; height: 42px; border: 2px solid #ff8000; color: #ff8000; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; gap: 8px; }
         .btn.selected { color: var(--gold); border-color: var(--gold); }
         .btn-icon { width: 14px; height: 14px; background: #ff8000; clip-path: path('M7,14 A3.5,3.5 0,0,1 14,14 A3.5,3.5 0,0,1 21,14 L14,21 Z'); transform: scale(1.2); }
         .btn.selected .btn-icon { background: var(--gold); }
 
         /* PROJECTILES */
-        .bone { position: absolute; background: #fff; border-radius: 4px; }
+        .bone { position: absolute; background: #fff; border-radius: 2px; }
         .blue-bone { background: var(--cyan); }
     </style>
 </head>
@@ -71,8 +71,9 @@
     <div id="battle-box">
         <div id="text-box"></div>
         <div id="sub-menu"></div>
-        <div id="fight-target"><div id="fight-cursor"></div></div>
+        <div id="fight-target"><div id="fight-cursor" id="f-cursor"></div></div>
         
+        <div id="projectiles"></div>
         <div id="soul">
             <svg viewBox="0 0 32 32"><path id="soul-svg" d="M16,28.3L3.7,16c-2.3-2.3-2.3-6.1,0-8.5c2.3-2.3,6.1-2.3,8.5,0l3.8,3.8l3.8-3.8c2.3-2.3,6.1-2.3,8.5,0c2.3,2.3,2.3,6.1,0,8.5L16,28.3z" fill="red"/></svg>
         </div>
@@ -94,6 +95,7 @@
 </div>
 
 <script>
+    /** ⚙️ CORE STATE **/
     const STATE = {
         hp: 20, max: 20, owner: 'PLAYER', phase: 'SANS_TALK',
         menuIdx: 0, subIdx: 0, currentMenu: 'MAIN', turn: 0,
@@ -101,22 +103,31 @@
         fightBar: { x: 0, dir: 1 },
         keys: {},
         dialogueTimer: null, sansTimer: null,
-        friskSkill: parseFloat(localStorage.getItem('frisk_skill')) || 1.0
+        friskSkill: 1.0
     };
 
-    const soul = document.getElementById('soul');
-    const box = document.getElementById('battle-box');
-    const textBox = document.getElementById('text-box');
-    const sansBubble = document.getElementById('sans-bubble');
+    // DOM Elements cached so they are never lost
+    const elSoul = document.getElementById('soul');
+    const elBox = document.getElementById('battle-box');
+    const elText = document.getElementById('text-box');
+    const elSub = document.getElementById('sub-menu');
+    const elProj = document.getElementById('projectiles');
+    const elTarget = document.getElementById('fight-target');
+    const elCursor = document.getElementById('fight-cursor');
+    const elSansBubble = document.getElementById('sans-bubble');
 
-    /** 🗣️ TYPEWRITERS **/
+    /** 🗣️ DIALOGUE ENGINES **/
     function typeFlavor(text, callback) {
         clearInterval(STATE.dialogueTimer);
-        textBox.innerHTML = "";
+        elText.innerHTML = "";
+        elText.style.display = 'block';
+        elSub.style.display = 'none';
+        elTarget.style.display = 'none';
+        
         STATE.phase = 'TYPING';
         let i = 0;
         STATE.dialogueTimer = setInterval(() => {
-            textBox.innerHTML += text[i]; i++;
+            elText.innerHTML += text[i]; i++;
             if (i >= text.length) {
                 clearInterval(STATE.dialogueTimer);
                 STATE.phase = 'MENU';
@@ -128,11 +139,11 @@
 
     function sansSpeak(text, callback) {
         clearInterval(STATE.sansTimer);
-        sansBubble.innerHTML = "";
-        sansBubble.style.display = 'block';
+        elSansBubble.innerHTML = "";
+        elSansBubble.style.display = 'block';
         let i = 0;
         STATE.sansTimer = setInterval(() => {
-            sansBubble.innerHTML += text[i]; i++;
+            elSansBubble.innerHTML += text[i]; i++;
             if (i >= text.length) {
                 clearInterval(STATE.sansTimer);
                 if(callback) setTimeout(callback, 1000);
@@ -142,11 +153,11 @@
 
     function clearSansBubble() {
         clearInterval(STATE.sansTimer);
-        sansBubble.style.display = 'none';
-        sansBubble.innerHTML = "";
+        elSansBubble.style.display = 'none';
+        elSansBubble.innerHTML = "";
     }
 
-    /** 💀 COMBAT PHYSICS **/
+    /** 💀 COMBAT PHYSICS ENGINE **/
     function physicsLoop() {
         if (STATE.phase === 'ATTACK') {
             let speed = 2.5;
@@ -171,56 +182,60 @@
             }
 
             // Box Bounds
-            STATE.soul.x = Math.max(0, Math.min(box.clientWidth - 18, STATE.soul.x));
-            STATE.soul.y = Math.max(0, Math.min(box.clientHeight - 18, STATE.soul.y));
-            if (STATE.soul.y >= box.clientHeight - 18) {
-                STATE.soul.y = box.clientHeight - 18;
+            STATE.soul.x = Math.max(0, Math.min(elBox.clientWidth - 18, STATE.soul.x));
+            STATE.soul.y = Math.max(0, Math.min(elBox.clientHeight - 18, STATE.soul.y));
+            if (STATE.soul.y >= elBox.clientHeight - 18) {
+                STATE.soul.y = elBox.clientHeight - 18;
                 STATE.soul.vY = 0;
                 STATE.soul.grounded = true;
             }
 
             STATE.soul.moving = (Math.abs(oldX - STATE.soul.x) > 0.1 || Math.abs(oldY - STATE.soul.y) > 0.1);
-            soul.style.left = STATE.soul.x + 'px';
-            soul.style.top = STATE.soul.y + 'px';
+            elSoul.style.left = STATE.soul.x + 'px';
+            elSoul.style.top = STATE.soul.y + 'px';
             
             checkHitboxes();
+
         } else if (STATE.phase === 'FIGHT_AIM') {
             STATE.fightBar.x += 6 * STATE.fightBar.dir;
-            if (STATE.fightBar.x >= box.clientWidth || STATE.fightBar.x <= 0) STATE.fightBar.dir *= -1;
-            document.getElementById('fight-cursor').style.left = STATE.fightBar.x + 'px';
+            if (STATE.fightBar.x >= elBox.clientWidth - 6 || STATE.fightBar.x <= 0) STATE.fightBar.dir *= -1;
+            elCursor.style.left = STATE.fightBar.x + 'px';
         }
         requestAnimationFrame(physicsLoop);
     }
 
     function checkHitboxes() {
-        const sR = soul.getBoundingClientRect();
-        const bones = document.querySelectorAll('.bone');
+        const sR = elSoul.getBoundingClientRect();
+        const bones = elProj.querySelectorAll('.bone');
         for (let b of bones) {
             const eR = b.getBoundingClientRect();
             if (!(sR.right < eR.left || sR.left > eR.right || sR.bottom < eR.top || sR.top > eR.bottom)) {
-                if (b.classList.contains('blue-bone') && !STATE.soul.moving) continue;
+                if (b.classList.contains('blue-bone') && !STATE.soul.moving) continue; // Blue bone logic
+                
                 STATE.hp -= 1; // 1 DMG PER FRAME
                 updateHUD();
-                if (STATE.hp <= 0) { STATE.hp = 0; alert("GAME OVER."); location.reload(); return; }
+                if (STATE.hp <= 0) { 
+                    STATE.hp = 0; 
+                    alert("GAME OVER."); 
+                    location.reload(); 
+                    return; 
+                }
             }
         }
     }
 
-    /** 🤖 AI: FRISK / CHARA SOVEREIGNTY **/
+    /** 🤖 AI: FRISK SOVEREIGNTY **/
     function toggleQ() {
-        if (STATE.owner !== 'PLAYER') return; 
-        const teammate = localStorage.getItem('teammate') || 'FRISK';
-        STATE.owner = teammate;
-        document.getElementById('p-name').innerText = teammate;
-        document.getElementById('p-name').style.color = teammate === 'FRISK' ? 'var(--purple)' : 'red';
+        if (STATE.owner === 'FRISK') return; // Cannot take control back
+        STATE.owner = 'FRISK';
+        document.getElementById('p-name').innerText = "FRISK";
+        document.getElementById('p-name').style.color = "var(--purple)";
         
-        if (STATE.phase === 'MENU') {
-            if (teammate === 'FRISK') friskThinkAndAct();
-            if (teammate === 'CHARA') charaThinkAndFight();
+        if (STATE.phase === 'MENU' && STATE.currentMenu === 'MAIN') {
+            friskThinkAndAct();
         }
     }
 
-    // Frisk hesitates, then acts peacefully.
     function friskThinkAndAct() {
         STATE.phase = 'AI_THINKING';
         setTimeout(() => {
@@ -232,50 +247,38 @@
                     setTimeout(executeSubMenu, 1000);
                 }, 800);
             }, 800);
-        }, 1500); // 1.5s Hesitation
-    }
-
-    // Chara is aggressive.
-    function charaThinkAndFight() {
-        STATE.phase = 'AI_THINKING';
-        setTimeout(() => {
-            STATE.menuIdx = 0; updateUI();
-            setTimeout(() => {
-                STATE.phase = 'FIGHT_AIM';
-                textBox.innerHTML = '';
-                document.getElementById('fight-target').style.display = 'block';
-                // Chara perfectly stops the bar in the middle
-                setTimeout(() => executeStrike(), 500);
-            }, 500);
-        }, 1000);
+        }, 1500); // Hesitation
     }
 
     function friskDodgingAI() {
-        // Frisk's dodging isn't perfect immediately. Scaled by friskSkill.
-        const haz = document.querySelectorAll('.bone');
+        const haz = elProj.querySelectorAll('.bone');
         let dangerX = 0, dangerY = 0;
         
         haz.forEach(h => {
-            const hR = h.getBoundingClientRect(), sR = soul.getBoundingClientRect();
-            if (Math.abs(hR.left - sR.left) < (40 * STATE.friskSkill)) {
+            const hR = h.getBoundingClientRect(), sR = elSoul.getBoundingClientRect();
+            if (Math.abs(hR.left - sR.left) < 40) {
                 dangerX = sR.left < hR.left ? -2.5 : 2.5;
                 if (h.classList.contains('blue-bone')) { dangerX = 0; dangerY = 0; } // Stop for blue
                 else if (STATE.soul.gravity && STATE.soul.grounded) STATE.soul.vY = STATE.soul.jump;
+                else if (!STATE.soul.gravity) dangerY = sR.top < hR.top ? -2.5 : 2.5;
             }
         });
 
         STATE.soul.x += dangerX;
         STATE.soul.y += dangerY;
-        
-        // Save skill improvement slightly each frame she survives
-        STATE.friskSkill = Math.min(2.0, STATE.friskSkill + 0.0001);
-        localStorage.setItem('frisk_skill', STATE.friskSkill);
     }
 
     /** ⚔️ FIGHT SEQUENCE **/
+    function startFightBar() {
+        STATE.phase = 'FIGHT_AIM';
+        elText.style.display = 'none';
+        elTarget.style.display = 'block';
+        STATE.fightBar.x = 0;
+    }
+
     function executeStrike() {
         STATE.phase = 'ANIMATION';
-        document.getElementById('fight-target').style.display = 'none';
+        elTarget.style.display = 'none';
         
         const anim = document.getElementById('strike-anim');
         anim.style.opacity = '1';
@@ -284,11 +287,11 @@
         setTimeout(() => {
             const sans = document.getElementById('sans-container');
             const miss = document.getElementById('miss-text');
-            sans.style.transform = 'translateX(-100px)';
+            sans.style.transform = 'translateX(-100px)'; // Slide left
             miss.style.opacity = '1'; miss.style.top = '-10px';
 
             setTimeout(() => {
-                sans.style.transform = 'translateX(-50%)';
+                sans.style.transform = 'translateX(-50%)'; // Slide back
                 miss.style.opacity = '0'; miss.style.top = '20px';
                 
                 sansSpeak("what? you think i'm just \ngonna stand there?", () => {
@@ -299,16 +302,18 @@
         }, 100);
     }
 
-    /** 🌀 CUSTOM ENEMY ATTACKS **/
+    /** 🌀 ENEMY ATTACK PATTERNS **/
     function triggerAttackSequence() {
         STATE.turn++;
         STATE.phase = 'ATTACK';
-        textBox.innerHTML = '';
-        subMenu.style.display = 'none';
+        elText.style.display = 'none';
+        elSub.style.display = 'none';
         STATE.soul.x = 275; STATE.soul.y = 60;
+        elProj.innerHTML = ''; // Clear previous bones safely
         
         if (STATE.turn === 1) attack1_SmallBones();
-        else attack2_SlowBlueBone();
+        else if (STATE.turn === 2) attack2_SlowBlueBone();
+        else attack3_RandomBones(); // Fallback for turn 3+
     }
 
     // Turn 1: 10 small bones left to right
@@ -322,37 +327,35 @@
                 const b = document.createElement('div');
                 b.className = 'bone';
                 b.style.width = '12px'; b.style.height = '40px';
-                b.style.left = '-20px'; b.style.bottom = (20 + Math.random()*50) + 'px';
-                box.appendChild(b);
+                b.style.left = '-20px'; b.style.bottom = (10 + Math.random()*60) + 'px';
+                elProj.appendChild(b);
                 let bx = -20;
                 const int = setInterval(() => {
                     bx += 3.5; b.style.left = bx + 'px'; // Move right
-                    if (bx > box.clientWidth + 20) { clearInterval(int); b.remove(); }
+                    if (bx > elBox.clientWidth + 20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
                 }, 16);
             }, i * 500);
         }
-
         setTimeout(endTurn, 6500);
     }
 
     // Turn 2: Giant slow blue bone + Sans talking
     function attack2_SlowBlueBone() {
-        STATE.soul.gravity = false; // Easier to stand still if gravity is off, or can make it gravity
+        STATE.soul.gravity = false; 
         document.getElementById('soul-svg').setAttribute('fill', 'red');
         
         const b = document.createElement('div');
         b.className = 'bone blue-bone';
-        b.style.width = '25px'; b.style.height = '140px'; // Fills height
+        b.style.width = '25px'; b.style.height = '140px'; 
         b.style.left = '-30px'; b.style.bottom = '0px';
-        box.appendChild(b);
+        elProj.appendChild(b);
         
         let bx = -30;
         const int = setInterval(() => {
-            bx += 1.2; b.style.left = bx + 'px'; // Very slow
-            if (bx > box.clientWidth + 20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
+            bx += 1.2; b.style.left = bx + 'px'; 
+            if (bx > elBox.clientWidth + 20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
         }, 16);
 
-        // Sans talks DURING attack
         sansSpeak("so.\nyou're still here.\njust standing around.\ntaking it all in.", () => {
             setTimeout(() => sansSpeak("i gotta respect the\ncommitment to doing\nabsolutely nothing.", null), 1000);
         });
@@ -360,20 +363,33 @@
         setTimeout(endTurn, 8000);
     }
 
+    function attack3_RandomBones() {
+        STATE.soul.gravity = true;
+        document.getElementById('soul-svg').setAttribute('fill', 'blue');
+        for(let i=0; i<8; i++) {
+            setTimeout(() => {
+                if (STATE.phase !== 'ATTACK') return;
+                const b = document.createElement('div');
+                b.className = 'bone';
+                b.style.width = '12px'; b.style.height = '60px';
+                b.style.left = '560px'; b.style.bottom = '0px';
+                elProj.appendChild(b);
+                let bx = 560;
+                const int = setInterval(() => {
+                    bx -= 4; b.style.left = bx + 'px';
+                    if (bx < -20 || STATE.phase !== 'ATTACK') { clearInterval(int); b.remove(); }
+                }, 16);
+            }, i * 600);
+        }
+        setTimeout(endTurn, 5000);
+    }
+
     function endTurn() {
         STATE.phase = 'MENU';
         STATE.currentMenu = 'MAIN';
         clearSansBubble();
+        elProj.innerHTML = ''; // Clean up arena
         
-        // Reset Box contents safely
-        box.innerHTML = '<div id="text-box"></div><div id="sub-menu"></div><div id="fight-target"><div id="fight-cursor"></div></div><div id="soul">' + soul.innerHTML + '</div>';
-        
-        Object.assign(window, {
-            soul: document.getElementById('soul'),
-            textBox: document.getElementById('text-box'),
-            subMenu: document.getElementById('sub-menu')
-        });
-
         const flavorTexts = [
             "* The wind is howling.",
             "* Smells like bone dirt.",
@@ -381,7 +397,6 @@
         ];
         
         if (STATE.owner === 'FRISK') friskThinkAndAct();
-        else if (STATE.owner === 'CHARA') charaThinkAndFight();
         else typeFlavor(flavorTexts[Math.floor(Math.random()*flavorTexts.length)]);
     }
 
@@ -399,27 +414,30 @@
     function openSubMenu(type) {
         STATE.currentMenu = 'SUB';
         STATE.subIdx = 0;
-        textBox.innerHTML = '';
-        subMenu.style.display = 'block';
+        elText.style.display = 'none';
+        elSub.style.display = 'block';
 
         if (type === 'ACT') {
-            subMenu.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Check</div><div class="sub-opt">* Talk</div>`;
+            elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Check</div><div class="sub-opt">* Talk</div>`;
+        } else if (type === 'ITEM') {
+            elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* No Items</div>`;
         } else if (type === 'MERCY') {
-            subMenu.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Spare</div>`;
+            elSub.innerHTML = `<div class="sub-opt" style="color:var(--gold)">* Spare</div>`;
         }
     }
 
     function executeSubMenu() {
-        subMenu.style.display = 'none';
-        if (STATE.menuIdx === 1) {
+        if (STATE.menuIdx === 1) { // ACT
             if (STATE.subIdx === 1) { // Talk
-                typeFlavor("* You tell Sans a bad joke.\n* He didn't laugh.", () => {
+                typeFlavor("* You try to talk to Sans.\n* He ignores you.", () => {
                     sansSpeak("try harder next time.", triggerAttackSequence);
                 });
             } else { // Check
                 typeFlavor("* SANS - 1 ATK 1 DEF\n* The easiest enemy.", () => { setTimeout(triggerAttackSequence, 1000); });
             }
-        } else if (STATE.menuIdx === 3) {
+        } else if (STATE.menuIdx === 2) { // ITEM
+            typeFlavor("* You don't have any items.", () => { setTimeout(triggerAttackSequence, 1000); });
+        } else if (STATE.menuIdx === 3) { // MERCY
             typeFlavor("* You are sparing Sans.", () => {
                 sansSpeak("... yeah, ok.", triggerAttackSequence);
             });
@@ -442,16 +460,14 @@
                     if (e.key === 'ArrowRight') STATE.menuIdx = (STATE.menuIdx + 1) % 4;
                     updateUI();
                     if (e.key === 'z' || e.key === 'Z') {
-                        if (STATE.menuIdx === 0) {
-                            STATE.phase = 'FIGHT_AIM';
-                            textBox.innerHTML = '';
-                            document.getElementById('fight-target').style.display = 'block';
-                        } else if (STATE.menuIdx === 1) openSubMenu('ACT');
+                        if (STATE.menuIdx === 0) startFightBar();
+                        else if (STATE.menuIdx === 1) openSubMenu('ACT');
+                        else if (STATE.menuIdx === 2) openSubMenu('ITEM');
                         else if (STATE.menuIdx === 3) openSubMenu('MERCY');
                     }
                 } else if (STATE.currentMenu === 'SUB') {
                     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') STATE.subIdx = (STATE.subIdx === 0 ? 1 : 0);
-                    if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; subMenu.style.display = 'none'; typeFlavor("* Sans is waiting."); }
+                    if (e.key === 'x' || e.key === 'X') { STATE.currentMenu = 'MAIN'; elSub.style.display = 'none'; typeFlavor("* Sans is waiting."); }
                     if (e.key === 'z' || e.key === 'Z') executeSubMenu();
                     updateUI();
                 }
@@ -462,7 +478,7 @@
     };
     window.onkeyup = (e) => STATE.keys[e.key] = false;
 
-    // Start
+    // Start Sequence
     STATE.phase = 'SANS_TALK';
     sansSpeak("heya.\nready?", () => { clearSansBubble(); typeFlavor("* The wind is howling."); });
     physicsLoop();
