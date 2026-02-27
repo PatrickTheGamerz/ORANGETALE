@@ -2,26 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI DREAM: MINECRAFT HORROR</title>
+    <title>AI OBSIDIAN: THE DREAM ENGINE</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #0f0; z-index: 100; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #0f0; border-radius: 8px; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border: 1px solid white; transform: translate(-50%, -50%); pointer-events: none; }
-        input { background: #111; color: #0f0; border: 1px solid #0f0; padding: 10px; margin-top: 10px; width: 250px; }
-        button { background: #0f0; color: #000; border: none; padding: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
-        #status { font-size: 10px; margin-top: 10px; color: #888; text-transform: uppercase; }
-        #dream-log { font-size: 12px; color: #fff; margin-top: 10px; font-style: italic; }
+        :root { --glitch-red: #ff003c; --void-bg: #050505; }
+        body { margin: 0; overflow: hidden; background: var(--void-bg); font-family: 'Consolas', monospace; color: white; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* UI Styling */
+        #ui-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+            padding: 20px; box-sizing: border-box; z-index: 100;
+        }
+        .panel {
+            pointer-events: auto; background: rgba(0,0,0,0.85);
+            border: 1px solid var(--glitch-red); padding: 15px; border-radius: 4px;
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.3); width: 320px;
+        }
+        input, button {
+            width: 100%; padding: 10px; margin-top: 10px; border-radius: 2px;
+            border: 1px solid #444; background: #111; color: white; font-family: inherit;
+        }
+        button { 
+            background: var(--glitch-red); color: white; border: none; font-weight: bold; 
+            cursor: pointer; text-transform: uppercase;
+        }
+        button:hover { background: #ff2b5f; }
+        
+        #crosshair {
+            position: fixed; top: 50%; left: 50%; width: 12px; height: 12px;
+            border: 2px solid rgba(255,255,255,0.4); transform: translate(-50%, -50%);
+            border-radius: 50%; pointer-events: none;
+        }
+
+        /* Glitch Effects */
+        #vhs-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 2px);
+            pointer-events: none; z-index: 5;
+        }
+        
+        .diagnostics { font-size: 10px; color: #00ff00; margin-top: 10px; overflow: hidden; height: 60px; }
+        .critical-error { color: var(--glitch-red); font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h2 style="margin:0">DREAM ENGINE 2.0</h2>
-        <input type="password" id="apiKey" placeholder="GEMINI API KEY">
-        <button id="startBtn">INITIALIZE DREAM</button>
-        <div id="status">Status: Waiting for Input...</div>
-        <div id="dream-log">"The world is yet to be dreamt."</div>
-    </div>
+
+    <div id="vhs-overlay"></div>
     <div id="crosshair"></div>
+
+    <div id="ui-wrapper">
+        <div class="panel" id="main-panel">
+            <h2 style="margin:0; color:var(--glitch-red); font-style: italic;">VOID-WALKER v1.0</h2>
+            <p style="font-size: 10px; color: #888;">NEURAL NETWORK WORLD MANIFESTATION</p>
+            
+            <input type="password" id="apiKey" placeholder="GEMINI_API_KEY">
+            <input type="text" id="worldPrompt" placeholder="DREAM SEED (e.g. 'fleshy caves')">
+            <button id="initBtn">INITIALIZE REALITY</button>
+            
+            <div class="diagnostics" id="logs">
+                [SYSTEM] Awaiting API Key...<br>
+                [SYSTEM] Renderer Ready.
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: center;">
+            <div class="panel" style="width: auto; padding: 10px 20px; text-align: center;">
+                <span id="ai-status" style="color:#ff003c">AI STATUS: ASLEEP</span>
+            </div>
+        </div>
+    </div>
 
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
@@ -31,121 +81,210 @@
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
+        // --- GLOBAL ENGINE STATE ---
         let scene, camera, renderer, controls, clock;
-        let ground, skybox;
-        const move = { fwd: false, bwd: false, lft: false, rgt: false };
+        let blocks = [];
+        let instancedMesh;
+        const CHUNK_SIZE = 16;
+        const TOTAL_BLOCKS = 4096;
+        const move = { fwd: false, bwd: false, lft: false, rgt: false, jump: false };
         let velocity = new THREE.Vector3();
-        let lastPos = new THREE.Vector3();
+        let lastManifestYaw = 0;
+        let isProcessingAI = false;
+        let currentWorldTheme = "Minecraft Classic";
 
+        const log = (msg, isError = false) => {
+            const div = document.getElementById('logs');
+            div.innerHTML += `<br><span class="${isError ? 'critical-error' : ''}">[${new Date().toLocaleTimeString()}] ${msg}</span>`;
+            div.scrollTop = div.scrollHeight;
+        };
+
+        // --- 1. CORE RENDERER SETUP ---
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.6, 0);
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.Fog(0x050505, 5, 40);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(CHUNK_SIZE/2, 10, CHUNK_SIZE/2);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Ground - The "Floor" of the dream
-            const groundGeo = new THREE.PlaneGeometry(100, 100);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-            ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            scene.add(ground);
-
-            // Skybox - The "Vision" of the dream
-            const skyGeo = new THREE.SphereGeometry(500, 64, 64);
-            const skyMat = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.BackSide });
-            skybox = new THREE.Mesh(skyGeo, skyMat);
-            scene.add(skybox);
-
-            const light = new THREE.AmbientLight(0xffffff, 1);
-            scene.add(light);
-
             controls = new PointerLockControls(camera, document.body);
-            document.addEventListener('click', () => { if(document.getElementById('apiKey').value) controls.lock(); });
+            document.addEventListener('click', () => { if(!isProcessingAI) controls.lock(); });
 
-            window.addEventListener('keydown', (e) => handleKey(e.code, true));
-            window.addEventListener('keyup', (e) => handleKey(e.code, false));
+            const light = new THREE.PointLight(0xffffff, 50, 50);
+            camera.add(light);
+            scene.add(camera);
 
             clock = new THREE.Clock();
+
+            createWorldShell();
+            window.addEventListener('keydown', (e) => handleKey(e.code, true));
+            window.addEventListener('keyup', (e) => handleKey(e.code, false));
             animate();
+            log("Engine Online.");
         }
 
-        async function manifestDream() {
+        // --- 2. THE AI NEURAL LAYER ---
+        async function queryGemini(prompt) {
             const key = document.getElementById('apiKey').value;
-            const log = document.getElementById('dream-log');
-            const status = document.getElementById('status');
+            if(!key) { log("ERROR: API KEY MISSING", true); return null; }
+
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
             
-            status.innerText = "Status: HALLUCINATING...";
-            
-            // Ask AI to describe a high-detail Minecraft image
-            const prompt = "Describe a photorealistic but cursed Minecraft landscape in 10 words. No chat, just the description.";
-            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 1.0, topP: 0.95, maxOutputTokens: 1000 }
+            };
+
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await res.json();
-                const description = data.candidates[0].content.parts[0].text.trim();
-                log.innerText = `"${description}"`;
-
-                // Use Unsplash or Source.Unsplash to get a "Minecraft-like" AI image based on the prompt
-                const imgUrl = `https://source.unsplash.com/featured/?minecraft,${encodeURIComponent(description)}`;
-                const loader = new THREE.TextureLoader();
-                
-                loader.load(imgUrl, (texture) => {
-                    skybox.material.map = texture;
-                    skybox.material.needsUpdate = true;
-                    ground.material.map = texture;
-                    ground.material.needsUpdate = true;
-                    status.innerText = "Status: REALITY STABLE";
+                    body: JSON.stringify(payload)
                 });
 
-            } catch (e) {
-                status.innerText = "Status: DREAM FAILED (Check API Key)";
-                console.error(e);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || "Unknown API Error");
+                }
+
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (err) {
+                log(`API REJECTION: ${err.message}`, true);
+                return null;
             }
         }
 
-        function handleKey(code, val) {
-            if(code === 'KeyW') move.fwd = val;
-            if(code === 'KeyS') move.bwd = val;
-            if(code === 'KeyA') move.lft = val;
-            if(code === 'KeyD') move.rgt = val;
+        async function manifestReality() {
+            if(isProcessingAI) return;
+            isProcessingAI = true;
+            document.getElementById('ai-status').innerText = "AI STATUS: DREAMING";
+            log("Manifesting new reality slice...");
+
+            const userTheme = document.getElementById('worldPrompt').value || "A glitchy, terrifying Minecraft void";
+            const prompt = `You are the Dream Architect. Output ONLY a valid JSON block of 30 cubes.
+            Each cube needs: {"x": coord, "y": coord, "z": coord, "color": hex_color, "scale": 0.5-3.0}.
+            The world theme is: ${userTheme}. Respond only with the JSON.`;
+
+            const aiResponse = await queryGemini(prompt);
+            
+            if(aiResponse) {
+                try {
+                    // Extract JSON from potential Markdown wrappers
+                    const cleanJson = aiResponse.match(/\[.*\]/s)[0];
+                    const blockData = JSON.parse(cleanJson);
+                    
+                    updateWorldFromAI(blockData);
+                    log("Reality shift successful.");
+                } catch (e) {
+                    log("Failed to parse AI dream logic.", true);
+                }
+            }
+
+            isProcessingAI = false;
+            document.getElementById('ai-status').innerText = "AI STATUS: STABLE";
+        }
+
+        // --- 3. WORLD BUILDING & UPDATING ---
+        function createWorldShell() {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshStandardMaterial({ color: 0x222222, wireframe: true });
+            
+            // Initial scaffold
+            for(let i=0; i<100; i++) {
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(
+                    (Math.random()-0.5)*30, 
+                    Math.random()*10, 
+                    (Math.random()-0.5)*30
+                );
+                scene.add(mesh);
+                blocks.push(mesh);
+            }
+        }
+
+        function updateWorldFromAI(data) {
+            // Smooth transition: Move existing blocks to new AI locations
+            data.forEach((item, i) => {
+                if(blocks[i]) {
+                    const b = blocks[i];
+                    b.position.set(item.x, item.y, item.z);
+                    b.scale.setScalar(item.scale || 1);
+                    b.material.color.set(item.color || 0xffffff);
+                    b.material.wireframe = false;
+                }
+            });
+        }
+
+        // --- 4. PLAYER & PHYSICS ---
+        function handleKey(code, state) {
+            if(code === 'KeyW') move.fwd = state;
+            if(code === 'KeyS') move.bwd = state;
+            if(code === 'KeyA') move.lft = state;
+            if(code === 'KeyD') move.rgt = state;
+            if(code === 'Space') move.jump = state;
         }
 
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
             if (controls.isLocked) {
-                const delta = clock.getDelta();
+                // Movement
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 2.0 * delta; // Simple Gravity
 
-                if (move.fwd) velocity.z += 40.0 * delta;
-                if (move.bwd) velocity.z -= 40.0 * delta;
-                if (move.lft) velocity.x -= 40.0 * delta;
-                if (move.rgt) velocity.x += 40.0 * delta;
+                if (move.fwd) velocity.z += 50.0 * delta;
+                if (move.bwd) velocity.z -= 50.0 * delta;
+                if (move.lft) velocity.x -= 50.0 * delta;
+                if (move.rgt) velocity.x += 50.0 * delta;
 
                 controls.moveRight(velocity.x * delta);
                 controls.moveForward(velocity.z * delta);
+                camera.position.y += (velocity.y * delta);
 
-                // Trigger new dream if player moves a certain distance
-                if (camera.position.distanceTo(lastPos) > 10) {
-                    manifestDream();
-                    lastPos.copy(camera.position);
+                if (camera.position.y < 1.6) {
+                    velocity.y = 0;
+                    camera.position.y = 1.6;
+                    if(move.jump) velocity.y = 10;
                 }
+
+                // --- 5. THE HORROR TRIGGER ---
+                // Detect a "Quick Look Back"
+                const currentYaw = camera.rotation.y;
+                if (Math.abs(currentYaw - lastManifestYaw) > 2.0) {
+                    manifestReality();
+                    lastManifestYaw = currentYaw;
+                }
+
+                // Block drifting
+                blocks.forEach((b, i) => {
+                    b.position.y += Math.sin(clock.getElapsedTime() + i) * 0.005;
+                });
             }
+
             renderer.render(scene, camera);
         }
 
-        document.getElementById('startBtn').onclick = () => {
-            init();
-            manifestDream();
-            document.getElementById('ui').style.background = "rgba(0,0,0,0.3)";
+        // Bootstrap
+        document.getElementById('initBtn').onclick = () => {
+            if(!scene) init();
+            manifestReality();
         };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
     </script>
 </body>
 </html>
