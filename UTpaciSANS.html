@@ -2,462 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DUSTTRUST 3D: BROTHER'S KEEPER</title>
+    <title>Piano Loop Player</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'VT323', monospace; color: white; user-select: none; }
-
-        #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
-        #top-hud { padding: 20px 40px; font-size: 36px; text-shadow: 2px 2px #000; display: flex; justify-content: space-between; }
-        
-        #dialogue-container { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); width: 550px; background: rgba(0,0,0,0.9); border: 4px solid #ff8c00; border-radius: 10px; padding: 25px; font-size: 32px; display: none; text-align: center; line-height: 1.3; font-family: 'VT323', monospace; text-transform: uppercase; box-shadow: 0 0 20px rgba(255, 140, 0, 0.4);}
-
-        #narrative-box { position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%); width: 760px; height: 160px; background: rgba(0,0,0,0.95); border: 4px solid white; padding: 20px 30px; font-size: 36px; display: block; pointer-events: auto; line-height: 1.4; }
-
-        #bottom-ui { padding: 10px 40px 30px 40px; display: flex; flex-direction: column; align-items: center; background: rgba(0,0,0,0.95); border-top: 4px solid white; pointer-events: auto; }
-        
-        #stats-bar { display: flex; align-items: center; justify-content: space-between; font-size: 36px; margin-bottom: 20px; width: 800px; }
-        #hp-container { display: flex; align-items: center; }
-        .hp-box { width: 150px; height: 30px; background: red; margin: 0 15px; border: 2px solid #555; position: relative; }
-        #hp-fill { height: 100%; background: #ffff00; width: 100%; transition: width 0.1s; }
-        #kr-fill { height: 100%; background: #c800ff; position: absolute; right: 0; top: 0; width: 0%; transition: width 0.1s; }
-        
-        #controller-badge { color: #888; font-size: 28px; border: 2px solid #888; padding: 5px 15px; border-radius: 5px; background: #000;}
-
-        #action-buttons { display: flex; justify-content: space-between; width: 800px; }
-        .action-btn { background: black; color: #ff8c00; border: 4px solid #ff8c00; width: 170px; height: 60px; font-size: 36px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.1s; position: relative; pointer-events: auto; }
-        .action-btn.active { background: #ffaa33; color: black; border-color: #ffaa33; }
-        .soul-icon { display: none; position: absolute; left: 10px; color: #00ffff; font-size: 24px; }
-        .action-btn.active .soul-icon { display: block; }
-
-        #controls-hint { position: absolute; left: 20px; bottom: 380px; font-size: 24px; color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border: 2px solid #555; line-height: 1.5;}
-
-        #game-over { position: absolute; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
-        .go-text { font-size: 120px; letter-spacing: 5px; margin: 0; color: #fff; }
-        .retry-btn { margin-top: 60px; font-size: 40px; background: none; color: white; border: 2px solid white; padding: 10px 30px; cursor: pointer; font-family: inherit; pointer-events: auto;}
-        .retry-btn:hover { background: white; color: black; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        .player-card {
+            background: #2d2d2d;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 300px;
+        }
+        .visualizer {
+            height: 5px;
+            background: #4facfe;
+            margin: 20px 0;
+            border-radius: 5px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        audio {
+            width: 100%;
+            filter: invert(100%); /* Makes the player match dark mode */
+        }
+        @keyframes pulse {
+            0% { opacity: 0.3; width: 20%; margin-left: 40%; }
+            50% { opacity: 1; width: 100%; margin-left: 0%; }
+            100% { opacity: 0.3; width: 20%; margin-left: 40%; }
+        }
     </style>
 </head>
 <body>
 
-<div id="ui-layer">
-    <div id="top-hud">
-        <span style="color: cyan;" id="hud-name">💙 PLAYER</span>
-        <span style="color: yellow;">LV 1</span>
-    </div>
+<div class="player-card">
+    <h3>Piano Composition</h3>
+    <p style="font-size: 0.8rem; color: #aaa;">Looping Enabled</p>
+    <div class="visualizer"></div>
     
-    <div id="dialogue-container"><div id="paps-dialogue">...</div></div>
-    <div id="narrative-box"></div>
-    
-    <div id="controls-hint">[WASD] Move/Menu<br>[Z/SPACE] Select/Jump<br>[X] Back<br>[Q] Tag SANS</div>
-
-    <div id="bottom-ui">
-        <div id="stats-bar">
-            <div id="hp-container">
-                <span>HP</span>
-                <div class="hp-box"><div id="hp-fill"></div><div id="kr-fill"></div></div>
-                <span id="hp-text">680 / 680</span>
-                <span style="margin-left: 15px; color: #c800ff;">KR</span>
-            </div>
-            <div id="controller-badge">CTRL: PLAYER</div>
-        </div>
-        <div id="action-buttons">
-            <div class="action-btn" id="btn-0"><span class="soul-icon">💙</span>FIGHT</div>
-            <div class="action-btn active" id="btn-1"><span class="soul-icon">💙</span>ACT</div>
-            <div class="action-btn" id="btn-2"><span class="soul-icon">💙</span>ITEM</div>
-            <div class="action-btn" id="btn-3"><span class="soul-icon">💙</span>MERCY</div>
-        </div>
-    </div>
+    <audio controls loop>
+        <source src="your-audio-file.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
 </div>
 
-<div id="game-over">
-    <h1 class="go-text">GAME OVER</h1>
-    <p style="font-size: 40px; color: #ff8c00; margin-top: 20px;">"I'M SORRY... I HAD TO DO IT."</p>
-    <button class="retry-btn" onclick="location.reload()">STAY DETERMINED</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-<script>
-    // --- STATE MANAGEMENT ---
-    const state = {
-        hp: 680, maxHp: 680, kr: 0, turn: 0, 
-        mode: "TYPING", // TYPING, MENU, ACT_MENU, DIALOGUE, DODGING
-        menuIndex: 1, actIndex: 0, talkIndex: 0, invuln: 0, globalTime: 0,
-        playerVel: new THREE.Vector3(0, 0, 0),
-        items: ["Hot Dog...?", "Hot Cat", "Ketchup", "Ketchup"],
-        teammate: localStorage.getItem('teammate') || 'SANS',
-        controller: 'PLAYER' 
-    };
-
-    const keys = {};
-    window.addEventListener('keydown', e => { keys[e.code] = true; handleInput(e.code); });
-    window.addEventListener('keyup', e => keys[e.code] = false);
-
-    const buttons = [
-        document.getElementById('btn-0'), document.getElementById('btn-1'), 
-        document.getElementById('btn-2'), document.getElementById('btn-3')
-    ];
-    const navBox = document.getElementById('narrative-box');
-    const badge = document.getElementById('controller-badge');
-    const hudName = document.getElementById('hud-name');
-
-    // --- DIALOGUE & LORE ---
-    const talkOptions = [
-        "* You ask Papyrus why he's doing this.",
-        "* You tell him you don't want to fight your own brother.",
-        "* You mention the human. You say you can still stop them together.",
-        "* You ask him if he remembers your puns.",
-        "* You plead with him to drop the bone.",
-        "* You tell him LV isn't the answer.",
-        "* You ask if he even feels anything anymore.",
-        "* You stand in silence."
-    ];
-
-    const papsScript = [
-        "SANS... YOU CAN'T STOP ME NOW.",
-        "THE HUMAN WILL JUST RESET ANYWAY.",
-        "IT'S BETTER THIS WAY. BETTER ME THAN THEM.",
-        "WHY WON'T YOU JUST LET ME FINISH THIS?!",
-        "YOUR PUNS WON'T SAVE YOU THIS TIME.",
-        "I'M DOING THIS FOR US, SANS!",
-        "PLEASE... JUST GIVE UP.",
-        "..."
-    ];
-
-    // --- 3D ENGINE ---
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x1a0505, 0.035);
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 20, 24); camera.lookAt(0, 0, 0);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
-
-    scene.add(new THREE.AmbientLight(0x442222));
-    const spotLight = new THREE.SpotLight(0xff8c00, 2); spotLight.position.set(0, 30, 10); scene.add(spotLight);
-
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 36), new THREE.MeshStandardMaterial({ color: 0x110505 }));
-    floor.rotation.x = -Math.PI / 2; scene.add(floor);
-    const gridHelper = new THREE.GridHelper(36, 18, 0xff4400, 0x441100); gridHelper.position.y = 0.01; scene.add(gridHelper);
-
-    // Player (Blue Soul)
-    const playerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-    const player = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), playerMat); player.position.y = 0.5; scene.add(player);
-
-    // Papyrus
-    const papsGroup = new THREE.Group();
-    const papsBody = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.2, 5, 16), new THREE.MeshStandardMaterial({ color: 0xcc5500 })); papsBody.position.y = 2.5; papsGroup.add(papsBody);
-    const papsHead = new THREE.Mesh(new THREE.SphereGeometry(1.3, 16, 16), new THREE.MeshStandardMaterial({color: 0xffffff})); papsHead.position.y = 5.8; papsGroup.add(papsHead);
-    papsGroup.position.set(0, 0, -16); scene.add(papsGroup);
-
-    // --- PROPER 3D MESHES (BALANCED) ---
-    function createBoneMesh(h, w, isBlue) {
-        const group = new THREE.Group();
-        const mat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00ffff : 0xffffff, roughness: 0.3 });
-        const r = w * 0.45; 
-        const shaftH = Math.max(0.1, h - (r * 2));
-        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w*0.35, w*0.35, shaftH, 12), mat); group.add(shaft);
-        const yOff = shaftH / 2;
-        [[-w*0.3, yOff, 0], [w*0.3, yOff, 0], [-w*0.3, -yOff, 0], [w*0.3, -yOff, 0]].forEach(pos => {
-            const j = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), mat); j.position.set(...pos); group.add(j);
-        });
-        return group;
-    }
-
-    function createBlasterMesh() {
-        const group = new THREE.Group();
-        const matWhite = new THREE.MeshStandardMaterial({color: 0xffffff});
-        const matBlack = new THREE.MeshBasicMaterial({color: 0x111111});
-        const skull = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 4), matWhite); skull.position.y = 1; group.add(skull);
-        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.5), matBlack); eyeL.position.set(-0.8, 1.2, 2.1); group.add(eyeL);
-        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.5), matBlack); eyeR.position.set(0.8, 1.2, 2.1); group.add(eyeR);
-        const jaw = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1, 3.5), matWhite); jaw.position.set(0, -1.5, 1); group.add(jaw);
-        return group;
-    }
-
-    let projectiles = [];
-    function spawnBone(x, y, z, h, w, vx, vz, behavior = 'normal', isBlue = false) {
-        const bone = createBoneMesh(h, w, isBlue);
-        bone.position.set(x, y, z);
-        if (w > 4) bone.scale.set(w/2, 1, 1); // Scale horizontally for long jumps
-        scene.add(bone);
-        projectiles.push({ mesh: bone, type: 'bone', vx, vz, vy: behavior === 'falling' ? -0.8 : 0, isBlue, w, h, behavior, baseY: y });
-    }
-
-    function spawnBlaster(x, y, z, aimX, aimZ, delay = 50) {
-        const blaster = createBlasterMesh(); blaster.position.set(x, y + 5, z); blaster.lookAt(aimX, 0, aimZ); scene.add(blaster);
-        const warn = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 80, 16), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 }));
-        warn.position.set(x, y, z); warn.lookAt(aimX, 0, aimZ); warn.rotateX(Math.PI/2); warn.translateY(40); scene.add(warn);
-        projectiles.push({ head: blaster, mesh: warn, type: 'blaster', timer: delay, px: x, pz: z, aimX, aimZ });
-    }
-
-    // --- TYPEWRITER ---
-    function typeText(text, container, callback) {
-        state.mode = "TYPING"; container.innerHTML = ''; let i = 0;
-        function nextChar() {
-            if(state.mode !== "TYPING") return; 
-            if (i < text.length) {
-                let char = text.charAt(i); container.innerHTML += (char === '\n') ? '<br>' : char; i++;
-                let delay = (char === '.' || char === ',' || char === '?' || char === '!') ? 200 : 35;
-                setTimeout(nextChar, delay);
-            } else if(callback) setTimeout(callback, 800);
-        }
-        nextChar();
-    }
-
-    // --- MENU CONTROLS & AI ---
-    function toggleTeammate() {
-        if (state.mode === "CUTSCENE") return;
-        state.controller = state.controller === 'PLAYER' ? 'AI' : 'PLAYER';
-        
-        if (state.controller === 'AI') {
-            badge.innerText = `CTRL: ${state.teammate}`; badge.style.borderColor = '#00ffff'; badge.style.color = '#00ffff';
-            hudName.innerText = `💙 ${state.teammate}`; hudName.style.color = '#00ffff';
-            if(state.mode === "MENU" || state.mode === "TYPING") typeText(`* ${state.teammate} steps in.`, navBox, () => { state.mode = "MENU"; runAIMenu(); });
-        } else {
-            badge.innerText = `CTRL: PLAYER`; badge.style.borderColor = '#888'; badge.style.color = '#888';
-            hudName.innerText = `💙 PLAYER`; hudName.style.color = '#00ffff';
-            if(state.mode === "MENU" || state.mode === "TYPING") typeText(`* You take control.`, navBox, () => { state.mode = "MENU"; });
-        }
-    }
-
-    function handleInput(key) {
-        if (key === 'KeyQ') { toggleTeammate(); return; }
-        const isUp = key === 'ArrowUp' || key === 'KeyW';
-        const isDown = key === 'ArrowDown' || key === 'KeyS';
-        const isLeft = key === 'ArrowLeft' || key === 'KeyA';
-        const isRight = key === 'ArrowRight' || key === 'KeyD';
-        const isSelect = key === 'Enter' || key === 'Space' || key === 'KeyZ';
-        const isCancel = key === 'ShiftLeft' || key === 'KeyX';
-
-        if (state.controller === 'PLAYER') {
-            if (state.mode === "MENU") {
-                if (isLeft) updateMenuIndex((state.menuIndex + 3) % 4);
-                if (isRight) updateMenuIndex((state.menuIndex + 1) % 4);
-                if (isSelect) executeMenuAction();
-            } else if (state.mode === "ACT_MENU") {
-                if (isUp) state.actIndex = Math.max(0, state.actIndex - 1);
-                if (isDown) state.actIndex = Math.min(2, state.actIndex + 1);
-                if (isSelect) executeActAction();
-                if (isCancel) { state.mode = "MENU"; typeText("* You reconsider.", navBox, () => state.mode = "MENU"); }
-                updateActUI();
-            }
-        } 
-    }
-
-    function updateMenuIndex(idx) {
-        buttons[state.menuIndex].classList.remove('active'); state.menuIndex = idx; buttons[state.menuIndex].classList.add('active');
-    }
-
-    function updateActUI() {
-        if (state.mode !== "ACT_MENU") return;
-        let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
-        ['CHECK', 'TALK', 'PLEAD'].forEach((act, i) => {
-            let prefix = (i === state.actIndex) ? '<span style="color:cyan">❤</span> ' : '&nbsp;&nbsp;';
-            html += `<div style="color:${i === state.actIndex ? '#fff' : '#aaa'}">${prefix} * ${act}</div>`;
-        });
-        html += '</div>';
-        navBox.innerHTML = html;
-    }
-
-    function runAIMenu() {
-        if(state.controller !== 'AI' || state.mode !== "MENU") return;
-        setTimeout(() => {
-            if(state.hp <= 300 && state.items.length > 0) updateMenuIndex(2); // Item
-            else updateMenuIndex(1); // ACT
-            setTimeout(() => {
-                if (state.menuIndex === 1) {
-                    state.mode = "ACT_MENU"; state.actIndex = 1; updateActUI(); // AI picks TALK
-                    setTimeout(executeActAction, 800);
-                } else executeMenuAction();
-            }, 600);
-        }, 600);
-    }
-
-    function executeMenuAction() {
-        if (state.menuIndex === 0) {
-            state.mode = "DIALOGUE";
-            typeText(`* You swing at your brother.\n* He blocks it effortlessly.`, navBox, () => {
-                let dodgeInt = setInterval(() => { papsGroup.position.x += 1; if(papsGroup.position.x > 8) { clearInterval(dodgeInt); triggerPapsDiag(); } }, 16);
-            });
-        } else if (state.menuIndex === 1) {
-            state.mode = "ACT_MENU"; state.actIndex = 0; updateActUI();
-        } else if (state.menuIndex === 2) {
-            state.mode = "DIALOGUE";
-            if (state.items.length > 0) {
-                let item = state.items.shift(); state.hp = Math.min(state.maxHp, state.hp + 200); updateHUD();
-                typeText(`* You eat the ${item}.\n* HP recovered!`, navBox, triggerPapsDiag);
-            } else typeText("* No items left.", navBox, triggerPapsDiag);
-        } else if (state.menuIndex === 3) {
-            state.mode = "DIALOGUE"; typeText("* You spare Papyrus.\n* He refuses your mercy.", navBox, triggerPapsDiag);
-        }
-    }
-
-    function executeActAction() {
-        state.mode = "DIALOGUE";
-        if (state.actIndex === 0) {
-            typeText("* PAPYRUS - 99 ATK 99 DEF\n* He has lost his mind.", navBox, triggerPapsDiag);
-        } else if (state.actIndex === 1) {
-            let txt = talkOptions[Math.min(state.talkIndex, talkOptions.length - 1)]; state.talkIndex++;
-            typeText(txt, navBox, triggerPapsDiag);
-        } else if (state.actIndex === 2) {
-            typeText("* You beg him to stop.\n* He looks away, but continues.", navBox, triggerPapsDiag);
-        }
-    }
-
-    function triggerPapsDiag() {
-        papsGroup.position.x = 0; 
-        document.getElementById('dialogue-container').style.display = 'block'; navBox.style.display = 'none';
-        let text = papsScript[Math.min(state.turn, papsScript.length - 1)];
-
-        typeText(text, document.getElementById('paps-dialogue'), () => {
-            document.getElementById('dialogue-container').style.display = 'none'; navBox.style.display = 'block'; navBox.innerHTML = "";
-            startEnemyTurn();
-        });
-    }
-
-    // --- BALANCED 3D ATTACKS ---
-    function startEnemyTurn() {
-        state.mode = "DODGING";
-        let tick = 0;
-        const attackInt = setInterval(() => {
-            if(tick > 45 + (state.turn * 8)) {
-                clearInterval(attackInt); setTimeout(endTurn, 1000); return;
-            }
-
-            if (state.turn === 0) {
-                if(tick % 12 === 0) spawnBone(18, 1, player.position.z, 2, 1.5, -0.35, 0, 'normal');
-                if(tick % 18 === 0) spawnBone(-18, 0.6, player.position.z, 1.2, 16, 0.35, 0, 'normal'); // Jumpable sweeping line
-            } 
-            else if (state.turn === 1) {
-                if(tick % 10 === 0) {
-                    let isBlue = Math.random() > 0.5;
-                    spawnBone(18, isBlue ? 2 : 1, player.position.z, isBlue ? 6 : 2, 1.5, -0.4, 0, 'normal', isBlue);
-                }
-            }
-            else if (state.turn === 2) {
-                if(tick % 15 === 0) spawnBlaster(player.position.x + (Math.random()*8-4), 12, -16, player.position.x, player.position.z, 40);
-            }
-            else {
-                if(tick % 15 === 0) spawnBone(18, 0.6, player.position.z, 1.2, 16, -0.4, 0); // Fast Jumps
-                if(tick % 25 === 0) spawnBlaster(12, 10, -12, player.position.x, player.position.z, 45);
-            }
-            tick++;
-        }, 120);
-    }
-
-    function endTurn() {
-        state.mode = "MENU"; state.turn++; 
-        typeText("* The heavy air makes it hard to breathe.", navBox, () => { if(state.controller === 'AI') runAIMenu(); });
-        player.position.set(0, 0.6, 0); state.playerVel.set(0,0,0);
-        projectiles.forEach(p => { scene.remove(p.mesh); if(p.head) scene.remove(p.head); }); projectiles = [];
-    }
-
-    // --- PHYSICS & AI DODGING ---
-    function takeDamage(amt, isKr) {
-        if(state.invuln > 0 || state.mode !== "DODGING") return;
-        if(isKr) { state.kr += amt; if(state.hp - state.kr <= 1) state.kr = state.hp - 1; } 
-        else state.hp -= amt;
-        
-        state.invuln = 20;
-        playerMat.color.setHex(0xffaaaa); setTimeout(() => playerMat.color.setHex(0x00ffff), 150);
-        if(state.hp <= 0) { state.mode = "GAMEOVER"; document.getElementById('game-over').style.display = 'flex'; }
-        
-        let activeHp = Math.max(0, state.hp - state.kr);
-        document.getElementById('hp-fill').style.width = (state.hp / state.maxHp * 100) + '%';
-        document.getElementById('kr-fill').style.width = (state.kr / state.maxHp * 100) + '%';
-        document.getElementById('hp-text').innerText = `${activeHp} / ${state.maxHp}`;
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        state.globalTime += 0.05;
-        if(state.invuln > 0) state.invuln--;
-
-        if (state.mode === "DODGING") {
-            const speed = 0.35; let isMoving = false;
-
-            if (state.controller === 'PLAYER') {
-                if(keys['KeyW'] || keys['ArrowUp']) { state.playerVel.z = -speed; isMoving = true; }
-                else if(keys['KeyS'] || keys['ArrowDown']) { state.playerVel.z = speed; isMoving = true; }
-                else state.playerVel.z = 0;
-
-                if(keys['KeyA'] || keys['ArrowLeft']) { state.playerVel.x = -speed; isMoving = true; }
-                else if(keys['KeyD'] || keys['ArrowRight']) { state.playerVel.x = speed; isMoving = true; }
-                else state.playerVel.x = 0;
-
-                if((keys['Space'] || keys['KeyZ']) && player.position.y <= 0.61) { state.playerVel.y = 0.6; isMoving = true; }
-            } else {
-                // SANS AI DODGING
-                let dx = 0, dz = 0, doJump = false, freeze = false;
-                projectiles.forEach(p => {
-                    let distX = p.mesh.position.x - player.position.x; let distZ = p.mesh.position.z - player.position.z;
-                    let distSq = distX*distX + distZ*distZ;
-                    
-                    if(distSq < 36) { 
-                        if(p.isBlue) freeze = true;
-                        else {
-                            dx -= distX * 0.2; dz -= distZ * 0.2;
-                            if (p.mesh.position.y < 2 && Math.abs(distX) < 4 && p.w > 4) doJump = true; // Jump over wide bones
-                        }
-                    }
-                });
-
-                if (freeze) { state.playerVel.x = 0; state.playerVel.z = 0; isMoving = false; } 
-                else {
-                    let mag = Math.sqrt(dx*dx + dz*dz);
-                    if (mag > 0) { state.playerVel.x = (dx / mag) * speed; state.playerVel.z = (dz / mag) * speed; isMoving = true; } 
-                    else { state.playerVel.x = -player.position.x * 0.1; state.playerVel.z = -player.position.z * 0.1; }
-                    if(doJump && player.position.y <= 0.61) { state.playerVel.y = 0.6; isMoving = true; }
-                }
-            }
-
-            state.playerVel.y -= 0.045; player.position.add(state.playerVel);
-            let isMovingOverall = isMoving || Math.abs(state.playerVel.y) > 0.1;
-
-            if(player.position.y < 0.6) { player.position.y = 0.6; state.playerVel.y = 0; }
-            player.position.x = Math.max(-15, Math.min(15, player.position.x));
-            player.position.z = Math.max(-15, Math.min(15, player.position.z));
-
-            // Collisions
-            for(let i = projectiles.length - 1; i >= 0; i--) {
-                let p = projectiles[i];
-                p.mesh.position.x += p.vx; p.mesh.position.z += p.vz;
-                if(p.behavior === 'sine') p.mesh.position.y = p.baseY + Math.sin(state.globalTime * 2.5) * 2;
-
-                let hw = p.w / 2, hh = p.h / 2;
-                if (Math.abs(player.position.x - p.mesh.position.x) < hw + 0.5 &&
-                    Math.abs(player.position.y - p.mesh.position.y) < hh + 0.5 &&
-                    Math.abs(player.position.z - p.mesh.position.z) < 1.0) {
-                    if(p.isBlue) { if(isMovingOverall) takeDamage(15, true); } else takeDamage(25, true);
-                }
-
-                if(p.type === 'blaster') {
-                    p.timer--;
-                    if (p.timer > 0 && p.timer < 12) p.head.children[3].position.y -= 0.15;
-                    else if(p.timer === 0) {
-                        p.mesh.scale.set(1.2, 1, 1.2); p.mesh.material.color.setHex(0xffffff); p.mesh.material.opacity = 0.9;
-                        const dist = new THREE.Vector2(player.position.x - p.px, player.position.z - p.pz).length();
-                        if(dist < 2.5) takeDamage(50, false); 
-                    } else if (p.timer < -12) {
-                        scene.remove(p.mesh); scene.remove(p.head); projectiles.splice(i, 1); continue;
-                    }
-                }
-
-                if(Math.abs(p.mesh.position.x) > 22 || Math.abs(p.mesh.position.z) > 22 || p.mesh.position.y < -2) {
-                    scene.remove(p.mesh); projectiles.splice(i, 1);
-                }
-            }
-
-            if(state.kr > 0 && Math.random() < 0.1) { state.kr--; state.hp--; }
-        }
-
-        papsGroup.position.y = Math.sin(Date.now() * 0.005) * 0.2; 
-        renderer.render(scene, camera);
-    }
-
-    typeText("* The heavy air makes it hard to breathe.", navBox); animate();
-</script>
 </body>
 </html>
