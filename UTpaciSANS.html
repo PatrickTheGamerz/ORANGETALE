@@ -2,122 +2,125 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mice on Venus - Measures 1-21</title>
+    <title>Mice on Venus - Precision 21 Measures</title>
     <style>
-        :root { --accent: #00d2ff; --bg: #0a0a0c; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .sequencer-ui { background: #121216; border: 1px solid #222; padding: 40px; border-radius: 16px; text-align: center; width: 500px; box-shadow: 0 40px 100px rgba(0,0,0,0.9); }
-        .measure-tag { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 10px; }
-        .current-notes { font-size: 28px; color: var(--accent); margin: 20px 0; min-height: 40px; font-weight: 300; }
-        .progress-container { width: 100%; height: 4px; background: #222; border-radius: 2px; margin: 20px 0; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 15px var(--accent); }
-        button { background: var(--accent); color: #000; border: none; padding: 15px 50px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 14px; }
-        button:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        body { background: #0b0b0d; color: #fff; font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .player { background: #18181c; border: 1px solid #2d2d33; padding: 40px; border-radius: 20px; text-align: center; width: 400px; box-shadow: 0 40px 80px rgba(0,0,0,0.8); }
+        .note-view { font-size: 32px; font-weight: 200; color: #4facfe; margin: 25px 0; height: 40px; text-shadow: 0 0 20px rgba(79, 172, 254, 0.4); }
+        .measure-num { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 4px; }
+        button { background: #4facfe; color: #000; border: none; padding: 16px 40px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 15px; width: 100%; }
+        button:hover { background: #00f2fe; transform: translateY(-2px); }
+        .progress-rail { width: 100%; height: 4px; background: #222; border-radius: 2px; margin-top: 30px; }
+        .progress-fill { height: 100%; width: 0%; background: #4facfe; transition: width 0.1s linear; }
     </style>
 </head>
 <body>
 
-<div class="sequencer-ui">
-    <div class="measure-tag" id="mInfo">Measure 01 / 21</div>
-    <div class="current-notes" id="noteDisplay">---</div>
-    <div class="progress-container"><div class="progress-bar" id="pBar"></div></div>
-    <button id="playBtn">PLAY FULL 21 MEASURES</button>
+<div class="player">
+    <div class="measure-num" id="measureInfo">Measure 01 / 21</div>
+    <div class="note-view" id="noteName">---</div>
+    <button id="playBtn">START AMBIENT LOOP</button>
+    <div class="progress-rail"><div class="progress-fill" id="pFill"></div></div>
 </div>
 
 <script>
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-// Frequency Map for all keys on your sheets
-const F = {
-    'G2': 98.00, 'Bb2': 116.54, 'C3': 130.81, 'Eb3': 155.56, 'F#3': 185.00, 'Ab3': 207.65, 'Bb3': 233.08,
-    'C4': 261.63, 'D4': 293.66, 'Eb4': 311.13, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'Ab4': 415.30, 'Bb4': 466.16,
+// Exact Frequencies for the keys in your sheets
+const FREQ = {
+    'G2': 98.00, 'Ab2': 103.83, 'Bb2': 116.54, 'C3': 130.81, 'Eb3': 155.56, 'F#3': 185.00, 'Ab3': 207.65, 
+    'C4': 261.63, 'E4': 329.63, 'G4': 392.00, 'Ab4': 415.30, 'Bb4': 466.16, 
     'C5': 523.25, 'D5': 587.33, 'Eb5': 622.25, 'E5': 659.25, 'G5': 783.99, 'C6': 1046.50
 };
 
-const BPM = 108; // Official marking from your sheet
-const beat = 60 / BPM;
+const BPM = 75; 
+const secondsPerBeat = 60 / BPM;
 
-// The full 21-measure score transcribed from your images
+// SEQUENCE DATA: measure, timeInBeats, notes[], durationInBeats
 const score = [
-    // M1-4: C Major Intro
-    { t: 0, n: ['C3', 'C4', 'E4'], d: 4 }, { t: 2, n: ['C4', 'E4'], d: 2 },
-    { t: 4, n: ['C3', 'C4', 'E4'], d: 4 }, { t: 6, n: ['C4', 'E4'], d: 2 },
-    { t: 8, n: ['C3', 'C4', 'E4'], d: 4 }, { t: 10, n: ['C4', 'E4'], d: 2 },
-    { t: 12, n: ['C3', 'C4', 'E4'], d: 4 }, { t: 14, n: ['C4', 'E4'], d: 2 },
-    // M5-10: Harmonic Shift (Ab and C)
-    { t: 16, n: ['Ab3', 'C4', 'E4', 'G4'], d: 4 }, { t: 18, n: ['C4', 'E4', 'G4'], d: 2 },
-    { t: 20, n: ['C3', 'C4', 'E4', 'G4'], d: 4 }, { t: 22, n: ['C4', 'E4', 'G4'], d: 2 },
-    { t: 24, n: ['Ab3', 'C4', 'E4', 'G4'], d: 4 }, { t: 26, n: ['C4', 'E4', 'G4'], d: 2 },
-    { t: 28, n: ['C3', 'C4', 'E4', 'G4'], d: 4 }, { t: 30, n: ['C4', 'E4', 'G4'], d: 2 },
-    { t: 32, n: ['C3', 'C4', 'E4', 'G4'], d: 4 }, { t: 34, n: ['C4', 'E4', 'G4'], d: 2 },
-    { t: 36, n: ['C3', 'C4', 'E4', 'G4'], d: 4 }, { t: 38, n: ['C4', 'E4', 'G4'], d: 2 },
-    // M11: The Transition
-    { t: 40, n: ['F#3', 'E5'], d: 4 }, { t: 42, n: ['G5'], d: 1 }, { t: 43, n: ['C6'], d: 1 },
-
-    // --- NEW LINES START HERE (Measures 12-21) ---
-    // M12-15: Eb -> Ab -> Bb -> C
-    { t: 44, n: ['C3', 'G4', 'C5', 'Eb5'], d: 4 }, { t: 46, n: ['G4', 'C5', 'Eb5'], d: 2 },
-    { t: 48, n: ['Ab2', 'Ab4', 'C5', 'Eb5'], d: 4 }, { t: 50, n: ['Ab4', 'C5', 'Eb5'], d: 2 },
-    { t: 52, n: ['Bb2', 'Bb4', 'D5', 'F5'], d: 4 }, { t: 54, n: ['Bb4', 'D5', 'F5'], d: 2 },
-    { t: 56, n: ['C3', 'G4', 'C5', 'Eb5'], d: 4 }, { t: 58, n: ['G4', 'C5', 'Eb5'], d: 2 },
-    // M16-19: Repeat of the Walking Chords
-    { t: 60, n: ['C3', 'G4', 'C5', 'Eb5'], d: 4 }, { t: 62, n: ['G4', 'C5', 'Eb5'], d: 2 },
-    { t: 64, n: ['Ab2', 'Ab4', 'C5', 'Eb5'], d: 4 }, { t: 66, n: ['Ab4', 'C5', 'Eb5'], d: 2 },
-    { t: 68, n: ['Bb2', 'Bb4', 'D5', 'F5'], d: 4 }, { t: 70, n: ['Bb4', 'D5', 'F5'], d: 2 },
-    { t: 72, n: ['C3', 'G4', 'C5', 'Eb5'], d: 4 }, { t: 74, n: ['G4', 'C5', 'Eb5'], d: 2 },
-    // M20: Quick Bass Step-up
-    { t: 76, n: ['G2', 'Bb4', 'D5'], d: 2 }, { t: 78, n: ['Bb2', 'C5', 'Eb5'], d: 2 },
-    // M21: Whole Note Resolution
-    { t: 80, n: ['C3', 'Eb5', 'G5', 'C6'], d: 4 }
+    // M1-4: Foundation
+    { m: 1, t: 0, n: ['C3','C4','E4'], d: 4 }, { m: 1, t: 2, n: ['C4','E4'], d: 2 },
+    { m: 2, t: 4, n: ['C3','C4','E4'], d: 4 }, { m: 2, t: 6, n: ['C4','E4'], d: 2 },
+    { m: 3, t: 8, n: ['C3','C4','E4'], d: 4 }, { m: 3, t: 10, n: ['C4','E4'], d: 2 },
+    { m: 4, t: 12, n: ['C3','C4','E4'], d: 4 }, { m: 4, t: 14, n: ['C4','E4'], d: 2 },
+    // M5-10: C/Ab Movement
+    { m: 5, t: 16, n: ['Ab3','C4','E4','G4'], d: 4 }, { m: 5, t: 18, n: ['C4','E4','G4'], d: 2 },
+    { m: 6, t: 20, n: ['C3','C4','E4','G4'], d: 4 }, { m: 6, t: 22, n: ['C4','E4','G4'], d: 2 },
+    { m: 7, t: 24, n: ['Ab3','C4','E4','G4'], d: 4 }, { m: 7, t: 26, n: ['C4','E4','G4'], d: 2 },
+    { m: 8, t: 28, n: ['C3','C4','E4','G4'], d: 4 }, { m: 8, t: 30, n: ['C4','E4','G4'], d: 2 },
+    { m: 9, t: 32, n: ['C3','C4','E4','G4'], d: 4 }, { m: 9, t: 34, n: ['C4','E4','G4'], d: 2 },
+    { m: 10, t: 36, n: ['C3','C4','E4','G4'], d: 4 }, { m: 10, t: 38, n: ['C4','E4','G4'], d: 2 },
+    // M11: Rhythmic Shift
+    { m: 11, t: 40, n: ['F#3','E5'], d: 4 }, { m: 11, t: 42, n: ['G5'], d: 1 }, { m: 11, t: 43, n: ['C6'], d: 1 },
+    
+    // M12-19: Walking Bass (Keys to the left)
+    { m: 12, t: 44, n: ['C3','G4','C5','Eb5'], d: 4 }, { m: 12, t: 46, n: ['G4','C5','Eb5'], d: 2 },
+    { m: 13, t: 48, n: ['Ab2','Ab4','C5','Eb5'], d: 4 }, { m: 13, t: 50, n: ['Ab4','C5','Eb5'], d: 2 },
+    { m: 14, t: 52, n: ['Bb2','Bb4','D5','F5'], d: 4 }, { m: 14, t: 54, n: ['Bb4','D5','F5'], d: 2 },
+    { m: 15, t: 56, n: ['C3','G4','C5','Eb5'], d: 4 }, { m: 15, t: 58, n: ['G4','C5','Eb5'], d: 2 },
+    { m: 16, t: 60, n: ['C3','G4','C5','Eb5'], d: 4 }, { m: 16, t: 62, n: ['G4','C5','Eb5'], d: 2 },
+    { m: 17, t: 64, n: ['Ab2','Ab4','C5','Eb5'], d: 4 }, { m: 17, t: 66, n: ['Ab4','C5','Eb5'], d: 2 },
+    { m: 18, t: 68, n: ['Bb2','Bb4','D5','F5'], d: 4 }, { m: 18, t: 70, n: ['Bb4','D5','F5'], d: 2 },
+    { m: 19, t: 72, n: ['C3','G4','C5','Eb5'], d: 4 }, { m: 19, t: 74, n: ['G4','C5','Eb5'], d: 2 },
+    // M20-21: Final Resolution
+    { m: 20, t: 76, n: ['G2','Bb4','D5'], d: 2 }, { m: 20, t: 78, n: ['Bb2', 'C5','Eb5'], d: 2 },
+    { m: 21, t: 80, n: ['C3','Eb5','G5','C6'], d: 4 }
 ];
 
-function playFeltPiano(freq, start, duration) {
+function playNote(freq, startTime, durBeats) {
     const osc = audioCtx.createOscillator();
-    const sub = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const filter = audioCtx.createBiquadFilter();
 
-    osc.type = 'triangle'; 
-    sub.type = 'sine'; 
-    osc.frequency.setValueAtTime(freq, start);
-    sub.frequency.setValueAtTime(freq, start);
-
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, startTime);
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1000, start); // Warm filter
+    filter.frequency.setValueAtTime(1000, startTime);
 
-    gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(0.1, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, start + (duration * beat) + 1.5);
+    const durSeconds = durBeats * secondsPerBeat;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + durSeconds + 1);
 
-    osc.connect(filter); sub.connect(filter);
-    filter.connect(gain); gain.connect(audioCtx.destination);
-
-    osc.start(start); sub.start(start);
-    osc.stop(start + (duration * beat) + 2); sub.stop(start + (duration * beat) + 2);
+    osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(startTime); osc.stop(startTime + durSeconds + 2);
 }
 
-function startSong() {
-    const now = audioCtx.currentTime;
-    score.forEach(item => {
-        const startTime = now + (item.t * beat);
-        item.n.forEach(note => playFeltPiano(F[note], startTime, item.d));
+let scoreIndex = 0;
+let nextNoteTime = 0;
+const lookAhead = 0.1; 
+
+function scheduler() {
+    while (nextNoteTime < audioCtx.currentTime + lookAhead && scoreIndex < score.length) {
+        const item = score[scoreIndex];
+        const timeOffset = item.t * secondsPerBeat;
         
-        // Update UI
+        // Schedule each note in the chord
+        item.n.forEach(note => playNote(FREQ[note], audioCtx.currentTime + (timeOffset - (audioCtx.currentTime - startTime)), item.d));
+        
+        // UI updates (synced roughly with audio)
         setTimeout(() => {
-            const mNum = Math.floor(item.t / 4) + 1;
-            document.getElementById('mInfo').innerText = `Measure ${mNum.toString().padStart(2, '0')} / 21`;
-            document.getElementById('noteDisplay').innerText = item.n.join(' • ');
-            document.getElementById('pBar').style.width = (item.t / 84) * 100 + '%';
-        }, item.t * beat * 1000);
-    });
+            document.getElementById('noteName').innerText = item.n.join(' • ');
+            document.getElementById('measureInfo').innerText = `Measure ${item.m.toString().padStart(2, '0')} / 21`;
+            document.getElementById('pFill').style.width = (item.t / 84) * 100 + '%';
+        }, (timeOffset) * 1000);
+
+        scoreIndex++;
+    }
+    if (scoreIndex >= score.length) {
+        setTimeout(() => { scoreIndex = 0; startTime = audioCtx.currentTime; scheduler(); }, 4000);
+        return;
+    }
+    requestAnimationFrame(scheduler);
 }
 
+let startTime;
 document.getElementById('playBtn').addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     document.getElementById('playBtn').style.display = 'none';
-    startSong();
+    startTime = audioCtx.currentTime;
+    scheduler();
 });
 </script>
-
 </body>
 </html>
