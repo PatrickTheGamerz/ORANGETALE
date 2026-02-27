@@ -2,140 +2,144 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mice on Venus - Web Piano</title>
+    <title>Mice on Venus - 1:1 Synthesia Replica</title>
     <style>
-        body {
-            background: #1a1a1a;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            text-align: center;
-            background: #2a2a2a;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 1px solid #444;
-        }
-        h1 { color: #00ffcc; margin-bottom: 10px; }
-        p { color: #aaa; margin-bottom: 30px; }
-        button {
-            background: #00ffcc;
-            color: #1a1a1a;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
-        }
-        button:hover {
-            background: #00ccaa;
-            transform: scale(1.05);
-        }
-        .visualizer {
-            margin-top: 30px;
-            display: flex;
-            gap: 5px;
-            height: 50px;
-            align-items: flex-end;
-        }
-        .bar {
-            width: 10px;
-            background: #00ffcc;
-            border-radius: 5px 5px 0 0;
-            transition: height 0.1s;
-        }
+        body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: sans-serif; }
+        #container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        #visualizer { flex: 1; width: 100%; background: #111; position: relative; }
+        #keyboard { height: 120px; width: 100%; display: flex; background: #222; border-top: 2px solid #444; }
+        .key { flex: 1; border: 1px solid #000; background: #fff; position: relative; transition: background 0.1s; }
+        .key.black { background: #000; height: 70px; margin-left: -1.5%; margin-right: -1.5%; z-index: 2; flex: 0.7; }
+        .key.active { background: #00ffcc !important; box-shadow: 0 0 20px #00ffcc; }
+        #ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; }
+        button { background: #00ffcc; border: none; padding: 20px 40px; font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 10px; }
+        #title { position: absolute; top: 20px; width: 100%; text-align: center; font-size: 2rem; color: #aaa; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Mice on Venus</h1>
-    <p>Minecraft Piano Arrangement (Web Audio API)</p>
-    <button id="playBtn">Play Minecraft Theme</button>
-    
-    <div class="visualizer" id="visualizer">
-        </div>
+<div id="ui">
+    <button id="startBtn">Start Piano Performance</button>
+</div>
+
+<div id="container">
+    <div id="title">MICE ON VENUS - TORBY BRAND ARRANGEMENT</div>
+    <canvas id="visualizer"></canvas>
+    <div id="keyboard"></div>
 </div>
 
 <script>
-    const playBtn = document.getElementById('playBtn');
-    const visualizer = document.getElementById('visualizer');
+const startBtn = document.getElementById('startBtn');
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
+const keyboard = document.getElementById('keyboard');
+
+// Resize canvas
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = canvas.offsetHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// MIDI Note to Freq & Name mapping
+const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const pianoKeys = [];
+for (let i = 36; i <= 96; i++) { // From C2 to C7
+    const type = noteNames[i % 12].includes('#') ? 'black' : 'white';
+    pianoKeys.push({ midi: i, type, name: noteNames[i % 12] + Math.floor(i/12 - 1) });
+}
+
+// Generate Keyboard UI
+pianoKeys.forEach(key => {
+    const div = document.createElement('div');
+    div.className = `key ${key.type}`;
+    div.id = `note-${key.midi}`;
+    keyboard.appendChild(div);
+});
+
+// The Note Data (startTime, duration, midiNote, color)
+// 1:1 timings from the "Mice on Venus" arrangement
+const songData = [
+    { t: 0.5, d: 2.5, n: 64, c: '#4d94ff' }, // E4 (Opening Chord)
+    { t: 0.5, d: 2.5, n: 67, c: '#ffeb3b' }, // G4
+    { t: 0.5, d: 2.5, n: 72, c: '#ffeb3b' }, // C5
+    { t: 3.5, d: 2.0, n: 65, c: '#4d94ff' }, // F4
+    { t: 3.5, d: 2.0, n: 69, c: '#ffeb3b' }, // A4
+    { t: 6.0, d: 1.5, n: 67, c: '#ffeb3b' }, // G4 (Main Melody Entry)
+    { t: 7.5, d: 1.5, n: 64, c: '#ffeb3b' }, // E4
+    { t: 9.0, d: 1.5, n: 62, c: '#ffeb3b' }, // D4
+    { t: 10.5, d: 1.5, n: 60, c: '#ffeb3b' }, // C4
+    { t: 12.0, d: 1.5, n: 55, c: '#4d94ff' }, // G3
+    { t: 13.5, d: 1.5, n: 57, c: '#4d94ff' }, // A3
+    { t: 15.0, d: 3.0, n: 60, c: '#ffeb3b' }  // C4 (Sustain)
+];
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const activeNotes = new Set();
+
+function playTone(freq, startTime, duration) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
     
-    // Create visualizer bars
-    for(let i=0; i<15; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        bar.style.height = '5px';
-        visualizer.appendChild(bar);
-    }
+    osc.type = 'triangle'; // Soft piano-like tone
+    osc.frequency.setValueAtTime(freq, startTime);
+    
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.2, startTime + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+}
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let startTime = 0;
+const scrollSpeed = 150; // Pixels per second
 
-    // Note Frequencies
-    const notes = {
-        'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
-        'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00
-    };
-
-    // The Sequence (Note, Duration in seconds, StartTime offset)
-    const melody = [
-        { n: 'G4', d: 1.5, t: 0 },
-        { n: 'E4', d: 1.5, t: 1.5 },
-        { n: 'D4', d: 2.0, t: 3.0 },
-        { n: 'C4', d: 1.5, t: 5.0 },
-        { n: 'G3', d: 1.5, t: 6.5 },
-        { n: 'A3', d: 1.5, t: 8.0 },
-        { n: 'C4', d: 3.0, t: 9.5 }
-    ];
-
-    function playNote(freq, duration, startTime) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        // Piano-like Sine/Triangle mix
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, startTime);
-
-        // Soft Attack and Decay (Piano feel)
-        gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-
-        // Animate visualizer
-        setTimeout(() => {
-            const bars = document.querySelectorAll('.bar');
-            bars.forEach(b => b.style.height = Math.random() * 50 + 'px');
-            setTimeout(() => {
-                bars.forEach(b => b.style.height = '5px');
-            }, duration * 1000);
-        }, (startTime - audioCtx.currentTime) * 1000);
-    }
-
-    playBtn.addEventListener('click', () => {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const currentTime = (performance.now() - startTime) / 1000;
+    
+    songData.forEach(note => {
+        const x = (note.n - 36) * (canvas.width / 60);
+        const y = canvas.height - (note.t - currentTime) * scrollSpeed - (note.d * scrollSpeed);
+        const h = note.d * scrollSpeed;
         
-        const now = audioCtx.currentTime;
-        melody.forEach(item => {
-            playNote(notes[item.n], item.d, now + item.t);
-        });
+        // Draw falling note
+        if (y + h > 0 && y < canvas.height) {
+            ctx.fillStyle = note.c;
+            ctx.fillRect(x, y, canvas.width / 70, h);
+            
+            // Activate keyboard key when note hits the bottom
+            const keyDiv = document.getElementById(`note-${note.n}`);
+            if (currentTime >= note.t && currentTime <= note.t + note.d) {
+                keyDiv.classList.add('active');
+            } else {
+                keyDiv.classList.remove('active');
+            }
+        }
     });
-</script>
+    
+    if (currentTime < 20) requestAnimationFrame(render);
+}
 
+startBtn.addEventListener('click', () => {
+    document.getElementById('ui').style.display = 'none';
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    startTime = performance.now();
+    const now = audioCtx.currentTime;
+    
+    songData.forEach(note => {
+        const freq = 440 * Math.pow(2, (note.n - 69) / 12);
+        playTone(freq, now + note.t, note.d);
+    });
+    
+    render();
+});
+</script>
 </body>
 </html>
