@@ -3,210 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Craft Obsidian</title>
+    <title>AI Dream Manifest: Minecraft</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; background: rgba(15, 23, 42, 0.9); padding: 25px; border-radius: 12px; color: white; width: 320px; z-index: 100; border: 1px solid #334155; }
-        input, button { width: 100%; padding: 12px; margin-top: 10px; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; }
-        button { background: #8b5cf6; font-weight: bold; cursor: pointer; border: none; }
-        button:hover { background: #7c3aed; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.5); transform: translate(-50%, -50%); pointer-events: none; }
-        .hint { font-size: 11px; color: #94a3b8; margin-top: 10px; line-height: 1.4; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; border: 50px solid transparent;
+            box-sizing: border-box; transition: border-color 2s;
+            z-index: 10;
+        }
+        #ui {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #0f0; padding: 15px;
+            border-radius: 5px; text-align: center; z-index: 20; border: 1px solid #0f0;
+        }
+        #dream-status { font-weight: bold; text-transform: uppercase; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+            background: white; border-radius: 50%; transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
 
+    <div id="overlay"></div>
     <div id="ui">
-        <h2 style="margin:0; color:#a78bfa">Obsidian Engine</h2>
-        <input type="password" id="apiKey" placeholder="Gemini API Key">
-        <input type="text" id="prompt" placeholder="Describe world: 'Sky Islands', 'Deep Caves'...">
-        <button id="btn">INITIALIZE WORLD</button>
-        <div class="hint">
-            <b>Controls:</b> WASD to Move | SPACE to Jump<br>
-            <b>Mouse:</b> LEFT Click = Break | RIGHT Click = Place<br>
-            <i>Click anywhere on the screen to lock mouse.</i>
-        </div>
+        <div id="dream-status">World State: Stable</div>
+        <small>LOOK AWAY AND TURN BACK TO MANIFEST NEW REALITY</small>
     </div>
     <div id="crosshair"></div>
 
     <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        let scene, camera, renderer, controls, raycaster;
-        let worldData = [];
-        const move = { fwd: false, bwd: false, lft: false, rgt: false, jump: false };
-        let velocity = new THREE.Vector3();
-        let canJump = false;
+        let scene, camera, renderer, clock;
+        let blocks = [];
+        let lastYaw = 0;
 
-        // Block Dictionary
-        const TYPES = { GRASS: 0, DIRT: 1, STONE: 2, WOOD: 3, LEAVES: 4 };
-        const COLORS = [0x5ea44e, 0x8b4513, 0x71717a, 0x78350f, 0x166534];
+        // "Popular Minecraft Images" - We use high-res AI-generated Minecraft landscape textures
+        const AI_TEXTURES = [
+            'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/minecraft/grass.png',
+            'https://images.unsplash.com/photo-1627398242454-45a1465c2479?auto=format&fit=crop&q=80&w=400', // AI Dark Forest
+            'https://images.unsplash.com/photo-1615653051968-69c2b0e41f67?auto=format&fit=crop&q=80&w=400'  // AI Floating Island
+        ];
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xbae6fd);
-            scene.fog = new THREE.Fog(0xbae6fd, 20, 100);
-
+            scene.fog = new THREE.FogExp2(0x000000, 0.1);
+            
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(8, 15, 8);
+            camera.position.z = 5;
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambient);
-            const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-            sun.position.set(10, 20, 10);
-            scene.add(sun);
+            clock = new THREE.Clock();
 
-            controls = new PointerLockControls(camera, document.body);
-            document.addEventListener('click', () => { if(!controls.isLocked) controls.lock(); });
-            controls.addEventListener('lock', () => { document.getElementById('ui').style.opacity = '0.1'; });
-            controls.addEventListener('unlock', () => { document.getElementById('ui').style.opacity = '1'; });
+            // Create initial world
+            generateDreamChunk();
 
-            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 2);
+            // Movement and Rotation tracker
+            window.addEventListener('mousemove', (e) => {
+                const yaw = (e.clientX / window.innerWidth) * Math.PI * 4;
+                camera.rotation.y = yaw;
 
-            window.addEventListener('keydown', (e) => handleKey(e.code, true));
-            window.addEventListener('keyup', (e) => handleKey(e.code, false));
-            window.addEventListener('mousedown', handleMouse);
+                // "Look back" detection
+                if (Math.abs(yaw - lastYaw) > Math.PI) {
+                    manifestNewReality();
+                    lastYaw = yaw;
+                }
+            });
 
             animate();
         }
 
-        async function fetchAIWorld() {
-            const key = document.getElementById('apiKey').value;
-            const prompt = document.getElementById('prompt').value || "Classic Minecraft Hills";
-            if(!key) return alert("API Key Missing!");
+        function generateDreamChunk() {
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const loader = new THREE.TextureLoader();
 
-            document.getElementById('btn').innerText = "AI IS ARCHITECTING...";
-            
-            const system = `You are a 3D Voxel Generator. Output ONLY a valid JSON array. 
-            Block types: 0 (Grass), 1 (Dirt), 2 (Stone), 3 (Wood).
-            Grid: 16x16. Output format: [{"x":x,"y":y,"z":z,"t":type}]. 
-            Focus on: ${prompt}`;
-
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: system }] }] })
+            for (let i = 0; i < 50; i++) {
+                const texIndex = Math.floor(Math.random() * AI_TEXTURES.length);
+                const mat = new THREE.MeshBasicMaterial({ 
+                    map: loader.load(AI_TEXTURES[texIndex]),
+                    transparent: true,
+                    opacity: 0.9
                 });
-                const data = await res.json();
-                const text = data.candidates[0].content.parts[0].text;
-                const json = JSON.parse(text.match(/\[.*\]/s)[0]);
-                renderWorld(json);
-                document.getElementById('btn').innerText = "REGENERATE WORLD";
-            } catch (e) {
-                console.error("AI Build Failed, using fallback terrain.", e);
-                generateFallback();
-            }
-        }
 
-        function renderWorld(data) {
-            // Clean up existing blocks
-            scene.children = scene.children.filter(c => c.type !== 'Mesh' || c === camera); 
-            
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-            data.forEach(b => {
-                const mat = new THREE.MeshStandardMaterial({ color: COLORS[b.t] || 0xffffff });
-                const mesh = new THREE.Mesh(geometry, mat);
-                mesh.position.set(b.x, b.y, b.z);
-                mesh.name = "block";
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 20
+                );
+                mesh.rotation.y = Math.random() * Math.PI;
                 scene.add(mesh);
-            });
-        }
-
-        function generateFallback() {
-            let fallback = [];
-            for(let x=0; x<20; x++) {
-                for(let z=0; z<20; z++) {
-                    const h = Math.floor(Math.random() * 3);
-                    fallback.push({x, y:h, z, t:0});
-                    fallback.push({x, y:h-1, z, t:1});
-                }
+                blocks.push(mesh);
             }
-            renderWorld(fallback);
         }
 
-        function handleKey(code, val) {
-            if(code === 'KeyW') move.fwd = val;
-            if(code === 'KeyS') move.bwd = val;
-            if(code === 'KeyA') move.lft = val;
-            if(code === 'KeyD') move.rgt = val;
-            if(code === 'Space') move.jump = val;
-        }
+        function manifestNewReality() {
+            const status = document.getElementById('dream-status');
+            const overlay = document.getElementById('overlay');
+            
+            status.innerText = "Manifesting Reality...";
+            status.style.color = "#f00";
+            overlay.style.borderColor = "white";
 
-        function handleMouse(e) {
-            if(!controls.isLocked) return;
-            const pointerRay = new THREE.Raycaster();
-            pointerRay.setFromCamera({x:0, y:0}, camera);
-            const intersects = pointerRay.intersectObjects(scene.children);
-
-            if (intersects.length > 0) {
-                const hit = intersects[0];
-                if (e.button === 0) { // Left Click - Break
-                    scene.remove(hit.object);
-                } else if (e.button === 2) { // Right Click - Place
-                    const pos = hit.point.add(hit.face.normal.multiplyScalar(0.5));
-                    const geometry = new THREE.BoxGeometry(1, 1, 1);
-                    const mat = new THREE.MeshStandardMaterial({ color: COLORS[2] });
-                    const block = new THREE.Mesh(geometry, mat);
-                    block.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
-                    block.name = "block";
-                    scene.add(block);
-                }
-            }
+            setTimeout(() => {
+                // Morph blocks that are behind the player
+                blocks.forEach(b => {
+                    b.position.x += (Math.random() - 0.5) * 5;
+                    b.scale.setScalar(Math.random() * 2);
+                    
+                    // Randomly swap textures to "popular" Minecraft-style AI images
+                    const loader = new THREE.TextureLoader();
+                    b.material.map = loader.load(AI_TEXTURES[Math.floor(Math.random() * AI_TEXTURES.length)]);
+                });
+                
+                status.innerText = "World State: Manifested";
+                status.style.color = "#0f0";
+                overlay.style.borderColor = "transparent";
+            }, 500);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            if (controls.isLocked) {
-                // Gravity & Collision
-                raycaster.ray.origin.copy(camera.position);
-                raycaster.ray.origin.y -= 1.5;
-                const intersections = raycaster.intersectObjects(scene.children);
-                const onGround = intersections.length > 0;
+            const t = clock.getElapsedTime();
+            
+            // Subtle "breathing" effect for the AI blocks
+            blocks.forEach((b, i) => {
+                b.position.y += Math.sin(t + i) * 0.005;
+            });
 
-                const delta = 0.1;
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 2.0 * delta; // Gravity
-
-                if (onGround) {
-                    velocity.y = Math.max(0, velocity.y);
-                    canJump = true;
-                }
-
-                if (move.fwd) velocity.z += 40.0 * delta;
-                if (move.bwd) velocity.z -= 40.0 * delta;
-                if (move.lft) velocity.x -= 40.0 * delta;
-                if (move.rgt) velocity.x += 40.0 * delta;
-                if (move.jump && canJump) {
-                    velocity.y += 15;
-                    canJump = false;
-                }
-
-                controls.moveRight(velocity.x * delta);
-                controls.moveForward(velocity.z * delta);
-                camera.position.y += (velocity.y * delta);
-
-                if (camera.position.y < -10) { // Void respawn
-                    camera.position.set(8, 15, 8);
-                    velocity.y = 0;
-                }
-            }
             renderer.render(scene, camera);
         }
 
         init();
-        document.getElementById('btn').onclick = fetchAIWorld;
+
+        // Click to start audio or full immersive mode
+        window.onclick = () => {
+            document.body.requestPointerLock();
+        };
     </script>
 </body>
 </html>
