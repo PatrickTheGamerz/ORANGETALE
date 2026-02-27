@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mice On Venus - 1:1 Piano</title>
+    <title>Advanced MIDI Piano Player</title>
+    <script src="https://unpkg.com/@tonejs/midi"></script>
     <style>
         body {
             background-color: #1a1a20;
@@ -21,26 +22,38 @@
         h1 { margin-top: 30px; margin-bottom: 5px; }
         p { color: #abb2bf; margin-bottom: 20px; }
 
-        .controls { margin-bottom: 30px; }
-
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            background-color: #007BFF;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        .controls { 
+            margin-bottom: 30px; 
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: #222;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        button:hover { background-color: #0056b3; }
+        input[type="file"] {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        input[type="file"]::file-selector-button {
+            padding: 8px 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #ff5722;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        input[type="file"]::file-selector-button:hover { background-color: #e64a19; }
 
         /* Scrollable container for the massive keyboard */
         .piano-container {
-            width: 90vw;
+            width: 95vw;
             overflow-x: auto;
             padding-bottom: 20px;
             display: flex;
@@ -70,7 +83,7 @@
         }
 
         .white {
-            width: 40px;
+            width: 35px;
             height: 200px;
             background: linear-gradient(to bottom, #fff 0%, #e0e0e0 100%);
             border: 1px solid #ccc;
@@ -81,36 +94,39 @@
         }
 
         .white.active {
-            background: linear-gradient(to bottom, #e0e0e0 0%, #80c1ff 100%);
+            background: linear-gradient(to bottom, #e0e0e0 0%, #ff8a65 100%);
             height: 198px;
             margin-top: 2px;
         }
 
         .black {
-            width: 24px;
+            width: 22px;
             height: 120px;
             background: linear-gradient(to bottom, #333 0%, #000 100%);
             color: white;
             z-index: 2;
-            margin-left: -13px;
-            margin-right: -13px;
+            margin-left: -12px;
+            margin-right: -12px;
             box-shadow: inset 0 -3px 5px rgba(255,255,255,0.1), 0 3px 5px rgba(0,0,0,0.5);
         }
 
         .black.active {
-            background: linear-gradient(to bottom, #222 0%, #0056b3 100%);
+            background: linear-gradient(to bottom, #222 0%, #e64a19 100%);
             height: 118px;
             margin-top: 2px;
         }
+        
+        #status { color: #ff5722; font-weight: bold; font-size: 14px;}
     </style>
 </head>
 <body>
 
-    <h1>Mice On Venus - Full Piano Arrangement</h1>
-    <p>Includes accurate polyphony, left-hand bass, and chords (Measures 1-8)</p>
+    <h1>Universal MIDI Piano Player</h1>
+    <p>Upload a Torby Brand .mid file (or any Synthesia track) to watch it play automatically.</p>
 
     <div class="controls">
-        <button id="playBtn">▶ Play 1:1 Arrangement</button>
+        <input type="file" id="midiInput" accept=".mid,.midi">
+        <div id="status">Waiting for file...</div>
     </div>
 
     <div class="piano-container" id="piano-container">
@@ -120,14 +136,13 @@
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let isPlaying = false;
-
-        // --- 1. GENERATE THE PIANO ---
-        // We need MIDI notes 36 (C2) to 84 (C6) to cover both hands
+        
+        // --- 1. GENERATE A MASSIVE 7-OCTAVE PIANO ---
+        // MIDI notes 21 (A0) to 108 (C8) - A full grand piano!
         const pianoDiv = document.getElementById('piano');
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         
-        for (let midi = 36; midi <= 84; midi++) {
+        for (let midi = 21; midi <= 108; midi++) {
             const noteName = notes[midi % 12];
             const octave = Math.floor(midi / 12) - 1;
             const isBlack = noteName.includes('#');
@@ -135,151 +150,81 @@
             const key = document.createElement('div');
             key.className = `key ${isBlack ? 'black' : 'white'}`;
             key.id = `midi-${midi}`;
-            key.dataset.midi = midi;
             
-            // Only label C notes to keep it clean
-            if (noteName === 'C') {
-                key.innerHTML = `<span>${noteName}${octave}</span>`;
-            }
-            
+            if (noteName === 'C') key.innerHTML = `<span>C${octave}</span>`;
             pianoDiv.appendChild(key);
-
-            // Click functionality
-            key.addEventListener('mousedown', () => {
-                if(audioCtx.state === 'suspended') audioCtx.resume();
-                key.classList.add('active');
-                playTone(midi, audioCtx.currentTime, 1);
-            });
-            key.addEventListener('mouseup', () => key.classList.remove('active'));
-            key.addEventListener('mouseleave', () => key.classList.remove('active'));
         }
 
-        // --- 2. SOUND ENGINE ---
-        function getFrequency(midiNumber) {
-            return 440 * Math.pow(2, (midiNumber - 69) / 12);
-        }
-
-        function playTone(midiNumber, startTime, duration) {
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            oscillator.type = 'triangle'; // Closer to a soft piano
-            oscillator.frequency.value = getFrequency(midiNumber);
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            // ADSR Envelope for realistic piano fade
-            gainNode.gain.setValueAtTime(0, startTime);
-            gainNode.gain.linearRampToValueAtTime(0.6, startTime + 0.02); // Fast attack
-            // Slower decay for bass notes, faster for high notes
-            const decay = midiNumber < 60 ? duration + 1 : duration + 0.5;
-            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + decay); 
-
-            oscillator.start(startTime);
-            oscillator.stop(startTime + decay + 0.1);
-        }
-
-        // --- 3. THE 1:1 TIMELINE (MEASURES 1-8) ---
-        // t = beats from the start of the song. n = MIDI note number. d = duration in beats.
-        // C3 = 48, C4 = 60, C5 = 72
-        const sheetMusic = [
-            // MEASURE 1
-            { t: 0, n: 76, d: 4 }, // Treble: E5
-            { t: 0, n: 48, d: 2 }, // Bass: C3
-            { t: 2, n: 55, d: 2 }, // Bass: G3
-
-            // MEASURE 2
-            { t: 4, n: 72, d: 2 }, // Treble: C5
-            { t: 4, n: 48, d: 2 }, // Bass: C3
-            { t: 6, n: 74, d: 2 }, // Treble: D5
-            { t: 6, n: 52, d: 2 }, // Bass: E3
-
-            // MEASURE 3
-            { t: 8, n: 76, d: 2 }, // Treble: E5
-            { t: 8, n: 48, d: 2 }, // Bass: C3
-            { t: 10, n: 79, d: 2 }, // Treble: G5
-            { t: 10, n: 51, d: 2 }, // Bass: Eb3 (accidental in sheet)
-
-            // MEASURE 4
-            { t: 12, n: 77, d: 2 }, // Treble: F5
-            { t: 12, n: 48, d: 2 }, // Bass: C3
-            { t: 14, n: 69, d: 2 }, // Treble: A4
-            { t: 14, n: 54, d: 2 }, // Bass: F#3 (accidental in sheet)
-
-            // MEASURE 5
-            { t: 16, n: 76, d: 2 }, // Treble: E5
-            { t: 16, n: 48, d: 2 }, // Bass: C3
-            { t: 18, n: 72, d: 2 }, // Treble: C5
-            { t: 18, n: 53, d: 2 }, // Bass: F3 (natural accidental in sheet)
-
-            // MEASURE 6
-            { t: 20, n: 72, d: 1.5 }, // Treble: C5 (dotted)
-            { t: 20, n: 48, d: 2 },   // Bass: C3
-            { t: 21.5, n: 74, d: 0.5 },// Treble: D5 (eighth)
-            { t: 22, n: 76, d: 1.5 }, // Treble: E5 (dotted)
-            { t: 22, n: 55, d: 2 },   // Bass: G3
-            { t: 23.5, n: 79, d: 0.5 },// Treble: G5 (eighth)
-
-            // MEASURE 7 (CHORDS!)
-            { t: 24, n: 65, d: 1.5 }, { t: 24, n: 69, d: 1.5 }, { t: 24, n: 72, d: 1.5 }, { t: 24, n: 77, d: 1.5 }, // Treble Fmaj Chord
-            { t: 24, n: 41, d: 2 }, // Bass F2
-            { t: 25.5, n: 79, d: 0.5 }, // Treble G5 melody step
-            { t: 26, n: 65, d: 2 }, { t: 26, n: 69, d: 2 }, { t: 26, n: 72, d: 2 }, { t: 26, n: 81, d: 2 }, // Treble Fmaj Chord -> A5
-            { t: 26, n: 48, d: 2 }, // Bass C3
-
-            // MEASURE 8 (CHORDS!)
-            { t: 28, n: 64, d: 1.5 }, { t: 28, n: 67, d: 1.5 }, { t: 28, n: 72, d: 1.5 }, { t: 28, n: 79, d: 1.5 }, // Treble Cmaj Chord
-            { t: 28, n: 48, d: 2 }, // Bass C3
-            { t: 29.5, n: 77, d: 0.5 }, // Treble F5 melody step
-            { t: 30, n: 64, d: 2 }, { t: 30, n: 67, d: 2 }, { t: 30, n: 72, d: 2 }, { t: 30, n: 76, d: 2 }, // Treble Cmaj Chord -> E5
-            { t: 30, n: 43, d: 2 } // Bass G2
-        ];
-
-        // --- 4. PLAYBACK CONTROLLER ---
-        function playSheetMusic() {
-            if (isPlaying) return; 
-            isPlaying = true;
-
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
-            const bpm = 54; // Tempo marked at the top of the sheet
-            const beatDuration = 60 / bpm; 
-            const startTime = audioCtx.currentTime + 0.5; 
-            let maxDelay = 0;
-
-            sheetMusic.forEach((noteEvent) => {
-                const keyElement = document.getElementById(`midi-${noteEvent.n}`);
-                const eventStartTime = startTime + (noteEvent.t * beatDuration);
-                const durationInSeconds = noteEvent.d * beatDuration;
-
-                // 1. Schedule Audio
-                playTone(noteEvent.n, eventStartTime, durationInSeconds);
-
-                // 2. Schedule Visuals
-                if (keyElement) {
-                    const delayMs = (eventStartTime - audioCtx.currentTime) * 1000;
-                    const durationMs = (durationInSeconds * 1000) * 0.8; // 80% to show key releases
-                    
-                    setTimeout(() => keyElement.classList.add('active'), delayMs);
-                    setTimeout(() => keyElement.classList.remove('active'), delayMs + durationMs);
-
-                    if (delayMs + durationMs > maxDelay) {
-                        maxDelay = delayMs + durationMs;
-                    }
-                }
-            });
-
-            setTimeout(() => { isPlaying = false; }, maxDelay + 500);
-        }
-
-        document.getElementById('playBtn').addEventListener('click', playSheetMusic);
-        
-        // Center the scroll view on load so middle C is visible
+        // Center on Middle C
         window.onload = () => {
             const container = document.getElementById('piano-container');
             container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
         };
+
+        // --- 2. AUDIO ENGINE ---
+        function playTone(midiNumber, startTime, duration) {
+            const frequency = 440 * Math.pow(2, (midiNumber - 69) / 12);
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'triangle'; 
+            oscillator.frequency.value = frequency;
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // Audio envelope based on exact time in seconds
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.02); 
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.5); 
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration + 1);
+        }
+
+        // --- 3. THE MIDI FILE READER ---
+        document.getElementById('midiInput').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const status = document.getElementById('status');
+            status.innerText = "Parsing MIDI data...";
+
+            // Unlock audio context (browsers require user interaction to play sound)
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            // Read the binary file
+            const arrayBuffer = await file.arrayBuffer();
+            
+            // Convert it using Tone.js MIDI
+            const midiData = new Midi(arrayBuffer);
+            
+            status.innerText = `Playing: ${midiData.name || file.name}`;
+            
+            const now = audioCtx.currentTime + 0.5; // Start half a second from now
+
+            // Loop through every track (e.g., left hand, right hand)
+            midiData.tracks.forEach(track => {
+                // Loop through every note in the track
+                track.notes.forEach(note => {
+                    const eventStartTime = now + note.time; // note.time is exact seconds from start
+                    const duration = note.duration; // exact seconds to hold note
+
+                    // 1. Schedule Audio
+                    playTone(note.midi, eventStartTime, duration);
+
+                    // 2. Schedule Visuals
+                    const keyElement = document.getElementById(`midi-${note.midi}`);
+                    if (keyElement) {
+                        const delayMs = (eventStartTime - audioCtx.currentTime) * 1000;
+                        const durationMs = duration * 1000;
+                        
+                        setTimeout(() => keyElement.classList.add('active'), delayMs);
+                        setTimeout(() => keyElement.classList.remove('active'), delayMs + durationMs);
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
