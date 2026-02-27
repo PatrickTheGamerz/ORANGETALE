@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Web Piano</title>
+    <title>Advanced Web Piano - Auto Player</title>
     <style>
         body {
-            background-color: #282c34;
+            background-color: #1e1e24;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,8 +18,28 @@
             user-select: none;
         }
 
-        h1 { margin-bottom: 10px; }
-        p { color: #abb2bf; margin-bottom: 40px; }
+        h1 { margin-bottom: 5px; }
+        p { color: #abb2bf; margin-bottom: 20px; }
+
+        .controls {
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        button:hover { background-color: #45a049; }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
         .piano {
             display: flex;
@@ -37,178 +57,195 @@
             align-items: flex-end;
             padding-bottom: 15px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12px;
             cursor: pointer;
             border-radius: 0 0 5px 5px;
-            transition: background 0.1s, box-shadow 0.1s;
+            transition: background 0.05s, box-shadow 0.05s;
         }
 
         .white {
-            width: 60px;
-            height: 250px;
+            width: 45px;
+            height: 220px;
             background: linear-gradient(to bottom, #fff 0%, #e0e0e0 100%);
             border: 1px solid #ccc;
             color: #333;
             z-index: 1;
             box-shadow: inset 0 -3px 5px rgba(0,0,0,0.2), 0 3px 5px rgba(0,0,0,0.3);
-            margin: 0 2px;
+            margin: 0 1px;
         }
 
         .white.active {
-            background: linear-gradient(to bottom, #e0e0e0 0%, #ccc 100%);
+            background: linear-gradient(to bottom, #e0e0e0 0%, #a8d5ff 100%); /* Blue tint when active */
             box-shadow: inset 0 -1px 2px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3);
-            height: 248px;
+            height: 218px;
             margin-top: 2px;
         }
 
         .black {
-            width: 40px;
-            height: 150px;
+            width: 30px;
+            height: 130px;
             background: linear-gradient(to bottom, #333 0%, #000 100%);
             color: white;
             z-index: 2;
-            margin-left: -22px;
-            margin-right: -22px;
+            margin-left: -16px;
+            margin-right: -16px;
             box-shadow: inset 0 -3px 5px rgba(255,255,255,0.1), 0 3px 5px rgba(0,0,0,0.5);
         }
 
         .black.active {
-            background: linear-gradient(to bottom, #222 0%, #000 100%);
+            background: linear-gradient(to bottom, #222 0%, #00509e 100%); /* Blue tint when active */
             box-shadow: inset 0 -1px 2px rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.5);
-            height: 148px;
+            height: 128px;
             margin-top: 2px;
         }
 
-        /* Small labels on the keys */
-        .key span {
-            pointer-events: none;
-        }
+        .key span { pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <h1>Advanced HTML Piano</h1>
-    <p>Use your mouse to click, or use your keyboard (A-J for white keys, W, E, T, Y, U for black keys).</p>
+    <h1>Mice On Venus - Auto Player</h1>
+    <p>Expanded to 2 Octaves to support the sheet music</p>
+
+    <div class="controls">
+        <button id="playBtn">▶ Play "Mice on Venus"</button>
+    </div>
 
     <div class="piano" id="piano">
-        <div class="key white" data-note="261.63" data-key="a"><span>A</span></div>
-        <div class="key black" data-note="277.18" data-key="w"><span>W</span></div>
-        <div class="key white" data-note="293.66" data-key="s"><span>S</span></div>
-        <div class="key black" data-note="311.13" data-key="e"><span>E</span></div>
-        <div class="key white" data-note="329.63" data-key="d"><span>D</span></div>
-        <div class="key white" data-note="349.23" data-key="f"><span>F</span></div>
-        <div class="key black" data-note="369.99" data-key="t"><span>T</span></div>
-        <div class="key white" data-note="392.00" data-key="g"><span>G</span></div>
-        <div class="key black" data-note="415.30" data-key="y"><span>Y</span></div>
-        <div class="key white" data-note="440.00" data-key="h"><span>H</span></div>
-        <div class="key black" data-note="466.16" data-key="u"><span>U</span></div>
-        <div class="key white" data-note="493.88" data-key="j"><span>J</span></div>
+        <div class="key white" data-note="261.63" id="C4"><span>C4</span></div>
+        <div class="key black" data-note="277.18" id="Cs4"></div>
+        <div class="key white" data-note="293.66" id="D4"><span>D4</span></div>
+        <div class="key black" data-note="311.13" id="Ds4"></div>
+        <div class="key white" data-note="329.63" id="E4"><span>E4</span></div>
+        <div class="key white" data-note="349.23" id="F4"><span>F4</span></div>
+        <div class="key black" data-note="369.99" id="Fs4"></div>
+        <div class="key white" data-note="392.00" id="G4"><span>G4</span></div>
+        <div class="key black" data-note="415.30" id="Gs4"></div>
+        <div class="key white" data-note="440.00" id="A4"><span>A4</span></div>
+        <div class="key black" data-note="466.16" id="As4"></div>
+        <div class="key white" data-note="493.88" id="B4"><span>B4</span></div>
         
-        <div class="key white" data-note="523.25" data-key="k"><span>K</span></div>
-        <div class="key black" data-note="554.37" data-key="o"><span>O</span></div>
-        <div class="key white" data-note="587.33" data-key="l"><span>L</span></div>
-        <div class="key black" data-note="622.25" data-key="p"><span>P</span></div>
-        <div class="key white" data-note="659.25" data-key=";"><span>;</span></div>
+        <div class="key white" data-note="523.25" id="C5"><span>C5</span></div>
+        <div class="key black" data-note="554.37" id="Cs5"></div>
+        <div class="key white" data-note="587.33" id="D5"><span>D5</span></div>
+        <div class="key black" data-note="622.25" id="Ds5"></div>
+        <div class="key white" data-note="659.25" id="E5"><span>E5</span></div>
+        <div class="key white" data-note="698.46" id="F5"><span>F5</span></div>
+        <div class="key black" data-note="739.99" id="Fs5"></div>
+        <div class="key white" data-note="783.99" id="G5"><span>G5</span></div>
+        <div class="key black" data-note="830.61" id="Gs5"></div>
+        <div class="key white" data-note="880.00" id="A5"><span>A5</span></div>
+        <div class="key black" data-note="932.33" id="As5"></div>
+        <div class="key white" data-note="987.77" id="B5"><span>B5</span></div>
+
+        <div class="key white" data-note="1046.50" id="C6"><span>C6</span></div>
     </div>
 
     <script>
-        // Set up the Web Audio API context
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Track currently playing notes to avoid keyboard auto-repeat echoing
-        const activeOscillators = {};
+        let isPlaying = false;
 
-        // Function to play a sound based on a frequency
-        function playNote(frequency, keyElement) {
-            // Add visual depression to the key
-            keyElement.classList.add('active');
-
-            // If a note is already playing for this key, stop it so we don't layer them infinitely
-            if (activeOscillators[frequency]) return;
-
-            // Create oscillator (the sound source)
+        // Sound Engine
+        function playTone(frequency, startTime, duration) {
             const oscillator = audioCtx.createOscillator();
-            
-            // Create gain node (volume control)
             const gainNode = audioCtx.createGain();
 
-            // Set wave type (sine, square, sawtooth, triangle)
-            // Triangle sounds somewhat close to an electric piano/flute
-            oscillator.type = 'triangle'; 
+            oscillator.type = 'triangle'; // Gives that soft, electric piano/sine vibe
             oscillator.frequency.value = frequency;
 
-            // Connect oscillator -> gain -> speakers
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
 
-            // Envelope (Attack and Decay)
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-            gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.05); // Quick attack
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2); // Slow decay
+            // Envelope to make it sound like a piano rather than a robot beep
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.8, startTime + 0.05); // Attack
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration); // Decay
 
-            oscillator.start();
-            
-            // Store the oscillator so we can kill it on keyup/mouseup
-            activeOscillators[frequency] = {
-                oscillator: oscillator,
-                gainNode: gainNode
-            };
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration + 0.1);
         }
 
-        // Function to stop the sound
-        function stopNote(frequency, keyElement) {
-            keyElement.classList.remove('active');
+        // --- SHEET MUSIC TRANSCRIPTION ---
+        // Measures 1 through 12 mapped directly from the image
+        // beats = the length of the note based on the sheet (whole=4, half=2, quarter=1)
+        const sheetMusic = [
+            { note: 'E5', beats: 4 },     // Measure 1
+            { note: 'C5', beats: 2 }, { note: 'D5', beats: 2 }, // Measure 2
+            { note: 'E5', beats: 2 }, { note: 'G5', beats: 2 }, // Measure 3
+            { note: 'F5', beats: 2 }, { note: 'A4', beats: 2 }, // Measure 4
+            { note: 'E5', beats: 2 }, { note: 'C5', beats: 2 }, // Measure 5
+            
+            // Measure 6 (Dotted rhythms!)
+            { note: 'C5', beats: 1.5 }, { note: 'D5', beats: 0.5 }, { note: 'E5', beats: 1.5 }, { note: 'G5', beats: 0.5 }, 
+            
+            { note: 'F5', beats: 1.5 }, { note: 'G5', beats: 0.5 }, { note: 'A5', beats: 2 }, // Measure 7
+            { note: 'G5', beats: 1.5 }, { note: 'F5', beats: 0.5 }, { note: 'E5', beats: 2 }, // Measure 8
+            { note: 'D5', beats: 1.5 }, { note: 'E5', beats: 0.5 }, { note: 'F5', beats: 2 }, // Measure 9
+            { note: 'E5', beats: 1.5 }, { note: 'D5', beats: 0.5 }, { note: 'C5', beats: 2 }, // Measure 10
+            
+            { note: 'B4', beats: 1 }, { note: 'C5', beats: 1 }, { note: 'D5', beats: 2 }, // Measure 11
+            { note: 'C5', beats: 4 } // Measure 12
+        ];
 
-            if (activeOscillators[frequency]) {
-                const osc = activeOscillators[frequency].oscillator;
-                const gain = activeOscillators[frequency].gainNode;
+        // Auto-Player Logic
+        function playSheetMusic() {
+            if (isPlaying) return; // Prevent clicking multiple times
+            isPlaying = true;
 
-                // Quick fade out on release
-                gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const bpm = 55; // From the top left of the sheet music
+            const beatDuration = 60 / bpm; // In seconds
+            
+            let currentTimeOffset = audioCtx.currentTime + 0.5; // Start half a second from now
+            let totalTimeMs = 0;
+
+            sheetMusic.forEach((item) => {
+                const keyElement = document.getElementById(item.note);
+                if (keyElement) {
+                    const frequency = parseFloat(keyElement.getAttribute('data-note'));
+                    const durationInSeconds = item.beats * beatDuration;
+                    
+                    // 1. Schedule the audio precisely using Web Audio API
+                    playTone(frequency, currentTimeOffset, durationInSeconds);
+
+                    // 2. Schedule the visual key press using Javascript timeouts
+                    const visualDelay = (currentTimeOffset - audioCtx.currentTime) * 1000;
+                    const visualDuration = (durationInSeconds * 1000) * 0.9; // 90% of duration so keys detach between identical notes
+
+                    setTimeout(() => {
+                        keyElement.classList.add('active');
+                    }, visualDelay);
+
+                    setTimeout(() => {
+                        keyElement.classList.remove('active');
+                    }, visualDelay + visualDuration);
+                    
+                    totalTimeMs = visualDelay + visualDuration;
+                }
                 
-                osc.stop(audioCtx.currentTime + 0.1);
-                
-                delete activeOscillators[frequency];
-            }
+                // Move the timeline forward by the duration of the current note
+                currentTimeOffset += (item.beats * beatDuration); 
+            });
+
+            // Unlock the play button when the song is over
+            setTimeout(() => {
+                isPlaying = false;
+            }, totalTimeMs + 500);
         }
 
-        // --- Mouse Events ---
-        const keys = document.querySelectorAll('.key');
-        
-        keys.forEach(key => {
-            const frequency = parseFloat(key.getAttribute('data-note'));
-            
+        document.getElementById('playBtn').addEventListener('click', playSheetMusic);
+
+        // Allow manual clicking too!
+        document.querySelectorAll('.key').forEach(key => {
             key.addEventListener('mousedown', () => {
                 if(audioCtx.state === 'suspended') audioCtx.resume();
-                playNote(frequency, key);
+                const freq = parseFloat(key.getAttribute('data-note'));
+                key.classList.add('active');
+                playTone(freq, audioCtx.currentTime, 1);
             });
-            
-            key.addEventListener('mouseup', () => stopNote(frequency, key));
-            key.addEventListener('mouseleave', () => stopNote(frequency, key));
-        });
-
-        // --- Keyboard Events ---
-        document.addEventListener('keydown', (e) => {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            
-            const pressedKey = e.key.toLowerCase();
-            const keyElement = document.querySelector(`.key[data-key="${pressedKey}"]`);
-            
-            if (keyElement && !e.repeat) { // Ignore auto-repeat when holding down a key
-                const frequency = parseFloat(keyElement.getAttribute('data-note'));
-                playNote(frequency, keyElement);
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            const pressedKey = e.key.toLowerCase();
-            const keyElement = document.querySelector(`.key[data-key="${pressedKey}"]`);
-            
-            if (keyElement) {
-                const frequency = parseFloat(keyElement.getAttribute('data-note'));
-                stopNote(frequency, keyElement);
-            }
+            key.addEventListener('mouseup', () => key.classList.remove('active'));
+            key.addEventListener('mouseleave', () => key.classList.remove('active'));
         });
     </script>
 </body>
