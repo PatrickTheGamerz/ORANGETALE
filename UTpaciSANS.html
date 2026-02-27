@@ -2,80 +2,100 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Piano Sheet Music Loop</title>
+    <title>Mice on Venus - Piano Loop</title>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .controls { background: #222; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); text-align: center; }
-        button { background: #4facfe; border: none; padding: 10px 20px; color: white; border-radius: 5px; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #00f2fe; }
-        .note-display { margin-top: 20px; font-size: 24px; color: #4facfe; height: 30px; }
-        .status { font-size: 12px; color: #888; margin-top: 10px; }
+        body { background: #0f0f0f; color: #e0e0e0; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: #1a1a1a; border: 1px solid #333; padding: 40px; border-radius: 4px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        button { background: none; border: 1px solid #4facfe; color: #4facfe; padding: 12px 24px; cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; transition: 0.3s; }
+        button:hover { background: #4facfe; color: #121212; }
+        .note-info { margin-top: 30px; min-height: 50px; }
+        .current-chord { font-size: 22px; color: #fff; margin-bottom: 5px; }
+        .measure-count { color: #666; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div class="controls">
-    <h2>Piano Loop</h2>
-    <button id="playBtn">Start Music Loop</button>
-    <div class="note-display" id="noteDisplay">---</div>
-    <div class="status" id="status">Based on your provided sheet music</div>
+<div class="container">
+    <h1 style="font-weight: 300; letter-spacing: 5px;">MICE ON VENUS</h1>
+    <button id="startBtn">Begin Sequence</button>
+    
+    <div class="note-info">
+        <div id="chordName" class="current-chord">READY</div>
+        <div id="measureNum" class="measure-count">75 BPM | Ambient Loop</div>
+    </div>
 </div>
 
 <script>
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-// Frequencies for the notes in your sheet
-const notes = {
-    'C3': 130.81, 'Ab3': 207.65, 'F#3': 185.00,
-    'C4': 261.63, 'E4': 329.63, 'G4': 392.00,
-    'E5': 659.25, 'G5': 783.99, 'C6': 1046.50
+// Frequency Mapping
+const F = {
+    'C3': 130.81, 'Eb3': 155.56, 'F#3': 185.00, 'Ab3': 207.65, 'Bb3': 233.08,
+    'C4': 261.63, 'D4': 293.66, 'Eb4': 311.13, 'E4': 329.63, 'G4': 392.00, 'Ab4': 415.30,
+    'Bb4': 466.16, 'C5': 523.25, 'Eb5': 622.25, 'E5': 659.25, 'G5': 783.99, 'C6': 1046.50
 };
 
-// The sequence from your image (simplified into steps)
-const sequence = [
-    { rh: ['C4', 'E4'], lh: 'C3', label: "Measures 1-4: C Major Dyad" },
-    { rh: ['C4', 'E4', 'G4'], lh: 'Ab3', label: "Measure 5: C/Ab" },
-    { rh: ['C4', 'E4', 'G4'], lh: 'C3', label: "Measure 6: C Major" },
-    { rh: ['C4', 'E4', 'G4'], lh: 'Ab3', label: "Measure 7: C/Ab" },
-    { rh: ['C4', 'E4', 'G4'], lh: 'C3', label: "Measures 8-10: C Major" },
-    { rh: ['E5'], lh: 'F#3', label: "Measure 11: E over F#" },
-    { rh: ['G5'], lh: 'F#3', label: "Measure 11: G over F#" },
-    { rh: ['C6'], lh: 'F#3', label: "Measure 11: High C over F#" }
+// Sequence combined from both sheets
+const composition = [
+    // Sheet 1: The Foundation
+    { rh: ['C4', 'E4'], lh: 'C3', name: "C Major Dyad", dur: 2 },
+    { rh: ['C4', 'E4', 'G4'], lh: 'Ab3', name: "Ab Major 7", dur: 1 },
+    { rh: ['C4', 'E4', 'G4'], lh: 'C3', name: "C Major", dur: 1 },
+    { rh: ['E5'], lh: 'F#3', name: "E over F#", dur: 0.5 },
+    { rh: ['G5'], lh: 'F#3', name: "G over F#", dur: 0.5 },
+    { rh: ['C6'], lh: 'F#3', name: "High C / F#", dur: 1 },
+
+    // Sheet 2: The Melody Shift
+    { rh: ['G4', 'C5', 'Eb5'], lh: 'Eb3', name: "Eb Major triad", dur: 1 },
+    { rh: ['Ab4', 'C5', 'Eb5'], lh: 'Ab3', name: "Ab Major", dur: 1 },
+    { rh: ['Bb4', 'D5', 'F5'], lh: 'Bb3', name: "Bb Major", dur: 1 },
+    { rh: ['C5', 'Eb5', 'G5'], lh: 'C3', name: "C Minor resolution", dur: 2 }
 ];
 
-function playTone(freq, start, duration) {
+function playNote(freq, startTime, duration) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'triangle'; // Softer, piano-like tone
-    osc.frequency.setValueAtTime(freq, start);
-    gain.gain.setValueAtTime(0.2, start);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    
+    osc.type = 'sine'; // Pure, soft C418 tone
+    osc.frequency.setValueAtTime(freq, startTime);
+    
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.1); // Soft attack
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration * 2);
+    
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.start(start);
-    osc.stop(start + duration);
+    
+    osc.start(startTime);
+    osc.stop(startTime + duration * 2);
 }
 
-let step = 0;
-function playLoop() {
-    const item = sequence[step];
+let currentIndex = 0;
+function playNext() {
+    const chord = composition[currentIndex];
     const now = audioCtx.currentTime;
-    
-    document.getElementById('noteDisplay').innerText = item.label;
+    const beatDuration = 1.2; // Adjusted for 75 BPM
+
+    document.getElementById('chordName').innerText = chord.name;
+    document.getElementById('measureNum').innerText = `Sequence Step ${currentIndex + 1} / ${composition.length}`;
 
     // Play Left Hand
-    playTone(notes[item.lh], now, 0.8);
-    // Play Right Hand notes
-    item.rh.forEach(note => playTone(notes[note], now, 0.8));
+    playNote(F[chord.lh], now, chord.dur * beatDuration);
+    
+    // Play Right Hand
+    chord.rh.forEach(note => {
+        playNote(F[note], now, chord.dur * beatDuration);
+    });
 
-    step = (step + 1) % sequence.length;
-    setTimeout(playLoop, 1000); // Loops every second
+    currentIndex = (currentIndex + 1) % composition.length;
+    setTimeout(playNext, chord.dur * beatDuration * 1000);
 }
 
-document.getElementById('playBtn').addEventListener('click', () => {
+document.getElementById('startBtn').addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    playLoop();
-    document.getElementById('playBtn').style.display = 'none';
+    playNext();
+    document.getElementById('startBtn').style.opacity = '0';
+    document.getElementById('startBtn').style.pointerEvents = 'none';
 });
 </script>
 
