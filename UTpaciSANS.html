@@ -2,110 +2,139 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mice on Venus - Absolute Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mice on Venus - Web Piano</title>
     <style>
-        body { background: #050505; color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { background: #111; border: 2px solid #333; padding: 50px; border-radius: 20px; text-align: center; width: 450px; box-shadow: 0 0 50px rgba(0,0,0,1); }
-        .visual-key { font-size: 40px; color: #00d2ff; height: 60px; margin: 20px 0; font-weight: bold; text-shadow: 0 0 20px #00d2ff; }
-        .measure-info { color: #666; font-size: 14px; letter-spacing: 3px; margin-bottom: 20px; }
-        #playBtn { background: #00d2ff; color: black; border: none; padding: 20px 40px; font-size: 18px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; transition: 0.2s; }
-        #playBtn:hover { transform: scale(1.02); background: white; }
-        .indicator { width: 12px; height: 12px; background: #333; border-radius: 50%; display: inline-block; margin: 5px; }
-        .indicator.active { background: #00d2ff; box-shadow: 0 0 10px #00d2ff; }
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: #2a2a2a;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+        }
+        h1 { color: #00ffcc; margin-bottom: 10px; }
+        p { color: #aaa; margin-bottom: 30px; }
+        button {
+            background: #00ffcc;
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+        button:hover {
+            background: #00ccaa;
+            transform: scale(1.05);
+        }
+        .visualizer {
+            margin-top: 30px;
+            display: flex;
+            gap: 5px;
+            height: 50px;
+            align-items: flex-end;
+        }
+        .bar {
+            width: 10px;
+            background: #00ffcc;
+            border-radius: 5px 5px 0 0;
+            transition: height 0.1s;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="measure-info" id="mDisplay">MEASURE 01 / 21</div>
-    <div class="visual-key" id="noteName">---</div>
-    <button id="playBtn">START PIANO PLAYER</button>
-    <div style="margin-top:20px;">
-        <div class="indicator" id="ind1"></div>
-        <div class="indicator" id="ind2"></div>
-        <div class="indicator" id="ind3"></div>
-        <div class="indicator" id="ind4"></div>
-    </div>
+    <h1>Mice on Venus</h1>
+    <p>Minecraft Piano Arrangement (Web Audio API)</p>
+    <button id="playBtn">Play Minecraft Theme</button>
+    
+    <div class="visualizer" id="visualizer">
+        </div>
 </div>
 
 <script>
-let audioCtx;
-
-// Precise frequencies based on your sheets
-const FREQ = {
-    'G2': 98.00, 'Ab2': 103.83, 'Bb2': 116.54, 'C3': 130.81, 'Eb3': 155.56, 'F#3': 185.00, 'Ab3': 207.65, 
-    'C4': 261.63, 'E4': 329.63, 'G4': 392.00, 'Ab4': 415.30, 'Bb4': 466.16, 
-    'C5': 523.25, 'D5': 587.33, 'Eb5': 622.25, 'E5': 659.25, 'G5': 783.99, 'C6': 1046.50
-};
-
-// 75 BPM is the "Normal" speed for this song.
-const BPM = 75; 
-const beatTime = 60 / BPM;
-
-const score = [
-    // M1-4: Intro C Major
-    {m:1, b:0, n:['C3','C4','E4'], d:4}, {m:1, b:2, n:['C4','E4'], d:2},
-    {m:2, b:4, n:['C3','C4','E4'], d:4}, {m:2, b:6, n:['C4','E4'], d:2},
-    {m:3, b:8, n:['C3','C4','E4'], d:4}, {m:3, b:10, n:['C4','E4'], d:2},
-    {m:4, b:12, n:['C3','C4','E4'], d:4}, {m:4, b:14, n:['C4','E4'], d:2},
-    // M5-10: Harmonic Shift
-    {m:5, b:16, n:['Ab3','C4','E4','G4'], d:4}, {m:5, b:18, n:['C4','E4','G4'], d:2},
-    {m:6, b:20, n:['C3','C4','E4','G4'], d:4}, {m:6, b:22, n:['C4','E4','G4'], d:2},
-    {m:11,b:40, n:['F#3','E5'], d:2}, {m:11,b:42, n:['G5'], d:1}, {m:11,b:43, n:['C6'], d:1},
-    // M12-21: The "Left" Keys / Bass Walk
-    {m:12,b:44, n:['C3','G4','C5','Eb5'], d:4}, {m:12,b:46, n:['G4','C5','Eb5'], d:2},
-    {m:13,b:48, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:13,b:50, n:['Ab4','C5','Eb5'], d:2},
-    {m:14,b:52, n:['Bb2','Bb4','D5','G5'], d:4}, {m:14,b:54, n:['Bb4','D5','G5'], d:2},
-    {m:20,b:76, n:['G2','Bb4','D5'], d:2}, {m:20,b:78, n:['Bb2','C5','Eb5'], d:2},
-    {m:21,b:80, n:['C3','Eb5','G5','C6'], d:8}
-];
-
-function playNote(freq, start, duration) {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const playBtn = document.getElementById('playBtn');
+    const visualizer = document.getElementById('visualizer');
     
-    osc.type = 'triangle'; // Richer sound
-    osc.frequency.setValueAtTime(freq, start);
+    // Create visualizer bars
+    for(let i=0; i<15; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = '5px';
+        visualizer.appendChild(bar);
+    }
 
-    gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(0.3, start + 0.05); // LOUDER
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + (duration * beatTime) + 4);
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start(start);
-    osc.stop(start + (duration * beatTime) + 5);
-}
+    // Note Frequencies
+    const notes = {
+        'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
+        'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00
+    };
 
-function runSequencer() {
-    const startTime = audioCtx.currentTime + 0.1;
-    
-    score.forEach(item => {
-        const playTime = startTime + (item.b * beatTime);
-        
-        // Schedule Audio
-        item.n.forEach(note => playNote(FREQ[note], playTime, item.d));
+    // The Sequence (Note, Duration in seconds, StartTime offset)
+    const melody = [
+        { n: 'G4', d: 1.5, t: 0 },
+        { n: 'E4', d: 1.5, t: 1.5 },
+        { n: 'D4', d: 2.0, t: 3.0 },
+        { n: 'C4', d: 1.5, t: 5.0 },
+        { n: 'G3', d: 1.5, t: 6.5 },
+        { n: 'A3', d: 1.5, t: 8.0 },
+        { n: 'C4', d: 3.0, t: 9.5 }
+    ];
 
-        // Schedule Visuals
+    function playNote(freq, duration, startTime) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        // Piano-like Sine/Triangle mix
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        // Soft Attack and Decay (Piano feel)
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+
+        // Animate visualizer
         setTimeout(() => {
-            document.getElementById('noteName').innerText = item.n.join(' • ');
-            document.getElementById('mDisplay').innerText = `MEASURE ${item.m.toString().padStart(2, '0')} / 21`;
-            
-            // Pulse indicators based on beats
-            const beatInMeasure = (item.b % 4) + 1;
-            document.querySelectorAll('.indicator').forEach(el => el.classList.remove('active'));
-            document.getElementById('ind' + Math.ceil(beatInMeasure)).classList.add('active');
-        }, (playTime - audioCtx.currentTime) * 1000);
-    });
-}
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach(b => b.style.height = Math.random() * 50 + 'px');
+            setTimeout(() => {
+                bars.forEach(b => b.style.height = '5px');
+            }, duration * 1000);
+        }, (startTime - audioCtx.currentTime) * 1000);
+    }
 
-document.getElementById('playBtn').addEventListener('click', () => {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    document.getElementById('playBtn').style.display = 'none';
-    runSequencer();
-});
+    playBtn.addEventListener('click', () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        const now = audioCtx.currentTime;
+        melody.forEach(item => {
+            playNote(notes[item.n], item.d, now + item.t);
+        });
+    });
 </script>
 
 </body>
