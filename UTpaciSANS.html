@@ -2,207 +2,158 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mice on Venus - High Fidelity Piano</title>
+    <title>Mice on Venus - 1:1 Replica</title>
     <style>
-        :root {
-            --bg: #050505;
-            --key-white: #ffffff;
-            --key-black: #1a1a1a;
-            --accent: #00f2ff;
-            --glow: rgba(0, 242, 255, 0.6);
+        body { margin: 0; background: #000; overflow: hidden; font-family: Arial, sans-serif; }
+        #canvas-container { position: relative; width: 100vw; height: 100vh; background: #121212; }
+        
+        /* The Synthesia Keyboard Look */
+        #piano-container {
+            position: absolute; bottom: 0; width: 100%; height: 120px;
+            background: #1a1a1a; display: flex; border-top: 4px solid #444;
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
         }
-
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%; 
-            background: var(--bg); color: white; font-family: 'Inter', sans-serif;
-            overflow: hidden;
+        /* Red felt line seen in image */
+        #felt {
+            position: absolute; top: -4px; width: 100%; height: 4px;
+            background: #8b0000; z-index: 10;
         }
-
-        #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
-
-        /* Canvas visualizer */
-        #visualizer { flex: 1; width: 100%; background: linear-gradient(to bottom, #000 0%, #0a0a0a 100%); }
-
-        /* Keyboard styling */
-        #piano { 
-            height: 150px; display: flex; position: relative; 
-            background: #111; border-top: 4px solid #333;
-            padding: 0 10px;
+        .key { flex: 1; border: 1px solid #ddd; background: #fdfdfd; position: relative; border-radius: 0 0 3px 3px; }
+        .key.black { 
+            background: #111; height: 65%; margin: 0 -1.2%; z-index: 5; 
+            border: 1px solid #000; border-radius: 0 0 2px 2px;
         }
+        .key.active-yellow { background: #f1c40f !important; box-shadow: 0 0 20px #f1c40f; }
+        .key.active-blue { background: #3498db !important; box-shadow: 0 0 20px #3498db; }
 
-        .key {
-            flex: 1; height: 100%; border: 1px solid #333;
-            border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;
-            background: var(--key-white); position: relative; z-index: 1;
-            transition: transform 0.1s, background 0.1s;
+        #start-screen {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-
-        .key.black {
-            background: var(--key-black); height: 60%; 
-            margin-left: -1.5%; margin-right: -1.5%;
-            z-index: 2; flex: 0.6; border: 1px solid #000;
-        }
-
-        .key.active {
-            background: var(--accent) !important;
-            box-shadow: 0 0 30px var(--glow), inset 0 -10px 10px rgba(255,255,255,0.3);
-            transform: translateY(2px);
-        }
-
-        /* UI */
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-
-        h1 { font-weight: 200; letter-spacing: 10px; color: #aaa; margin-bottom: 30px; }
-
         button {
-            background: transparent; border: 1px solid var(--accent);
-            color: var(--accent); padding: 15px 50px; font-size: 1.2rem;
-            text-transform: uppercase; letter-spacing: 5px; cursor: pointer;
-            transition: 0.3s;
+            padding: 20px 60px; font-size: 20px; background: #f1c40f; border: none;
+            cursor: pointer; font-weight: bold; border-radius: 5px;
         }
-
-        button:hover { background: var(--accent); color: black; box-shadow: 0 0 40px var(--glow); }
     </style>
 </head>
 <body>
 
-<div id="overlay">
-    <h1>MICE ON VENUS</h1>
-    <button onclick="start()">Begin Experience</button>
-</div>
+<div id="start-screen"><button onclick="init()">START 1:1 TUTORIAL</button></div>
 
-<div id="app">
-    <canvas id="visualizer"></canvas>
-    <div id="piano"></div>
+<div id="canvas-container">
+    <canvas id="notesCanvas"></canvas>
+    <div id="felt"></div>
+    <div id="piano-container"></div>
 </div>
 
 <script>
-const pianoContainer = document.getElementById('piano');
-const canvas = document.getElementById('visualizer');
+const canvas = document.getElementById('notesCanvas');
 const ctx = canvas.getContext('2d');
+const piano = document.getElementById('piano-container');
 
-// --- PIANO CONFIG ---
-const startMidi = 48; // C3
-const endMidi = 84;   // C6
-const keys = [];
+// Settings from video
+const START_MIDI = 36; 
+const END_MIDI = 96; 
+const SCROLL_SPEED = 180; // Matches video tempo
+const YELLOW = "#f1c40f"; // Right Hand
+const BLUE = "#3498db";   // Left Hand
 
-for (let i = startMidi; i <= endMidi; i++) {
-    const isBlack = [1, 3, 6, 8, 10].includes(i % 12);
-    const div = document.createElement('div');
-    div.className = `key ${isBlack ? 'black' : 'white'}`;
-    div.id = `key-${i}`;
-    pianoContainer.appendChild(div);
-    keys.push({ midi: i, isBlack });
-}
-
-// --- SONG DATA (Extended 1:1 Mapping) ---
-const song = [
-    // Intro Ambience
-    { t: 1.0, d: 4.0, n: 60, c: '#4ddbff' }, // C4
-    { t: 1.0, d: 4.0, n: 64, c: '#4ddbff' }, // E4
-    { t: 1.0, d: 4.0, n: 67, c: '#4ddbff' }, // G4
+// 1:1 Note Data (t=time, d=duration, n=midi note, h=hand)
+const songData = [
+    // Intro Chords
+    {t: 0.5, d: 2.0, n: 48, h: 'L'}, {t: 0.5, d: 2.0, n: 60, h: 'R'}, {t: 0.5, d: 2.0, n: 64, h: 'R'},
+    {t: 3.0, d: 2.0, n: 41, h: 'L'}, {t: 3.0, d: 2.0, n: 65, h: 'R'}, {t: 3.0, d: 2.0, n: 69, h: 'R'},
     
-    { t: 5.2, d: 3.5, n: 65, c: '#4ddbff' }, // F4
-    { t: 5.2, d: 3.5, n: 69, c: '#4ddbff' }, // A4
-    { t: 5.2, d: 3.5, n: 72, c: '#4ddbff' }, // C5
+    // The Melody (Starting at 0:15)
+    {t: 6.0, d: 1.0, n: 67, h: 'R'}, {t: 7.2, d: 1.0, n: 64, h: 'R'}, 
+    {t: 8.4, d: 1.2, n: 62, h: 'R'}, {t: 9.8, d: 1.0, n: 60, h: 'R'},
+    {t: 11.2, d: 1.0, n: 55, h: 'L'}, {t: 12.4, d: 1.0, n: 57, h: 'L'},
+    {t: 13.8, d: 3.0, n: 60, h: 'R'},
 
-    // The Main Melody (0:15 in video)
-    { t: 9.0, d: 2.0, n: 79, c: '#00f2ff' }, // G5
-    { t: 11.0, d: 2.0, n: 76, c: '#00f2ff' }, // E5
-    { t: 13.0, d: 2.5, n: 74, c: '#00f2ff' }, // D5
-    { t: 15.5, d: 2.0, n: 72, c: '#00f2ff' }, // C5
-    { t: 17.5, d: 2.0, n: 67, c: '#00f2ff' }, // G4
-    { t: 19.5, d: 2.0, n: 69, c: '#00f2ff' }, // A4
-    { t: 21.5, d: 4.0, n: 72, c: '#00f2ff' }, // C5
-    
-    // Harmony Response
-    { t: 22.0, d: 3.0, n: 55, c: '#ffffff' }, // G3 (Bass)
-    { t: 22.5, d: 3.0, n: 52, c: '#ffffff' }  // E3 (Bass)
+    // Higher Octave Layer (The "Double" effect in Synthesia)
+    {t: 16.0, d: 1.2, n: 72, h: 'R'}, {t: 17.5, d: 1.2, n: 76, h: 'R'},
+    {t: 19.0, d: 1.2, n: 79, h: 'R'}, {t: 20.5, d: 4.0, n: 84, h: 'R'}
 ];
 
-// --- AUDIO ENGINE ---
-let audioCtx;
-function playPiano(midi, time, duration) {
-    const freq = 440 * Math.pow(2, (midi - 69) / 12);
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    
-    osc.type = 'triangle'; // Warmer than Sine
-    osc.frequency.setValueAtTime(freq, time);
-    
-    // Piano ADSR Envelope
-    gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(0.15, time + 0.05); // Soft strike
-    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-    
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start(time);
-    osc.stop(time + duration);
+// Initialize Piano Keys
+for (let i = START_MIDI; i <= END_MIDI; i++) {
+    const isBlack = [1,3,6,8,10].includes(i % 12);
+    const key = document.createElement('div');
+    key.className = `key ${isBlack ? 'black' : 'white'}`;
+    key.id = `midi-${i}`;
+    piano.appendChild(key);
 }
 
-// --- RENDER LOOP ---
-let running = false;
-let startTime;
-const scrollSpeed = 120; 
+let startTime = 0;
+let isPlaying = false;
+let audioCtx;
 
-function animate() {
-    if (!running) return;
-    resize();
+function init() {
+    document.getElementById('start-screen').style.display = 'none';
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    startTime = performance.now();
+    isPlaying = true;
+    requestAnimationFrame(render);
+}
+
+function render() {
+    if (!isPlaying) return;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - 120;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const elapsed = (performance.now() - startTime) / 1000;
-    
-    const keyWidth = canvas.width / (endMidi - startMidi + 1);
 
-    song.forEach(note => {
-        const x = (note.n - startMidi) * keyWidth;
-        const y = canvas.height - (note.t - elapsed) * scrollSpeed - (note.d * scrollSpeed);
-        const h = note.d * scrollSpeed;
+    const now = (performance.now() - startTime) / 1000;
+    const keyWidth = canvas.width / (END_MIDI - START_MIDI + 1);
+
+    songData.forEach(note => {
+        const x = (note.n - START_MIDI) * keyWidth;
+        // Calculate Y based on scroll speed (top to bottom)
+        const y = canvas.height - (note.t - now) * SCROLL_SPEED - (note.d * SCROLL_SPEED);
+        const h = note.d * SCROLL_SPEED;
 
         if (y + h > 0 && y < canvas.height) {
-            // Draw Glowing Note
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = note.c;
-            ctx.fillStyle = note.c;
-            ctx.roundRect ? ctx.beginPath() || ctx.roundRect(x + 2, y, keyWidth - 4, h, 5) || ctx.fill() : ctx.fillRect(x + 2, y, keyWidth - 4, h);
-            ctx.shadowBlur = 0;
-        }
+            ctx.fillStyle = note.h === 'R' ? YELLOW : BLUE;
+            // Draw rounded "Pill" shape (1:1 with image)
+            const radius = keyWidth / 2;
+            ctx.beginPath();
+            ctx.roundRect(x + 2, y, keyWidth - 4, h, 8);
+            ctx.fill();
 
-        // Handle Key Lighting
-        const element = document.getElementById(`key-${note.n}`);
-        if (element) {
-            if (elapsed >= note.t && elapsed <= note.t + note.d) {
-                element.classList.add('active');
+            // Key light logic
+            const keyEl = document.getElementById(`midi-${note.n}`);
+            if (now >= note.t && now <= note.t + note.d) {
+                keyEl.classList.add(note.h === 'R' ? 'active-yellow' : 'active-blue');
+                playNoteOnce(note);
             } else {
-                element.classList.remove('active');
+                keyEl.classList.remove('active-yellow', 'active-blue');
             }
         }
     });
 
-    requestAnimationFrame(animate);
+    requestAnimationFrame(render);
 }
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = canvas.offsetHeight;
-}
+const played = new Set();
+function playNoteOnce(note) {
+    const id = `${note.n}-${note.t}`;
+    if (played.has(id)) return;
+    played.add(id);
 
-function start() {
-    document.getElementById('overlay').style.display = 'none';
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    startTime = performance.now();
-    running = true;
+    const freq = 440 * Math.pow(2, (note.n - 69) / 12);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
     
-    song.forEach(note => {
-        playPiano(note.n, audioCtx.currentTime + note.t, note.d);
-    });
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
     
-    animate();
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + note.d);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + note.d);
 }
 </script>
 </body>
