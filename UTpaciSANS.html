@@ -2,47 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UT 3D: THE FINAL JUDGMENT (AI EDITION)</title>
+    <title>UT 3D: PACIFIST SANS ENCOUNTER</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         body { margin: 0; overflow: hidden; background: #000; font-family: 'VT323', monospace; color: white; user-select: none; }
 
-        /* UI Overlays */
         #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
-
         #top-hud { padding: 20px 40px; font-size: 36px; text-shadow: 2px 2px #000; display: flex; justify-content: space-between; }
         
-        #dialogue-container { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); width: 550px; background: rgba(0,0,0,0.9); border: 4px solid white; border-radius: 10px; padding: 25px; font-size: 32px; display: none; text-align: center; line-height: 1.3; font-family: 'Comic Sans MS', 'VT323', sans-serif; text-transform: lowercase; }
+        #dialogue-container { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 550px; background: rgba(0,0,0,0.9); border: 4px solid white; border-radius: 10px; padding: 25px; font-size: 32px; display: none; text-align: center; line-height: 1.3; font-family: 'Comic Sans MS', 'VT323', sans-serif; text-transform: lowercase; }
 
         #narrative-box { position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%); width: 760px; height: 160px; background: rgba(0,0,0,0.95); border: 4px solid white; padding: 20px 30px; font-size: 36px; display: block; pointer-events: auto; line-height: 1.4; }
 
         #bottom-ui { padding: 10px 40px 30px 40px; display: flex; flex-direction: column; align-items: center; background: rgba(0,0,0,0.95); border-top: 4px solid white; pointer-events: auto; }
-
         #stats-bar { display: flex; align-items: center; justify-content: space-between; font-size: 36px; margin-bottom: 20px; width: 800px; }
         #hp-container { display: flex; align-items: center; }
         .hp-box { width: 150px; height: 30px; background: red; margin: 0 15px; border: 2px solid #555; position: relative; }
         #hp-fill { height: 100%; background: #ffff00; width: 100%; transition: width 0.1s; }
-
         #controller-badge { color: #888; font-size: 28px; border: 2px solid #888; padding: 5px 15px; border-radius: 5px; }
 
         #action-buttons { display: flex; justify-content: space-between; width: 800px; }
         .action-btn { background: black; color: #ff8c00; border: 4px solid #ff8c00; width: 170px; height: 60px; font-size: 36px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.1s; position: relative; pointer-events: auto; }
-        .action-btn.active { background: #ff8c00; color: black; border-color: #ff8c00; }
-        .action-btn:hover { background: #ffaa33; color: black; border-color: #ffaa33; }
+        .action-btn.active { background: #ffaa33; color: black; border-color: #ffaa33; }
         .action-btn.locked { pointer-events: none; border-color: #333; color: #333; }
-        
         .soul-icon { display: none; position: absolute; left: 10px; color: #ff0000; font-size: 24px; }
         .action-btn.active .soul-icon { display: block; }
 
         #controls-hint { position: absolute; left: 20px; bottom: 380px; font-size: 24px; color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border: 2px solid #555; line-height: 1.5;}
 
-        /* Screens */
         #game-over { position: absolute; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
         .go-text { font-size: 120px; letter-spacing: 5px; margin: 0; color: #fff; }
         .retry-btn { margin-top: 60px; font-size: 40px; background: none; color: white; border: 2px solid white; padding: 10px 30px; cursor: pointer; font-family: inherit; pointer-events: auto;}
         .retry-btn:hover { background: white; color: black; }
-
+        
         #victory-screen { position: absolute; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #damage-text { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-family: 'Arial', sans-serif; font-size: 80px; font-weight: bold; color: #fff; opacity: 0; z-index: 50; transition: opacity 0.5s, top 0.5s; }
 
@@ -57,15 +50,9 @@
         <span style="color: red;" id="hud-name">❤️ PLAYER</span>
         <span style="color: white;">LV 1</span>
     </div>
-
     <div id="dialogue-container"><div id="sans-dialogue">...</div></div>
     <div id="narrative-box"></div>
-
-    <div id="controls-hint">
-        [WASD] Move Arena<br>
-        [SPACE/Z/CLICK] Select/Jump<br>
-        [Q] Tag Team Partner
-    </div>
+    <div id="controls-hint">[WASD] Move Arena<br>[SPACE] Jump<br>[Q] Tag Team Partner</div>
 
     <div id="bottom-ui">
         <div id="stats-bar">
@@ -89,8 +76,8 @@
 
 <div id="game-over">
     <h1 class="go-text">GAME OVER</h1>
-    <p style="font-size: 40px; color: #aaa; margin-top: 20px;">"geeettttttt dunked on!!!"</p>
-    <button class="retry-btn" onclick="location.reload()">STAY DETERMINED</button>
+    <p style="font-size: 40px; color: #aaa; margin-top: 20px;">"stay determined, kiddo."</p>
+    <button class="retry-btn" onclick="location.reload()">RETRY</button>
 </div>
 
 <div id="victory-screen">
@@ -106,11 +93,12 @@
     const state = {
         hp: 20, maxHp: 20, turn: 0, 
         mode: "TYPING", // TYPING, MENU, DIALOGUE, DODGING, CUTSCENE
-        menuIndex: 1, invuln: 0,
+        menuIndex: 1, invuln: 0, globalTime: 0,
         playerVel: new THREE.Vector3(0, 0, 0),
-        items: 3, isSleeping: false,
-        teammate: localStorage.getItem('teammate') || 'FRISK', // Reads from Council Hub
-        controller: 'PLAYER' // 'PLAYER' or 'AI'
+        items: ["Spider Cider", "Spider Donut", "Snowman Piece"],
+        isSleeping: false,
+        teammate: localStorage.getItem('teammate') || 'FRISK',
+        controller: 'PLAYER' 
     };
 
     const keys = {};
@@ -125,131 +113,79 @@
     const badge = document.getElementById('controller-badge');
     const hudName = document.getElementById('hud-name');
 
-    // --- SANS DIALOGUE PROGRESSION ---
+    // --- DIALOGUE ---
     const sansScript = [
-        "our reports showed a\nmassive anomaly.",
-        "timelines jumping left\nand right, stopping and starting...",
-        "until suddenly, everything ends.",
-        "heh. you're tough.\nlet's see you survive this.",
-        "... huff ... puff ...\nall right. that's it.",
-        "it's time for my\nspecial attack.",
-        "are you ready?\nhere goes nothing.",
+        "heya. let's just take it\neasy, alright?",
+        "you've been busy, huh?\nhere, have some up-and-downs.",
+        "watch your step.\nthe floor's getting tricky.",
+        "slow and steady wins the race.\nor so they say.",
+        "alright, i'm getting tired.\ntime for my special attack.",
         "...", 
-        "yep. that's right.\nit's literally nothing."
+        "yep. that's right.\nit's literally nothing.",
+        "my fabled 'blue attack'.\ni'm just not gonna do anything."
     ];
 
-    // --- 3D ENGINE SETUP ---
+    // --- 3D ENGINE ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000000, 0.03);
-    
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 18, 22);
-    camera.lookAt(0, 0, 0);
-
+    camera.position.set(0, 20, 24); camera.lookAt(0, 0, 0);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0x555555));
-    const spotLight = new THREE.SpotLight(0xffffff, 1.5);
-    spotLight.position.set(0, 30, 10);
-    scene.add(spotLight);
+    const spotLight = new THREE.SpotLight(0xffffff, 1.5); spotLight.position.set(0, 30, 10); scene.add(spotLight);
 
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(32, 32), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 }));
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 36), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    floor.rotation.x = -Math.PI / 2; scene.add(floor);
+    const gridHelper = new THREE.GridHelper(36, 18, 0x444444, 0x222222); gridHelper.position.y = 0.01; scene.add(gridHelper);
 
-    const gridHelper = new THREE.GridHelper(32, 16, 0x555555, 0x222222);
-    gridHelper.position.y = 0.01;
-    scene.add(gridHelper);
-
-    // Player Soul
+    // Entities
     const playerMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const player = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), playerMat);
-    player.position.y = 0.6;
-    scene.add(player);
+    const player = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), playerMat); player.position.y = 0.6; scene.add(player);
 
-    // Sans Model
     const sansGroup = new THREE.Group();
-    const jacket = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 3.5, 16), new THREE.MeshStandardMaterial({ color: 0x0033ff }));
-    jacket.position.y = 2.5;
-    sansGroup.add(jacket);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), new THREE.MeshStandardMaterial({color: 0xffffff}));
-    head.position.y = 5.6;
-    sansGroup.add(head);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshBasicMaterial({color: 0x00ffff}));
-    eye.position.set(0.6, 5.8, 1.4);
-    eye.visible = false;
-    sansGroup.add(eye);
-    sansGroup.position.set(0, 0, -15);
-    scene.add(sansGroup);
+    const jacket = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 3.5, 16), new THREE.MeshStandardMaterial({ color: 0x0033ff })); jacket.position.y = 2.5; sansGroup.add(jacket);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), new THREE.MeshStandardMaterial({color: 0xffffff})); head.position.y = 5.6; sansGroup.add(head);
+    sansGroup.position.set(0, 0, -16); scene.add(sansGroup);
 
-    // --- CUSTOM 3D BONE & BLASTER ---
+    // --- CUSTOM 3D BONE MESH ---
     function createBoneMesh(h, w, isBlue) {
         const group = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00ffff : 0xffffff, roughness: 0.4 });
-        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w*0.3, w*0.3, h - w, 12), mat);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w*0.3, w*0.3, Math.max(0.1, h - w), 12), mat);
         group.add(shaft);
-        const r = w * 0.4;
-        const offset = w * 0.35;
-        const positions = [[-offset, h/2 - r, 0], [offset, h/2 - r, 0], [-offset, -h/2 + r, 0], [offset, -h/2 + r, 0]];
-        positions.forEach(pos => {
+        const r = w * 0.4; const offset = w * 0.35;
+        [[-offset, h/2 - r, 0], [offset, h/2 - r, 0], [-offset, -h/2 + r, 0], [offset, -h/2 + r, 0]].forEach(pos => {
             const joint = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), mat);
-            joint.position.set(pos[0], pos[1], pos[2]);
-            group.add(joint);
+            joint.position.set(pos[0], pos[1], pos[2]); group.add(joint);
         });
         return group;
     }
 
-    function createBlasterMesh() {
-        const group = new THREE.Group();
-        const matWhite = new THREE.MeshStandardMaterial({color: 0xffffff});
-        const matBlack = new THREE.MeshBasicMaterial({color: 0x000000});
-        const skull = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 4), matWhite);
-        group.add(skull);
-        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.5), matBlack);
-        eyeL.position.set(-1, 1, 2.1);
-        group.add(eyeL);
-        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.5), matBlack);
-        eyeR.position.set(1, 1, 2.1);
-        group.add(eyeR);
-        const jaw = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 4), matWhite);
-        jaw.position.set(0, -3.2, 0);
-        group.add(jaw);
-        return group;
+    let projectiles = [];
+    let zones = [];
+
+    function spawnBone(x, y, z, h, w, vx, vz, behavior = 'normal', isBlue = false) {
+        const bone = createBoneMesh(h, w, isBlue);
+        bone.position.set(x, y, z); scene.add(bone);
+        projectiles.push({ mesh: bone, type: 'bone', vx, vz, vy: 0, isBlue, w, h, behavior, baseY: y });
     }
 
-    let projectiles = [];
-    function spawnBone(x, z, h, w, vx, vz, isBlue, isFalling = false) {
-        const bone = createBoneMesh(h, w, isBlue);
-        if(isFalling) bone.position.set(x, 25, z);
-        else bone.position.set(x, h/2, z);
-        scene.add(bone);
-        projectiles.push({ mesh: bone, type: 'bone', vx, vz, vy: isFalling ? -1 : 0, isBlue, w, h });
-    }
-    function spawnBlaster(x, y, z, aimX, aimZ, delay = 45) {
-        const blaster = createBlasterMesh();
-        blaster.position.set(x, y + 5, z);
-        blaster.lookAt(aimX, 0, aimZ);
-        scene.add(blaster);
-        const warn = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 80, 16), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 }));
-        warn.position.set(x, y, z); warn.lookAt(aimX, 0, aimZ); warn.rotateX(Math.PI/2); warn.translateY(40); 
-        scene.add(warn);
-        projectiles.push({ head: blaster, mesh: warn, type: 'blaster', timer: delay, px: x, pz: z, aimX, aimZ });
+    function spawnWarningZone(x, z, w, d, duration) {
+        const zone = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 }));
+        zone.rotation.x = -Math.PI / 2; zone.position.set(x, 0.05, z); scene.add(zone);
+        zones.push({ mesh: zone, timer: duration, w, d });
     }
 
     // --- TYPEWRITER ---
     function typeText(text, container, callback) {
-        state.mode = "TYPING";
-        container.innerHTML = '';
-        let i = 0;
+        state.mode = "TYPING"; container.innerHTML = ''; let i = 0;
         function nextChar() {
-            if(state.mode !== "TYPING") return; // interrupted
+            if(state.mode !== "TYPING") return; 
             if (i < text.length) {
-                let char = text.charAt(i);
-                container.innerHTML += (char === '\n') ? '<br>' : char;
-                i++;
-                let delay = (char === '.' || char === ',' || char === '?') ? 300 : 35;
+                let char = text.charAt(i); container.innerHTML += (char === '\n') ? '<br>' : char; i++;
+                let delay = (char === '.' || char === ',' || char === '?') ? 250 : 35;
                 setTimeout(nextChar, delay);
             } else if(callback) setTimeout(callback, 800);
         }
@@ -261,38 +197,25 @@
         if (state.mode === "CUTSCENE") return;
         if (state.controller === 'PLAYER') {
             state.controller = 'AI';
-            badge.innerText = `CTRL: ${state.teammate}`;
-            badge.style.borderColor = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
-            hudName.innerText = `❤️ ${state.teammate}`;
-            hudName.style.color = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
-            buttons.forEach(b => b.classList.add('locked')); // Lock buttons
-            
-            // Interrupt typing to show switch
+            badge.innerText = `CTRL: ${state.teammate}`; badge.style.borderColor = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
+            hudName.innerText = `❤️ ${state.teammate}`; hudName.style.color = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
+            buttons.forEach(b => b.classList.add('locked'));
             if(state.mode === "MENU" || state.mode === "TYPING") {
-                typeText(`* ${state.teammate} steps forward to take control.`, navBox, () => {
-                    if (state.mode === "TYPING") state.mode = "MENU";
-                    runAIMenu();
-                });
+                typeText(`* ${state.teammate} takes the lead.`, navBox, () => { if (state.mode === "TYPING") state.mode = "MENU"; runAIMenu(); });
             }
         } else {
             state.controller = 'PLAYER';
-            badge.innerText = `CTRL: PLAYER`;
-            badge.style.borderColor = '#888';
-            hudName.innerText = `❤️ PLAYER`;
-            hudName.style.color = '#ff0000';
-            buttons.forEach(b => b.classList.remove('locked')); // Unlock
-            
+            badge.innerText = `CTRL: PLAYER`; badge.style.borderColor = '#888';
+            hudName.innerText = `❤️ PLAYER`; hudName.style.color = '#ff0000';
+            buttons.forEach(b => b.classList.remove('locked'));
             if(state.mode === "MENU" || state.mode === "TYPING") {
-                typeText(`* You take back control.`, navBox, () => {
-                    if (state.mode === "TYPING") state.mode = "MENU";
-                });
+                typeText(`* You take back control.`, navBox, () => { if (state.mode === "TYPING") state.mode = "MENU"; });
             }
         }
     }
 
     function handleInput(key) {
         if (key === 'KeyQ') { toggleTeammate(); return; }
-
         if (state.controller === 'PLAYER' && state.mode === "MENU") {
             if (key === 'ArrowLeft') updateMenuIndex((state.menuIndex + 3) % 4);
             if (key === 'ArrowRight') updateMenuIndex((state.menuIndex + 1) % 4);
@@ -302,34 +225,27 @@
 
     function handleMouseClick(idx) {
         if (state.controller !== 'PLAYER' || state.mode !== "MENU") return;
-        updateMenuIndex(idx);
-        executeMenuAction();
+        updateMenuIndex(idx); executeMenuAction();
     }
 
     function updateMenuIndex(idx) {
-        buttons[state.menuIndex].classList.remove('active');
-        state.menuIndex = idx;
-        buttons[state.menuIndex].classList.add('active');
+        buttons[state.menuIndex].classList.remove('active'); state.menuIndex = idx; buttons[state.menuIndex].classList.add('active');
     }
 
     function runAIMenu() {
         if(state.controller !== 'AI' || state.mode !== "MENU") return;
-        
         setTimeout(() => {
             if(state.teammate === 'FRISK') {
-                if(state.items > 0 && state.hp <= 10) updateMenuIndex(2); // ITEM
-                else if(state.isSleeping) updateMenuIndex(3); // MERCY
-                else updateMenuIndex(1); // ACT
-            } else {
-                updateMenuIndex(0); // CHARA always FIGHTs
-            }
+                if(state.items.length > 0 && state.hp <= 12) updateMenuIndex(2);
+                else if(state.isSleeping) updateMenuIndex(3);
+                else updateMenuIndex(1);
+            } else updateMenuIndex(0); 
             setTimeout(executeMenuAction, 800);
-        }, 1000);
+        }, 800);
     }
 
     function executeMenuAction() {
-        state.mode = "DIALOGUE"; // Lock inputs
-        
+        state.mode = "DIALOGUE"; 
         if (state.isSleeping) {
             if (state.menuIndex === 0) triggerFatalBlow();
             else if (state.menuIndex === 3) triggerMercyWin();
@@ -337,115 +253,105 @@
         }
 
         if (state.menuIndex === 0) {
-            typeText(`* ${state.controller === 'AI' ? state.teammate : 'You'} swing the weapon.\n* Sans effortlessly steps aside.`, navBox, () => {
-                let dodgeInt = setInterval(() => {
-                    sansGroup.position.x += 1;
-                    if(sansGroup.position.x > 8) { clearInterval(dodgeInt); triggerSansDiag(); }
-                }, 16);
+            typeText(`* ${state.controller === 'AI' ? state.teammate : 'You'} swing the weapon.\n* Sans gently side-steps.`, navBox, () => {
+                let dodgeInt = setInterval(() => { sansGroup.position.x += 1; if(sansGroup.position.x > 8) { clearInterval(dodgeInt); triggerSansDiag(); } }, 16);
             });
         } else if (state.menuIndex === 1) {
-            typeText("* SANS - 1 ATK 1 DEF\n* The easiest enemy.\n* Can only deal 1 damage.", navBox, triggerSansDiag);
+            typeText("* SANS - 1 ATK 1 DEF\n* He seems pretty relaxed.", navBox, triggerSansDiag);
         } else if (state.menuIndex === 2) {
-            if (state.items > 0) {
-                state.items--; state.hp = Math.min(state.maxHp, state.hp + 10); updateHUD();
-                typeText(`* You ate a Legendary Hero.\n* HP maxed out. ${state.items} left.`, navBox, triggerSansDiag);
-            } else typeText("* You are out of items.", navBox, triggerSansDiag);
+            if (state.items.length > 0) {
+                let item = state.items.shift(); state.hp = Math.min(state.maxHp, state.hp + 12); updateHUD();
+                typeText(`* You consumed the ${item}.\n* HP recovered!`, navBox, triggerSansDiag);
+            } else typeText("* Your pockets are empty.", navBox, triggerSansDiag);
         } else if (state.menuIndex === 3) {
-            typeText("* You are sparing Sans.\n* ... But he doesn't accept it yet.", navBox, triggerSansDiag);
+            typeText("* You smile and spare Sans.\n* He winks back.", navBox, triggerSansDiag);
         }
     }
 
     function triggerSansDiag() {
         sansGroup.position.x = 0; 
-        document.getElementById('dialogue-container').style.display = 'block';
-        navBox.style.display = 'none';
+        document.getElementById('dialogue-container').style.display = 'block'; navBox.style.display = 'none';
         
         let text = state.turn < sansScript.length ? sansScript[state.turn] : "Zzz...";
-        if(state.turn >= 6) { state.isSleeping = true; startSleepingPhase(); return; }
+        if(state.turn >= 7) { state.isSleeping = true; startSleepingPhase(); return; }
 
         typeText(text, document.getElementById('sans-dialogue'), () => {
-            document.getElementById('dialogue-container').style.display = 'none';
-            navBox.style.display = 'block';
-            navBox.innerHTML = "";
+            document.getElementById('dialogue-container').style.display = 'none'; navBox.style.display = 'block'; navBox.innerHTML = "";
             startEnemyTurn();
         });
     }
 
-    // --- ENEMY ATTACKS ---
+    // --- DETAILED ATTACKS ---
     function startEnemyTurn() {
-        state.mode = "DODGING";
-        playerMat.color.setHex(0x0033ff); 
+        state.mode = "DODGING"; playerMat.color.setHex(0x0033ff); 
         document.querySelectorAll('.soul-icon').forEach(icon => icon.style.color = '#0033ff');
-
-        if(state.turn >= 3) eye.visible = true;
 
         let tick = 0;
         const attackInt = setInterval(() => {
-            if(tick > 30 + (state.turn * 5)) {
-                clearInterval(attackInt);
-                setTimeout(endTurn, 1000);
-                return;
+            if(tick > 45 + (state.turn * 10)) {
+                clearInterval(attackInt); setTimeout(endTurn, 1000); return;
             }
 
             if (state.turn === 0) {
-                let zPos = player.position.z + Math.sin(tick * 0.5) * 5;
-                if(tick % 3 === 0) spawnBone(16, zPos, 4, 1.5, -0.4, 0, false);
+                // 1. 6 Bone Jumps (Full width gaps)
+                if(tick % 8 === 0 && tick < 48) {
+                    spawnBone(18, 0.5, player.position.z, 2, 28, -0.4, 0, 'normal'); // Ground sweeper to jump over
+                }
             } 
             else if (state.turn === 1) {
-                if(tick === 5) spawnBlaster(0, 10, -16, 0, 16, 60);
+                // 2. Up/Down Oscillating Bones
                 if(tick % 5 === 0) {
-                    spawnBone(16, player.position.z, 6, 2, -0.3, 0, true);
-                    spawnBone(-16, player.position.z, 6, 2, 0.3, 0, true);
+                    let side = Math.random() > 0.5 ? 18 : -18;
+                    spawnBone(side, 3, player.position.z + (Math.random()*6-3), 3, 1.5, side>0 ? -0.3 : 0.3, 0, 'sine');
                 }
             }
             else if (state.turn === 2) {
-                if(tick % 6 === 0) spawnBone(16, player.position.z, 3, 2, -0.5, 0, false); 
-                if(tick % 10 === 0) spawnBone(16, player.position.z, 10, 2, -0.5, 0, true); 
+                // 3. Bone Zones + Blue Bones
+                if(tick % 15 === 0) spawnWarningZone(player.position.x, player.position.z, 8, 8, 20);
+                if(tick % 10 === 0) spawnBone(18, 4, player.position.z, 8, 2, -0.5, 0, 'normal', true); // Blue sweeps
             }
             else if (state.turn === 3) {
-                if(tick % 8 === 0) {
-                    let angle = Math.random() * Math.PI * 2;
-                    let bx = Math.cos(angle) * 15; let bz = Math.sin(angle) * 15;
-                    spawnBlaster(bx, 10, bz, player.position.x, player.position.z, 40);
+                // 4. Slow Bone Sliders
+                if(tick % 4 === 0) {
+                    spawnBone(18, 1, Math.random()*20-10, 3, 1.5, -0.15, 0);
+                    spawnBone(-18, 1, Math.random()*20-10, 3, 1.5, 0.15, 0);
                 }
             }
-            else {
-                if(tick % 5 === 0) spawnBone(16, player.position.z + (Math.random()*6-3), 5, 2, -0.5, 0, Math.random()>0.5);
-                if(tick % 3 === 0) spawnBone(player.position.x + (Math.random()*6-3), player.position.z, 5, 2, 0, 0, false, true);
-                if(tick % 15 === 0) spawnBlaster(player.position.x, 15, -16, player.position.x, player.position.z, 30);
+            else if (state.turn === 4) {
+                // 5. Special Attack (The Medley)
+                if(tick === 2) {
+                    // Two Bouncing Bones
+                    spawnBone(15, 10, -5, 3, 1.5, -0.3, 0.1, 'bounce');
+                    spawnBone(-15, 10, 5, 3, 1.5, 0.3, -0.1, 'bounce');
+                }
+                if(tick > 15 && tick % 6 === 0) spawnBone(18, 0.5, player.position.z, 2, 28, -0.4, 0); // Jumps
+                if(tick > 30 && tick % 3 === 0) spawnBone(player.position.x, 0.5, -18, 1.5, 1.5, 0, 0.5); // Fast small
+            }
+            else if (state.turn === 5 || state.turn === 6) {
+                // Fabled Blue Attack - Literally nothing happens
             }
             tick++;
         }, 150);
     }
 
     function endTurn() {
-        state.mode = "MENU"; state.turn++; eye.visible = false;
-        playerMat.color.setHex(0xff0000);
+        state.mode = "MENU"; state.turn++; playerMat.color.setHex(0xff0000);
         document.querySelectorAll('.soul-icon').forEach(icon => icon.style.color = '#ff0000');
         
-        typeText("* The battle continues.", navBox, () => {
-            if(state.controller === 'AI') runAIMenu();
-        });
+        typeText("* The battle continues.", navBox, () => { if(state.controller === 'AI') runAIMenu(); });
         player.position.set(0, 0.6, 0); state.playerVel.set(0,0,0);
-        
-        projectiles.forEach(p => { scene.remove(p.mesh); if(p.head) scene.remove(p.head); });
-        projectiles = [];
+        projectiles.forEach(p => scene.remove(p.mesh)); projectiles = [];
+        zones.forEach(z => scene.remove(z.mesh)); zones = [];
     }
 
     // --- ENDINGS ---
     function startSleepingPhase() {
         state.mode = "MENU";
-        typeText("* Sans is fast asleep.\n* Now is your chance.", navBox, () => {
-            if(state.controller === 'AI') runAIMenu();
-        });
-        
-        const zCont = document.getElementById('zzz-container');
-        zCont.style.display = 'block';
+        typeText("* Sans is fast asleep.\n* He can't dodge anymore.", navBox, () => { if(state.controller === 'AI') runAIMenu(); });
+        document.getElementById('zzz-container').style.display = 'block';
         setInterval(() => {
-            const z = document.createElement('div');
-            z.className = 'zzz'; z.innerText = 'Z';
-            zCont.appendChild(z);
-            setTimeout(() => z.remove(), 2900);
+            const z = document.createElement('div'); z.className = 'zzz'; z.innerText = 'Z';
+            document.getElementById('zzz-container').appendChild(z); setTimeout(() => z.remove(), 2900);
         }, 1000);
     }
 
@@ -455,16 +361,13 @@
         slash.position.set(0, 4, -14); slash.rotation.z = Math.PI / 6; scene.add(slash);
 
         const dmgText = document.getElementById('damage-text');
-        dmgText.innerText = "9999999"; dmgText.style.color = "red";
-        dmgText.style.opacity = '1'; dmgText.style.top = '10%';
+        dmgText.innerText = "9999999"; dmgText.style.color = "red"; dmgText.style.opacity = '1'; dmgText.style.top = '10%';
 
         setTimeout(() => {
             slash.visible = false; sansGroup.visible = false; 
             setTimeout(() => {
-                document.getElementById('ui-layer').style.display = "none";
-                dmgText.style.display = 'none';
-                const vic = document.getElementById('victory-screen');
-                vic.style.display = 'flex';
+                document.getElementById('ui-layer').style.display = "none"; dmgText.style.display = 'none';
+                const vic = document.getElementById('victory-screen'); vic.style.display = 'flex';
                 document.getElementById('vic-text').innerHTML = "YOU WON.<br><span style='font-size:30px; color:gray'>You earned 99999 EXP.<br>Your LV increased.</span>";
             }, 2000);
         }, 500);
@@ -473,38 +376,32 @@
     function triggerMercyWin() {
         state.mode = "CUTSCENE"; navBox.style.display = 'none';
         document.getElementById('dialogue-container').style.display = 'block';
-        
         typeText("you're sparing me?\n... alright.\ni'm going to grillby's.", document.getElementById('sans-dialogue'), () => {
             document.getElementById('ui-layer').style.display = "none";
-            const vic = document.getElementById('victory-screen');
-            vic.style.display = 'flex';
+            const vic = document.getElementById('victory-screen'); vic.style.display = 'flex';
             document.getElementById('vic-text').innerHTML = "YOU WON.<br><span style='font-size:30px; color:gray'>You spared him.<br>Pacifist Route Secured.</span>";
         });
     }
 
-    // --- PHYSICS & AI DODGING ---
+    // --- PHYSICS & DODGING ---
     function takeDamage(amt) {
         if(state.invuln > 0 || state.mode !== "DODGING") return;
         state.hp -= amt; state.invuln = 30;
         playerMat.color.setHex(0xffaaaa); setTimeout(() => playerMat.color.setHex(0x0033ff), 200);
 
-        if(state.hp <= 0) {
-            state.mode = "GAMEOVER"; document.getElementById('game-over').style.display = 'flex';
-        }
+        if(state.hp <= 0) { state.mode = "GAMEOVER"; document.getElementById('game-over').style.display = 'flex'; }
         document.getElementById('hp-fill').style.width = Math.max(0, (state.hp / state.maxHp * 100)) + '%';
         document.getElementById('hp-text').innerText = `${Math.max(0, state.hp)} / ${state.maxHp}`;
-        
-        // AI occasionally hands control back when hit
-        if(state.controller === 'AI' && Math.random() > 0.7) toggleTeammate(); 
+        if(state.controller === 'AI' && Math.random() > 0.8) toggleTeammate(); // AI panic switch
     }
 
     function animate() {
         requestAnimationFrame(animate);
+        state.globalTime += 0.05;
         if(state.invuln > 0) state.invuln--;
 
         if (state.mode === "DODGING") {
-            const speed = 0.35;
-            let isMovingHoriz = false;
+            const speed = 0.35; let isMovingHoriz = false;
 
             if (state.controller === 'PLAYER') {
                 if(keys['KeyW'] || keys['ArrowUp']) { state.playerVel.z = -speed; isMovingHoriz = true; }
@@ -515,79 +412,68 @@
                 else if(keys['KeyD'] || keys['ArrowRight']) { state.playerVel.x = speed; isMovingHoriz = true; }
                 else state.playerVel.x = 0;
 
-                if((keys['Space'] || keys['KeyZ']) && player.position.y <= 0.61) {
-                    state.playerVel.y = 0.6; isMovingHoriz = true;
-                }
+                if((keys['Space'] || keys['KeyZ']) && player.position.y <= 0.61) { state.playerVel.y = 0.6; isMovingHoriz = true; }
             } else {
-                // AI DODGING LOGIC
+                // Smart AI Dodging
                 let nearestDist = 999, nearestProj = null;
                 projectiles.forEach(p => {
                     let dist = Math.sqrt(Math.pow(p.mesh.position.x - player.position.x, 2) + Math.pow(p.mesh.position.z - player.position.z, 2));
                     if(dist < nearestDist) { nearestDist = dist; nearestProj = p; }
                 });
 
-                if(nearestProj && nearestDist < 6) {
-                    if (nearestProj.type === 'bone') {
-                        if(nearestProj.isBlue) {
-                            state.playerVel.x = 0; state.playerVel.z = 0; isMovingHoriz = false;
-                        } else {
-                            state.playerVel.x = (player.position.x < nearestProj.mesh.position.x) ? -speed : speed;
-                            if(nearestProj.mesh.position.y < 2 && player.position.y <= 0.61) state.playerVel.y = 0.6;
-                            isMovingHoriz = true;
-                        }
-                    } else if (nearestProj.type === 'blaster') {
-                        state.playerVel.x = player.position.x < 0 ? -speed : speed;
+                if(nearestProj && nearestDist < 7) {
+                    if(nearestProj.isBlue) {
+                        state.playerVel.x = 0; state.playerVel.z = 0; isMovingHoriz = false;
+                    } else {
+                        state.playerVel.z = (player.position.z < nearestProj.mesh.position.z) ? -speed : speed;
+                        if(nearestProj.mesh.position.y < 2 && player.position.y <= 0.61) state.playerVel.y = 0.6;
                         isMovingHoriz = true;
                     }
                 } else {
-                    if(player.position.x < -0.5) state.playerVel.x = speed;
-                    else if(player.position.x > 0.5) state.playerVel.x = -speed;
-                    else state.playerVel.x = 0;
-                    if(Math.abs(state.playerVel.x) > 0) isMovingHoriz = true;
+                    if(player.position.z < -1) state.playerVel.z = speed; else if(player.position.z > 1) state.playerVel.z = -speed; else state.playerVel.z = 0;
+                    if(Math.abs(state.playerVel.z) > 0) isMovingHoriz = true;
                 }
             }
 
-            state.playerVel.y -= 0.04; 
-            player.position.add(state.playerVel);
+            state.playerVel.y -= 0.04; player.position.add(state.playerVel);
             let isMovingOverall = isMovingHoriz || Math.abs(state.playerVel.y) > 0.1;
 
             if(player.position.y < 0.6) { player.position.y = 0.6; state.playerVel.y = 0; }
-            player.position.x = Math.max(-14, Math.min(14, player.position.x));
-            player.position.z = Math.max(-14, Math.min(14, player.position.z));
+            player.position.x = Math.max(-15, Math.min(15, player.position.x));
+            player.position.z = Math.max(-15, Math.min(15, player.position.z));
 
+            // Zones
+            for(let i = zones.length - 1; i >= 0; i--) {
+                let z = zones[i]; z.timer--;
+                if(z.timer <= 0) {
+                    // Explode Zone
+                    z.mesh.material.opacity = 1; z.mesh.material.color.setHex(0xffffff);
+                    if(Math.abs(player.position.x - z.mesh.position.x) < z.w/2 && Math.abs(player.position.z - z.mesh.position.z) < z.d/2) takeDamage(2);
+                    setTimeout(() => scene.remove(z.mesh), 200);
+                    zones.splice(i, 1);
+                }
+            }
+
+            // Projectiles
             for(let i = projectiles.length - 1; i >= 0; i--) {
                 let p = projectiles[i];
-                if(p.type === 'bone') {
-                    p.mesh.position.x += p.vx; p.mesh.position.z += p.vz; p.mesh.position.y += p.vy;
-
-                    let hw = p.w / 2, hh = p.h / 2;
-                    if (player.position.x > p.mesh.position.x - hw - 0.6 &&
-                        player.position.x < p.mesh.position.x + hw + 0.6 &&
-                        player.position.z > p.mesh.position.z - hw - 0.6 &&
-                        player.position.z < p.mesh.position.z + hw + 0.6 &&
-                        player.position.y < p.mesh.position.y + hh + 0.6 &&
-                        player.position.y > p.mesh.position.y - hh - 0.6) {
-                        
-                        if(p.isBlue) { if(isMovingOverall) takeDamage(1); } 
-                        else takeDamage(1);
-                    }
-
-                    if(Math.abs(p.mesh.position.x) > 20 || Math.abs(p.mesh.position.z) > 20 || p.mesh.position.y < -5) {
-                        scene.remove(p.mesh); projectiles.splice(i, 1);
-                    }
+                p.mesh.position.x += p.vx; p.mesh.position.z += p.vz;
+                
+                // Behaviors
+                if (p.behavior === 'sine') p.mesh.position.y = p.baseY + Math.sin(state.globalTime * 2) * 2;
+                else if (p.behavior === 'bounce') {
+                    p.vy -= 0.02; p.mesh.position.y += p.vy;
+                    if(p.mesh.position.y < p.h/2) { p.mesh.position.y = p.h/2; p.vy = Math.abs(p.vy) * 0.9; }
                 }
-                else if(p.type === 'blaster') {
-                    p.timer--;
-                    if (p.timer > 0 && p.timer < 15) p.head.children[3].position.y -= 0.1;
-                    else if(p.timer === 0) {
-                        p.mesh.scale.set(1.5, 1, 1.5);
-                        p.mesh.material.color.setHex(0x00ffff); p.mesh.material.opacity = 0.9;
-                        const dist = new THREE.Vector2(player.position.x - p.px, player.position.z - p.pz).length();
-                        if(dist < 3.5) takeDamage(5); 
-                    } else if (p.timer < -15) {
-                        scene.remove(p.mesh); scene.remove(p.head); projectiles.splice(i, 1);
-                    }
+
+                let hw = p.w / 2, hh = p.h / 2;
+                if (player.position.x > p.mesh.position.x - hw - 0.6 && player.position.x < p.mesh.position.x + hw + 0.6 &&
+                    player.position.z > p.mesh.position.z - hw - 0.6 && player.position.z < p.mesh.position.z + hw + 0.6 &&
+                    player.position.y < p.mesh.position.y + hh + 0.6 && player.position.y > p.mesh.position.y - hh - 0.6) {
+                    if(p.isBlue) { if(isMovingOverall) takeDamage(1); } else takeDamage(1);
                 }
+
+                if(Math.abs(p.mesh.position.x) > 22 || Math.abs(p.mesh.position.z) > 22) { scene.remove(p.mesh); projectiles.splice(i, 1); }
             }
         }
 
@@ -597,9 +483,7 @@
         renderer.render(scene, camera);
     }
 
-    // Start Game
-    typeText("* The wind is howling...", navBox);
-    animate();
+    typeText("* The wind is howling...", navBox); animate();
 </script>
 </body>
 </html>
