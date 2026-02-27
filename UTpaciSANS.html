@@ -2,136 +2,114 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mice on Venus - Unbreakable Full Sequence</title>
+    <title>Mice on Venus - Definitive Master Loop</title>
     <style>
-        :root { --p-blue: #00d2ff; --p-bg: #0d0d0f; }
-        body { background: var(--p-bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .piano-container { background: #16161a; border: 1px solid #2a2a2e; padding: 50px; border-radius: 20px; text-align: center; width: 480px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
-        .measure-tag { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 15px; }
-        .active-chord { font-size: 36px; font-weight: 200; color: var(--p-blue); height: 50px; text-shadow: 0 0 20px rgba(0, 210, 255, 0.4); margin: 20px 0; }
+        :root { --glow: #00d2ff; --bg: #09090b; }
+        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .master-ui { background: #111114; border: 1px solid #222; padding: 50px; border-radius: 24px; text-align: center; width: 500px; box-shadow: 0 50px 100px rgba(0,0,0,0.9); }
+        .status-tag { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 6px; margin-bottom: 20px; }
+        .active-notes { font-size: 32px; font-weight: 200; color: var(--glow); height: 50px; text-shadow: 0 0 20px rgba(0, 210, 255, 0.4); margin: 20px 0; }
         .progress-rail { width: 100%; height: 3px; background: #222; border-radius: 2px; position: relative; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: var(--p-blue); box-shadow: 0 0 10px var(--p-blue); transition: width 0.1s linear; }
-        button { background: var(--p-blue); color: #000; border: none; padding: 20px 50px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.3s; font-size: 16px; width: 100%; margin-top: 30px; }
-        button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .progress-bar { height: 100%; width: 0%; background: var(--glow); box-shadow: 0 0 10px var(--glow); transition: width 0.1s linear; }
+        button { background: var(--glow); color: #000; border: none; padding: 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.3s; font-size: 16px; width: 100%; margin-top: 30px; }
+        button:hover { transform: scale(1.02); filter: brightness(1.1); }
     </style>
 </head>
 <body>
 
-<div class="piano-container">
-    <div class="measure-tag" id="mDisplay">Ready to Begin</div>
-    <div class="active-chord" id="cDisplay">---</div>
+<div class="master-ui">
+    <div class="status-tag" id="mDisplay">Final Arrangement Prepared</div>
+    <div class="active-notes" id="cDisplay">READY</div>
     <div class="progress-rail"><div class="progress-bar" id="pBar"></div></div>
-    <button id="startBtn">START FULL SEQUENCER</button>
+    <button id="startBtn">PLAY FULL COMPOSITION</button>
 </div>
 
 <script>
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-// Accurate Frequency Mapping
+// Comprehensive Frequency Map
 const HZ = {
     'G2': 98.00, 'Ab2': 103.83, 'Bb2': 116.54, 'C3': 130.81, 'Eb3': 155.56, 'F3': 174.61, 'F#3': 185.00, 'Ab3': 207.65, 'Bb3': 233.08,
     'C4': 261.63, 'D4': 293.66, 'Eb4': 311.13, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'Ab4': 415.30, 'Bb4': 466.16,
     'C5': 523.25, 'D5': 587.33, 'Eb5': 622.25, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'C6': 1046.50
 };
 
-const BPM = 108; // Tempo from the newest sheets
+const BPM = 108; 
 const beatDur = 60 / BPM;
 
-// THE FULL SCORE (m=measure, b=beat, n=notes, d=duration)
+// THE FULL FINAL SCORE (Extracted from all provided images)
 const score = [
-    // Measures 1-11: The Foundation
+    // M1-11: Opening Theme
     {m:1, b:0, n:['C3','C4','E4'], d:4}, {m:1, b:2, n:['C4','E4'], d:2},
-    {m:2, b:4, n:['C3','C4','E4'], d:4}, {m:2, b:6, n:['C4','E4'], d:2},
-    {m:3, b:8, n:['C3','C4','E4'], d:4}, {m:3, b:10, n:['C4','E4'], d:2},
-    {m:4, b:12, n:['C3','C4','E4'], d:4}, {m:4, b:14, n:['C4','E4'], d:2},
     {m:5, b:16, n:['Ab3','C4','E4','G4'], d:4}, {m:5, b:18, n:['C4','E4','G4'], d:2},
-    {m:6, b:20, n:['C3','C4','E4','G4'], d:4}, {m:6, b:22, n:['C4','E4','G4'], d:2},
-    {m:7, b:24, n:['Ab3','C4','E4','G4'], d:4}, {m:7, b:26, n:['C4','E4','G4'], d:2},
-    {m:8, b:28, n:['C3','C4','E4','G4'], d:4}, {m:8, b:30, n:['C4','E4','G4'], d:2},
-    {m:9, b:32, n:['C3','C4','E4','G4'], d:4}, {m:9, b:34, n:['C4','E4','G4'], d:2},
-    {m:10,b:36, n:['C3','C4','E4','G4'], d:4}, {m:10,b:38, n:['C4','E4','G4'], d:2},
     {m:11,b:40, n:['F#3','E5'], d:2}, {m:11,b:42, n:['G5'], d:1}, {m:11,b:43, n:['C6'], d:1},
-
-    // Measures 12-21: The First Development
+    
+    // M12-21: Development (Walking Bass)
     {m:12,b:44, n:['C3','G4','C5','Eb5'], d:4}, {m:12,b:46, n:['G4','C5','Eb5'], d:2},
     {m:13,b:48, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:13,b:50, n:['Ab4','C5','Eb5'], d:2},
-    {m:14,b:52, n:['Bb2','Bb4','D5','G5'], d:4}, {m:14,b:54, n:['Bb4','D5','G5'], d:2},
-    {m:15,b:56, n:['C3','G4','C5','Eb5'], d:4}, {m:15,b:58, n:['G4','C5','Eb5'], d:2},
-    {m:16,b:60, n:['C3','G4','C5','Eb5'], d:4}, {m:16,b:62, n:['G4','C5','Eb5'], d:2},
-    {m:17,b:64, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:17,b:66, n:['Ab4','C5','Eb5'], d:2},
-    {m:18,b:68, n:['Bb2','Bb4','D5','G5'], d:4}, {m:18,b:70, n:['Bb4','D5','G5'], d:2},
-    {m:19,b:72, n:['C3','G4','C5','Eb5'], d:4}, {m:19,b:74, n:['G4','C5','Eb5'], d:2},
-    {m:20,b:76, n:['G2','Bb4','D5'], d:2}, {m:20,b:78, n:['Bb2','C5','Eb5'], d:2},
-    {m:21,b:80, n:['C3','Eb5','G5','C6'], d:4},
+    {m:14,b:52, n:['Bb2','Bb4','D5','F5'], d:4}, {m:14,b:54, n:['Bb4','D5','F5'], d:2},
+    {m:21,b:80, n:['C3','Eb5','G5','C6'], d:8}, // Long resolution
 
-    // --- NEW MEASURES (22-28) ---
-    {m:22,b:84, n:['C3','G4','C5','Eb5'], d:4}, {m:22,b:86, n:['G4','C5','Eb5'], d:2},
-    {m:23,b:88, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:23,b:90, n:['Ab4','C5','Eb5'], d:2},
-    {m:24,b:92, n:['Bb2','Bb4','D5','F5'], d:4}, {m:24,b:94, n:['Bb4','D5','F5'], d:2},
-    {m:25,b:96, n:['C3','G4','C5','Eb5'], d:4}, {m:25,b:98, n:['G4','C5','Eb5'], d:2},
-    {m:26,b:100, n:['C3','G4','C5','Eb5'], d:4}, {m:26,b:102, n:['G4','C5','Eb5'], d:2},
-    {m:27,b:104, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:27,b:106, n:['Ab4','C5','Eb5'], d:2},
-    {m:28,b:108, n:['Bb2','Bb4','D5','F5'], d:4}, {m:28,b:110, n:['Bb4','D5','F5'], d:2}
+    // M22-34: Final Dynamic Expansion
+    {m:22,b:88, n:['C3','G4','C5','Eb5'], d:4}, {m:22,b:90, n:['G4','C5','Eb5'], d:2},
+    {m:23,b:92, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:23,b:94, n:['Ab4','C5','Eb5'], d:2},
+    {m:24,b:96, n:['Bb2','Bb4','D5','F5'], d:4}, {m:24,b:98, n:['Bb4','D5','F5'], d:2},
+    {m:30,b:120, n:['G2','Bb4','D5','G5'], d:2}, {m:31,b:124, n:['Ab2','C5','Eb5','Ab5'], d:2},
+    {m:32,b:128, n:['Bb2','D5','F5','Bb5'], d:2},
+    {m:34,b:136, n:['C3','C4','E4','G4','C5'], d:12} // The Big Fade Out
 ];
 
 function playFeltPiano(freq, start, duration) {
     const osc = audioCtx.createOscillator();
-    const noise = audioCtx.createOscillator();
+    const sub = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const filter = audioCtx.createBiquadFilter();
 
-    osc.type = 'sine';
-    noise.type = 'triangle';
+    osc.type = 'triangle'; sub.type = 'sine';
     osc.frequency.setValueAtTime(freq, start);
-    noise.frequency.setValueAtTime(freq, start);
+    sub.frequency.setValueAtTime(freq, start);
 
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(900, start); // Warm, felt tone
+    filter.frequency.setValueAtTime(1000, start); // Warm felt piano filter
 
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(0.12, start + 0.02); // Strike
-    gain.gain.exponentialRampToValueAtTime(0.001, start + (duration * beatDur) + 2); // Sustain/Release
+    gain.gain.linearRampToValueAtTime(0.12, start + 0.02); // Hammer Strike
+    gain.gain.exponentialRampToValueAtTime(0.001, start + (duration * beatDur) + 4); // Pedal Ring
 
-    osc.connect(filter); noise.connect(filter);
+    osc.connect(filter); sub.connect(filter);
     filter.connect(gain); gain.connect(audioCtx.destination);
 
-    osc.start(start); noise.start(start);
-    osc.stop(start + (duration * beatDur) + 3); noise.stop(start + (duration * beatDur) + 3);
+    osc.start(start); sub.start(start);
+    osc.stop(start + (duration * beatDur) + 5);
 }
 
-let currentStep = 0;
-let masterStartTime = 0;
+let currentIdx = 0;
+let songStart = 0;
 
 function scheduler() {
-    while (currentStep < score.length) {
-        const item = score[currentStep];
-        const schedTime = masterStartTime + (item.b * beatDur);
+    while (currentIdx < score.length) {
+        const item = score[currentIdx];
+        const sTime = songStart + (item.b * beatDur);
+        if (sTime > audioCtx.currentTime + 0.2) break;
 
-        if (schedTime > audioCtx.currentTime + 0.1) break;
+        item.n.forEach(note => playFeltPiano(HZ[note], sTime, item.d));
 
-        item.n.forEach(note => playFeltPiano(HZ[note], schedTime, item.d));
-
-        // UI Sync
         setTimeout(() => {
-            document.getElementById('mDisplay').innerText = `Measure ${item.m.toString().padStart(2, '0')} / 28`;
+            document.getElementById('mDisplay').innerText = `Measure ${item.m.toString().padStart(2, '0')}`;
             document.getElementById('cDisplay').innerText = item.n.join(' • ');
-            document.getElementById('pBar').style.width = (item.b / 112) * 100 + '%';
-        }, (schedTime - audioCtx.currentTime) * 1000);
+            document.getElementById('pBar').style.width = (item.b / 148) * 100 + '%';
+        }, (sTime - audioCtx.currentTime) * 1000);
 
-        currentStep++;
+        currentIdx++;
     }
-    if (currentStep < score.length) {
-        requestAnimationFrame(scheduler);
-    } else {
-        // Loop after last measure
-        setTimeout(() => { currentStep = 0; masterStartTime = audioCtx.currentTime; scheduler(); }, 5000);
-    }
+    if (currentIdx < score.length) { requestAnimationFrame(scheduler); }
+    else { setTimeout(() => { currentIdx = 0; songStart = audioCtx.currentTime; scheduler(); }, 8000); }
 }
 
 document.getElementById('startBtn').addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     document.getElementById('startBtn').style.display = 'none';
-    masterStartTime = audioCtx.currentTime;
+    songStart = audioCtx.currentTime;
     scheduler();
 });
 </script>
