@@ -2,114 +2,128 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mice on Venus - Definitive Master Loop</title>
+    <title>Mice on Venus - Absolute Fix</title>
     <style>
-        :root { --glow: #00d2ff; --bg: #09090b; }
-        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .master-ui { background: #111114; border: 1px solid #222; padding: 50px; border-radius: 24px; text-align: center; width: 500px; box-shadow: 0 50px 100px rgba(0,0,0,0.9); }
-        .status-tag { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 6px; margin-bottom: 20px; }
-        .active-notes { font-size: 32px; font-weight: 200; color: var(--glow); height: 50px; text-shadow: 0 0 20px rgba(0, 210, 255, 0.4); margin: 20px 0; }
-        .progress-rail { width: 100%; height: 3px; background: #222; border-radius: 2px; position: relative; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: var(--glow); box-shadow: 0 0 10px var(--glow); transition: width 0.1s linear; }
-        button { background: var(--glow); color: #000; border: none; padding: 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.3s; font-size: 16px; width: 100%; margin-top: 30px; }
-        button:hover { transform: scale(1.02); filter: brightness(1.1); }
+        :root { --p-blue: #00d2ff; --p-bg: #09090b; }
+        body { background: var(--p-bg); color: white; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .player-card { background: #111115; border: 1px solid #222; padding: 50px; border-radius: 20px; text-align: center; width: 450px; box-shadow: 0 50px 100px rgba(0,0,0,1); }
+        .chord-display { font-size: 32px; font-weight: 200; color: var(--p-blue); height: 60px; margin: 20px 0; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 20px rgba(0, 210, 255, 0.4); }
+        .m-tag { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 10px; }
+        button { background: var(--p-blue); color: #000; border: none; padding: 20px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.3s; width: 100%; font-size: 16px; }
+        button:hover { transform: scale(1.02); filter: brightness(1.2); }
+        .progress-rail { width: 100%; height: 2px; background: #222; margin-top: 30px; }
+        .progress-fill { height: 100%; width: 0%; background: var(--p-blue); box-shadow: 0 0 10px var(--p-blue); }
     </style>
 </head>
 <body>
 
-<div class="master-ui">
-    <div class="status-tag" id="mDisplay">Final Arrangement Prepared</div>
-    <div class="active-notes" id="cDisplay">READY</div>
-    <div class="progress-rail"><div class="progress-bar" id="pBar"></div></div>
+<div class="player-card">
+    <div class="m-tag" id="mDisplay">SYSTEM READY</div>
+    <div class="chord-display" id="cDisplay">PRESS PLAY</div>
+    <div class="progress-rail"><div class="progress-fill" id="pBar"></div></div>
     <button id="startBtn">PLAY FULL COMPOSITION</button>
 </div>
 
 <script>
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-// Comprehensive Frequency Map
+// Scientific pitch frequencies (A4 = 440Hz)
 const HZ = {
     'G2': 98.00, 'Ab2': 103.83, 'Bb2': 116.54, 'C3': 130.81, 'Eb3': 155.56, 'F3': 174.61, 'F#3': 185.00, 'Ab3': 207.65, 'Bb3': 233.08,
     'C4': 261.63, 'D4': 293.66, 'Eb4': 311.13, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'Ab4': 415.30, 'Bb4': 466.16,
     'C5': 523.25, 'D5': 587.33, 'Eb5': 622.25, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'C6': 1046.50
 };
 
-const BPM = 108; 
-const beatDur = 60 / BPM;
+const BPM = 75; // Ambient slow tempo
+const beat = 60 / BPM;
 
-// THE FULL FINAL SCORE (Extracted from all provided images)
+// Full detailed sequence from all sheets
 const score = [
-    // M1-11: Opening Theme
+    // Intro Foundation (M1-11)
     {m:1, b:0, n:['C3','C4','E4'], d:4}, {m:1, b:2, n:['C4','E4'], d:2},
+    {m:2, b:4, n:['C3','C4','E4'], d:4}, {m:2, b:6, n:['C4','E4'], d:2},
+    {m:3, b:8, n:['C3','C4','E4'], d:4}, {m:3, b:10, n:['C4','E4'], d:2},
     {m:5, b:16, n:['Ab3','C4','E4','G4'], d:4}, {m:5, b:18, n:['C4','E4','G4'], d:2},
     {m:11,b:40, n:['F#3','E5'], d:2}, {m:11,b:42, n:['G5'], d:1}, {m:11,b:43, n:['C6'], d:1},
-    
-    // M12-21: Development (Walking Bass)
+
+    // Development (M12-21)
     {m:12,b:44, n:['C3','G4','C5','Eb5'], d:4}, {m:12,b:46, n:['G4','C5','Eb5'], d:2},
     {m:13,b:48, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:13,b:50, n:['Ab4','C5','Eb5'], d:2},
     {m:14,b:52, n:['Bb2','Bb4','D5','F5'], d:4}, {m:14,b:54, n:['Bb4','D5','F5'], d:2},
-    {m:21,b:80, n:['C3','Eb5','G5','C6'], d:8}, // Long resolution
+    {m:20,b:76, n:['G2','Bb4','D5'], d:2}, {m:20,b:78, n:['Bb2','C5','Eb5'], d:2},
+    {m:21,b:80, n:['C3','Eb5','G5','C6'], d:8},
 
-    // M22-34: Final Dynamic Expansion
+    // Final Evolution (M22-34)
     {m:22,b:88, n:['C3','G4','C5','Eb5'], d:4}, {m:22,b:90, n:['G4','C5','Eb5'], d:2},
     {m:23,b:92, n:['Ab2','Ab4','C5','Eb5'], d:4}, {m:23,b:94, n:['Ab4','C5','Eb5'], d:2},
     {m:24,b:96, n:['Bb2','Bb4','D5','F5'], d:4}, {m:24,b:98, n:['Bb4','D5','F5'], d:2},
     {m:30,b:120, n:['G2','Bb4','D5','G5'], d:2}, {m:31,b:124, n:['Ab2','C5','Eb5','Ab5'], d:2},
     {m:32,b:128, n:['Bb2','D5','F5','Bb5'], d:2},
-    {m:34,b:136, n:['C3','C4','E4','G4','C5'], d:12} // The Big Fade Out
+    {m:34,b:136, n:['C3','C4','E4','G4','C5'], d:12} 
 ];
 
-function playFeltPiano(freq, start, duration) {
+function playFeltNote(freq, start, duration) {
     const osc = audioCtx.createOscillator();
-    const sub = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const filter = audioCtx.createBiquadFilter();
 
-    osc.type = 'triangle'; sub.type = 'sine';
+    osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, start);
-    sub.frequency.setValueAtTime(freq, start);
-
+    
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1000, start); // Warm felt piano filter
+    filter.frequency.setValueAtTime(1100, start);
 
-    gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(0.12, start + 0.02); // Hammer Strike
-    gain.gain.exponentialRampToValueAtTime(0.001, start + (duration * beatDur) + 4); // Pedal Ring
+    // THE VOLUME FIX: Ensure start is always positive for exponentialRamp
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(0.2, start + 0.05); // Audibility boost
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + (duration * beat) + 4); 
 
-    osc.connect(filter); sub.connect(filter);
-    filter.connect(gain); gain.connect(audioCtx.destination);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
 
-    osc.start(start); sub.start(start);
-    osc.stop(start + (duration * beatDur) + 5);
+    osc.start(start);
+    osc.stop(start + (duration * beat) + 5);
 }
 
-let currentIdx = 0;
-let songStart = 0;
+let current = 0;
+let startTime = 0;
 
 function scheduler() {
-    while (currentIdx < score.length) {
-        const item = score[currentIdx];
-        const sTime = songStart + (item.b * beatDur);
-        if (sTime > audioCtx.currentTime + 0.2) break;
+    while (current < score.length) {
+        const item = score[current];
+        const sTime = startTime + (item.b * beat);
 
-        item.n.forEach(note => playFeltPiano(HZ[note], sTime, item.d));
+        // Look-ahead scheduling
+        if (sTime > audioCtx.currentTime + 0.1) break;
 
+        item.n.forEach(note => playFeltNote(HZ[note], sTime, item.d));
+
+        // Update display precisely
         setTimeout(() => {
-            document.getElementById('mDisplay').innerText = `Measure ${item.m.toString().padStart(2, '0')}`;
+            document.getElementById('mDisplay').innerText = `Measure ${item.m}`;
             document.getElementById('cDisplay').innerText = item.n.join(' • ');
             document.getElementById('pBar').style.width = (item.b / 148) * 100 + '%';
         }, (sTime - audioCtx.currentTime) * 1000);
 
-        currentIdx++;
+        current++;
     }
-    if (currentIdx < score.length) { requestAnimationFrame(scheduler); }
-    else { setTimeout(() => { currentIdx = 0; songStart = audioCtx.currentTime; scheduler(); }, 8000); }
+    if (current < score.length) {
+        requestAnimationFrame(scheduler);
+    } else {
+        // Long resolution wait before loop
+        setTimeout(() => { 
+            current = 0; 
+            startTime = audioCtx.currentTime; 
+            scheduler(); 
+        }, 10000);
+    }
 }
 
 document.getElementById('startBtn').addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     document.getElementById('startBtn').style.display = 'none';
-    songStart = audioCtx.currentTime;
+    startTime = audioCtx.currentTime;
     scheduler();
 });
 </script>
