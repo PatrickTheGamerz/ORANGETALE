@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UT 3D: THE FINAL JUDGMENT</title>
+    <title>UT 3D: THE FINAL JUDGMENT (AI EDITION)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
@@ -19,23 +19,28 @@
 
         #bottom-ui { padding: 10px 40px 30px 40px; display: flex; flex-direction: column; align-items: center; background: rgba(0,0,0,0.95); border-top: 4px solid white; pointer-events: auto; }
 
-        #stats-bar { display: flex; align-items: center; font-size: 36px; margin-bottom: 20px; width: 800px; }
+        #stats-bar { display: flex; align-items: center; justify-content: space-between; font-size: 36px; margin-bottom: 20px; width: 800px; }
+        #hp-container { display: flex; align-items: center; }
         .hp-box { width: 150px; height: 30px; background: red; margin: 0 15px; border: 2px solid #555; position: relative; }
         #hp-fill { height: 100%; background: #ffff00; width: 100%; transition: width 0.1s; }
 
+        #controller-badge { color: #888; font-size: 28px; border: 2px solid #888; padding: 5px 15px; border-radius: 5px; }
+
         #action-buttons { display: flex; justify-content: space-between; width: 800px; }
-        .action-btn { background: black; color: #ff8c00; border: 4px solid #ff8c00; width: 170px; height: 60px; font-size: 36px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.1s; position: relative; }
+        .action-btn { background: black; color: #ff8c00; border: 4px solid #ff8c00; width: 170px; height: 60px; font-size: 36px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.1s; position: relative; pointer-events: auto; }
         .action-btn.active { background: #ff8c00; color: black; border-color: #ff8c00; }
+        .action-btn:hover { background: #ffaa33; color: black; border-color: #ffaa33; }
+        .action-btn.locked { pointer-events: none; border-color: #333; color: #333; }
         
         .soul-icon { display: none; position: absolute; left: 10px; color: #ff0000; font-size: 24px; }
         .action-btn.active .soul-icon { display: block; }
 
-        #controls-hint { position: absolute; left: 20px; bottom: 360px; font-size: 28px; color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border: 2px solid #555;}
+        #controls-hint { position: absolute; left: 20px; bottom: 380px; font-size: 24px; color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border: 2px solid #555; line-height: 1.5;}
 
         /* Screens */
         #game-over { position: absolute; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
         .go-text { font-size: 120px; letter-spacing: 5px; margin: 0; color: #fff; }
-        .retry-btn { margin-top: 60px; font-size: 40px; background: none; color: white; border: 2px solid white; padding: 10px 30px; cursor: pointer; font-family: inherit; }
+        .retry-btn { margin-top: 60px; font-size: 40px; background: none; color: white; border: 2px solid white; padding: 10px 30px; cursor: pointer; font-family: inherit; pointer-events: auto;}
         .retry-btn:hover { background: white; color: black; }
 
         #victory-screen { position: absolute; inset: 0; background: black; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
@@ -49,26 +54,33 @@
 
 <div id="ui-layer">
     <div id="top-hud">
-        <span style="color: red;" id="hud-name">❤️ FRISK</span>
+        <span style="color: red;" id="hud-name">❤️ PLAYER</span>
         <span style="color: white;">LV 1</span>
     </div>
 
     <div id="dialogue-container"><div id="sans-dialogue">...</div></div>
     <div id="narrative-box"></div>
 
-    <div id="controls-hint">[WASD] Move Arena<br>[SPACE] Jump<br>Stand still for Blue Bones!</div>
+    <div id="controls-hint">
+        [WASD] Move Arena<br>
+        [SPACE/Z/CLICK] Select/Jump<br>
+        [Q] Tag Team Partner
+    </div>
 
     <div id="bottom-ui">
         <div id="stats-bar">
-            <span>HP</span>
-            <div class="hp-box"><div id="hp-fill"></div></div>
-            <span id="hp-text">20 / 20</span>
+            <div id="hp-container">
+                <span>HP</span>
+                <div class="hp-box"><div id="hp-fill"></div></div>
+                <span id="hp-text">20 / 20</span>
+            </div>
+            <div id="controller-badge">CTRL: PLAYER</div>
         </div>
         <div id="action-buttons">
-            <div class="action-btn" id="btn-0"><span class="soul-icon">❤️</span>FIGHT</div>
-            <div class="action-btn active" id="btn-1"><span class="soul-icon">❤️</span>ACT</div>
-            <div class="action-btn" id="btn-2"><span class="soul-icon">❤️</span>ITEM</div>
-            <div class="action-btn" id="btn-3"><span class="soul-icon">❤️</span>MERCY</div>
+            <div class="action-btn" id="btn-0" onclick="handleMouseClick(0)"><span class="soul-icon">❤️</span>FIGHT</div>
+            <div class="action-btn active" id="btn-1" onclick="handleMouseClick(1)"><span class="soul-icon">❤️</span>ACT</div>
+            <div class="action-btn" id="btn-2" onclick="handleMouseClick(2)"><span class="soul-icon">❤️</span>ITEM</div>
+            <div class="action-btn" id="btn-3" onclick="handleMouseClick(3)"><span class="soul-icon">❤️</span>MERCY</div>
         </div>
     </div>
 </div>
@@ -92,11 +104,13 @@
 <script>
     // --- STATE MANAGEMENT ---
     const state = {
-        hp: 20, maxHp: 20,
-        turn: 0, mode: "TYPING", // Starts with typing
+        hp: 20, maxHp: 20, turn: 0, 
+        mode: "TYPING", // TYPING, MENU, DIALOGUE, DODGING, CUTSCENE
         menuIndex: 1, invuln: 0,
         playerVel: new THREE.Vector3(0, 0, 0),
-        items: 3, isSleeping: false
+        items: 3, isSleeping: false,
+        teammate: localStorage.getItem('teammate') || 'FRISK', // Reads from Council Hub
+        controller: 'PLAYER' // 'PLAYER' or 'AI'
     };
 
     const keys = {};
@@ -108,7 +122,10 @@
         document.getElementById('btn-2'), document.getElementById('btn-3')
     ];
     const navBox = document.getElementById('narrative-box');
+    const badge = document.getElementById('controller-badge');
+    const hudName = document.getElementById('hud-name');
 
+    // --- SANS DIALOGUE PROGRESSION ---
     const sansScript = [
         "our reports showed a\nmassive anomaly.",
         "timelines jumping left\nand right, stopping and starting...",
@@ -118,8 +135,7 @@
         "it's time for my\nspecial attack.",
         "are you ready?\nhere goes nothing.",
         "...", 
-        "yep. that's right.\nit's literally nothing.",
-        "and it's not going to be\nANYTHING, either."
+        "yep. that's right.\nit's literally nothing."
     ];
 
     // --- 3D ENGINE SETUP ---
@@ -139,7 +155,6 @@
     spotLight.position.set(0, 30, 10);
     scene.add(spotLight);
 
-    // Arena Floor
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(32, 32), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 }));
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
@@ -169,61 +184,42 @@
     sansGroup.position.set(0, 0, -15);
     scene.add(sansGroup);
 
-    // --- CUSTOM 3D BONE GEOMETRY ---
+    // --- CUSTOM 3D BONE & BLASTER ---
     function createBoneMesh(h, w, isBlue) {
         const group = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00ffff : 0xffffff, roughness: 0.4 });
-        
-        // Shaft
         const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w*0.3, w*0.3, h - w, 12), mat);
         group.add(shaft);
-
-        // Joints (4 spheres)
         const r = w * 0.4;
         const offset = w * 0.35;
-        const positions = [
-            [-offset, h/2 - r, 0], [offset, h/2 - r, 0],
-            [-offset, -h/2 + r, 0], [offset, -h/2 + r, 0]
-        ];
-
+        const positions = [[-offset, h/2 - r, 0], [offset, h/2 - r, 0], [-offset, -h/2 + r, 0], [offset, -h/2 + r, 0]];
         positions.forEach(pos => {
             const joint = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), mat);
             joint.position.set(pos[0], pos[1], pos[2]);
             group.add(joint);
         });
-
         return group;
     }
 
-    // --- CUSTOM GASTER BLASTER ---
     function createBlasterMesh() {
         const group = new THREE.Group();
         const matWhite = new THREE.MeshStandardMaterial({color: 0xffffff});
         const matBlack = new THREE.MeshBasicMaterial({color: 0x000000});
-
-        // Skull base
         const skull = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 4), matWhite);
         group.add(skull);
-
-        // Eyes
         const eyeL = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.5), matBlack);
         eyeL.position.set(-1, 1, 2.1);
         group.add(eyeL);
         const eyeR = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.5), matBlack);
         eyeR.position.set(1, 1, 2.1);
         group.add(eyeR);
-
-        // Jaw
         const jaw = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 4), matWhite);
         jaw.position.set(0, -3.2, 0);
         group.add(jaw);
-
         return group;
     }
 
-    // --- PROJECTILE SYSTEM ---
     let projectiles = [];
-
     function spawnBone(x, z, h, w, vx, vz, isBlue, isFalling = false) {
         const bone = createBoneMesh(h, w, isBlue);
         if(isFalling) bone.position.set(x, 25, z);
@@ -231,69 +227,109 @@
         scene.add(bone);
         projectiles.push({ mesh: bone, type: 'bone', vx, vz, vy: isFalling ? -1 : 0, isBlue, w, h });
     }
-
     function spawnBlaster(x, y, z, aimX, aimZ, delay = 45) {
         const blaster = createBlasterMesh();
         blaster.position.set(x, y + 5, z);
         blaster.lookAt(aimX, 0, aimZ);
         scene.add(blaster);
-
-        // Warning Line
         const warn = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 80, 16), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 }));
-        warn.position.set(x, y, z);
-        warn.lookAt(aimX, 0, aimZ);
-        warn.rotateX(Math.PI/2);
-        warn.translateY(40); 
+        warn.position.set(x, y, z); warn.lookAt(aimX, 0, aimZ); warn.rotateX(Math.PI/2); warn.translateY(40); 
         scene.add(warn);
-        
         projectiles.push({ head: blaster, mesh: warn, type: 'blaster', timer: delay, px: x, pz: z, aimX, aimZ });
     }
 
-    // --- ADVANCED TYPEWRITER ---
+    // --- TYPEWRITER ---
     function typeText(text, container, callback) {
         state.mode = "TYPING";
         container.innerHTML = '';
         let i = 0;
-
         function nextChar() {
+            if(state.mode !== "TYPING") return; // interrupted
             if (i < text.length) {
                 let char = text.charAt(i);
-                if(char === '\n') container.innerHTML += '<br>';
-                else container.innerHTML += char;
+                container.innerHTML += (char === '\n') ? '<br>' : char;
                 i++;
-
-                // Dynamic Delay based on punctuation
-                let delay = 35;
-                if (char === '.' || char === ',' || char === '?') delay = 300;
-                
+                let delay = (char === '.' || char === ',' || char === '?') ? 300 : 35;
                 setTimeout(nextChar, delay);
-            } else {
-                if(callback) setTimeout(callback, 1000);
-            }
+            } else if(callback) setTimeout(callback, 800);
         }
         nextChar();
     }
 
-    // --- INPUT & LOGIC ---
+    // --- INPUT & AI LOGIC ---
+    function toggleTeammate() {
+        if (state.mode === "CUTSCENE") return;
+        if (state.controller === 'PLAYER') {
+            state.controller = 'AI';
+            badge.innerText = `CTRL: ${state.teammate}`;
+            badge.style.borderColor = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
+            hudName.innerText = `❤️ ${state.teammate}`;
+            hudName.style.color = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
+            buttons.forEach(b => b.classList.add('locked')); // Lock buttons
+            
+            // Interrupt typing to show switch
+            if(state.mode === "MENU" || state.mode === "TYPING") {
+                typeText(`* ${state.teammate} steps forward to take control.`, navBox, () => {
+                    if (state.mode === "TYPING") state.mode = "MENU";
+                    runAIMenu();
+                });
+            }
+        } else {
+            state.controller = 'PLAYER';
+            badge.innerText = `CTRL: PLAYER`;
+            badge.style.borderColor = '#888';
+            hudName.innerText = `❤️ PLAYER`;
+            hudName.style.color = '#ff0000';
+            buttons.forEach(b => b.classList.remove('locked')); // Unlock
+            
+            if(state.mode === "MENU" || state.mode === "TYPING") {
+                typeText(`* You take back control.`, navBox, () => {
+                    if (state.mode === "TYPING") state.mode = "MENU";
+                });
+            }
+        }
+    }
+
     function handleInput(key) {
-        if (state.mode === "MENU") {
-            if (key === 'ArrowLeft') {
-                buttons[state.menuIndex].classList.remove('active');
-                state.menuIndex = (state.menuIndex - 1 + buttons.length) % buttons.length;
-                buttons[state.menuIndex].classList.add('active');
-            }
-            if (key === 'ArrowRight') {
-                buttons[state.menuIndex].classList.remove('active');
-                state.menuIndex = (state.menuIndex + 1) % buttons.length;
-                buttons[state.menuIndex].classList.add('active');
-            }
-            if (key === 'Enter' || key === 'Space' || key === 'KeyZ') {
-                executeMenuAction();
-            }
+        if (key === 'KeyQ') { toggleTeammate(); return; }
+
+        if (state.controller === 'PLAYER' && state.mode === "MENU") {
+            if (key === 'ArrowLeft') updateMenuIndex((state.menuIndex + 3) % 4);
+            if (key === 'ArrowRight') updateMenuIndex((state.menuIndex + 1) % 4);
+            if (key === 'Enter' || key === 'Space' || key === 'KeyZ') executeMenuAction();
         } 
     }
 
+    function handleMouseClick(idx) {
+        if (state.controller !== 'PLAYER' || state.mode !== "MENU") return;
+        updateMenuIndex(idx);
+        executeMenuAction();
+    }
+
+    function updateMenuIndex(idx) {
+        buttons[state.menuIndex].classList.remove('active');
+        state.menuIndex = idx;
+        buttons[state.menuIndex].classList.add('active');
+    }
+
+    function runAIMenu() {
+        if(state.controller !== 'AI' || state.mode !== "MENU") return;
+        
+        setTimeout(() => {
+            if(state.teammate === 'FRISK') {
+                if(state.items > 0 && state.hp <= 10) updateMenuIndex(2); // ITEM
+                else if(state.isSleeping) updateMenuIndex(3); // MERCY
+                else updateMenuIndex(1); // ACT
+            } else {
+                updateMenuIndex(0); // CHARA always FIGHTs
+            }
+            setTimeout(executeMenuAction, 800);
+        }, 1000);
+    }
+
     function executeMenuAction() {
+        state.mode = "DIALOGUE"; // Lock inputs
+        
         if (state.isSleeping) {
             if (state.menuIndex === 0) triggerFatalBlow();
             else if (state.menuIndex === 3) triggerMercyWin();
@@ -301,13 +337,10 @@
         }
 
         if (state.menuIndex === 0) {
-            typeText("* You swing your weapon.\n* Sans effortlessly steps aside.", navBox, () => {
+            typeText(`* ${state.controller === 'AI' ? state.teammate : 'You'} swing the weapon.\n* Sans effortlessly steps aside.`, navBox, () => {
                 let dodgeInt = setInterval(() => {
                     sansGroup.position.x += 1;
-                    if(sansGroup.position.x > 8) {
-                        clearInterval(dodgeInt);
-                        triggerSansDiag();
-                    }
+                    if(sansGroup.position.x > 8) { clearInterval(dodgeInt); triggerSansDiag(); }
                 }, 16);
             });
         } else if (state.menuIndex === 1) {
@@ -328,13 +361,13 @@
         navBox.style.display = 'none';
         
         let text = state.turn < sansScript.length ? sansScript[state.turn] : "Zzz...";
-        if(state.turn >= 6) { state.isSleeping = true; startSleepingPhase(); }
+        if(state.turn >= 6) { state.isSleeping = true; startSleepingPhase(); return; }
 
         typeText(text, document.getElementById('sans-dialogue'), () => {
             document.getElementById('dialogue-container').style.display = 'none';
             navBox.style.display = 'block';
             navBox.innerHTML = "";
-            if(!state.isSleeping) startEnemyTurn();
+            startEnemyTurn();
         });
     }
 
@@ -354,14 +387,11 @@
                 return;
             }
 
-            // Complex Detailed Attacks
             if (state.turn === 0) {
-                // Wave Bones
                 let zPos = player.position.z + Math.sin(tick * 0.5) * 5;
                 if(tick % 3 === 0) spawnBone(16, zPos, 4, 1.5, -0.4, 0, false);
             } 
             else if (state.turn === 1) {
-                // The Trap: Edges close in, Blaster down middle
                 if(tick === 5) spawnBlaster(0, 10, -16, 0, 16, 60);
                 if(tick % 5 === 0) {
                     spawnBone(16, player.position.z, 6, 2, -0.3, 0, true);
@@ -369,21 +399,17 @@
                 }
             }
             else if (state.turn === 2) {
-                // Platforming Panic
-                if(tick % 6 === 0) spawnBone(16, player.position.z, 3, 2, -0.5, 0, false); // Low fast
-                if(tick % 10 === 0) spawnBone(16, player.position.z, 10, 2, -0.5, 0, true); // Tall blue
+                if(tick % 6 === 0) spawnBone(16, player.position.z, 3, 2, -0.5, 0, false); 
+                if(tick % 10 === 0) spawnBone(16, player.position.z, 10, 2, -0.5, 0, true); 
             }
             else if (state.turn === 3) {
-                // Blaster Hell
                 if(tick % 8 === 0) {
                     let angle = Math.random() * Math.PI * 2;
-                    let bx = Math.cos(angle) * 15;
-                    let bz = Math.sin(angle) * 15;
+                    let bx = Math.cos(angle) * 15; let bz = Math.sin(angle) * 15;
                     spawnBlaster(bx, 10, bz, player.position.x, player.position.z, 40);
                 }
             }
             else {
-                // The Final Push
                 if(tick % 5 === 0) spawnBone(16, player.position.z + (Math.random()*6-3), 5, 2, -0.5, 0, Math.random()>0.5);
                 if(tick % 3 === 0) spawnBone(player.position.x + (Math.random()*6-3), player.position.z, 5, 2, 0, 0, false, true);
                 if(tick % 15 === 0) spawnBlaster(player.position.x, 15, -16, player.position.x, player.position.z, 30);
@@ -397,7 +423,9 @@
         playerMat.color.setHex(0xff0000);
         document.querySelectorAll('.soul-icon').forEach(icon => icon.style.color = '#ff0000');
         
-        typeText("* The battle continues.", navBox);
+        typeText("* The battle continues.", navBox, () => {
+            if(state.controller === 'AI') runAIMenu();
+        });
         player.position.set(0, 0.6, 0); state.playerVel.set(0,0,0);
         
         projectiles.forEach(p => { scene.remove(p.mesh); if(p.head) scene.remove(p.head); });
@@ -407,7 +435,9 @@
     // --- ENDINGS ---
     function startSleepingPhase() {
         state.mode = "MENU";
-        typeText("* Sans is fast asleep.\n* Now is your chance.", navBox);
+        typeText("* Sans is fast asleep.\n* Now is your chance.", navBox, () => {
+            if(state.controller === 'AI') runAIMenu();
+        });
         
         const zCont = document.getElementById('zzz-container');
         zCont.style.display = 'block';
@@ -421,7 +451,6 @@
 
     function triggerFatalBlow() {
         state.mode = "CUTSCENE"; navBox.style.display = 'none';
-        
         const slash = new THREE.Mesh(new THREE.PlaneGeometry(15, 0.5), new THREE.MeshBasicMaterial({color: 0xff0000}));
         slash.position.set(0, 4, -14); slash.rotation.z = Math.PI / 6; scene.add(slash);
 
@@ -453,50 +482,73 @@
         });
     }
 
-    // --- PHYSICS & DAMAGE ---
+    // --- PHYSICS & AI DODGING ---
     function takeDamage(amt) {
         if(state.invuln > 0 || state.mode !== "DODGING") return;
         state.hp -= amt; state.invuln = 30;
-        
-        playerMat.color.setHex(0xffaaaa);
-        setTimeout(() => playerMat.color.setHex(0x0033ff), 200);
+        playerMat.color.setHex(0xffaaaa); setTimeout(() => playerMat.color.setHex(0x0033ff), 200);
 
         if(state.hp <= 0) {
             state.mode = "GAMEOVER"; document.getElementById('game-over').style.display = 'flex';
         }
-        updateHUD();
-    }
-
-    function updateHUD() {
         document.getElementById('hp-fill').style.width = Math.max(0, (state.hp / state.maxHp * 100)) + '%';
         document.getElementById('hp-text').innerText = `${Math.max(0, state.hp)} / ${state.maxHp}`;
+        
+        // AI occasionally hands control back when hit
+        if(state.controller === 'AI' && Math.random() > 0.7) toggleTeammate(); 
     }
 
-    // --- MAIN RENDER LOOP ---
     function animate() {
         requestAnimationFrame(animate);
         if(state.invuln > 0) state.invuln--;
 
         if (state.mode === "DODGING") {
-            const speed = 0.32;
+            const speed = 0.35;
             let isMovingHoriz = false;
 
-            if(keys['KeyW'] || keys['ArrowUp']) { state.playerVel.z = -speed; isMovingHoriz = true; }
-            else if(keys['KeyS'] || keys['ArrowDown']) { state.playerVel.z = speed; isMovingHoriz = true; }
-            else state.playerVel.z = 0;
+            if (state.controller === 'PLAYER') {
+                if(keys['KeyW'] || keys['ArrowUp']) { state.playerVel.z = -speed; isMovingHoriz = true; }
+                else if(keys['KeyS'] || keys['ArrowDown']) { state.playerVel.z = speed; isMovingHoriz = true; }
+                else state.playerVel.z = 0;
 
-            if(keys['KeyA'] || keys['ArrowLeft']) { state.playerVel.x = -speed; isMovingHoriz = true; }
-            else if(keys['KeyD'] || keys['ArrowRight']) { state.playerVel.x = speed; isMovingHoriz = true; }
-            else state.playerVel.x = 0;
+                if(keys['KeyA'] || keys['ArrowLeft']) { state.playerVel.x = -speed; isMovingHoriz = true; }
+                else if(keys['KeyD'] || keys['ArrowRight']) { state.playerVel.x = speed; isMovingHoriz = true; }
+                else state.playerVel.x = 0;
 
-            if(keys['Space'] && player.position.y <= 0.61) {
-                state.playerVel.y = 0.55; 
-                isMovingHoriz = true;
+                if((keys['Space'] || keys['KeyZ']) && player.position.y <= 0.61) {
+                    state.playerVel.y = 0.6; isMovingHoriz = true;
+                }
+            } else {
+                // AI DODGING LOGIC
+                let nearestDist = 999, nearestProj = null;
+                projectiles.forEach(p => {
+                    let dist = Math.sqrt(Math.pow(p.mesh.position.x - player.position.x, 2) + Math.pow(p.mesh.position.z - player.position.z, 2));
+                    if(dist < nearestDist) { nearestDist = dist; nearestProj = p; }
+                });
+
+                if(nearestProj && nearestDist < 6) {
+                    if (nearestProj.type === 'bone') {
+                        if(nearestProj.isBlue) {
+                            state.playerVel.x = 0; state.playerVel.z = 0; isMovingHoriz = false;
+                        } else {
+                            state.playerVel.x = (player.position.x < nearestProj.mesh.position.x) ? -speed : speed;
+                            if(nearestProj.mesh.position.y < 2 && player.position.y <= 0.61) state.playerVel.y = 0.6;
+                            isMovingHoriz = true;
+                        }
+                    } else if (nearestProj.type === 'blaster') {
+                        state.playerVel.x = player.position.x < 0 ? -speed : speed;
+                        isMovingHoriz = true;
+                    }
+                } else {
+                    if(player.position.x < -0.5) state.playerVel.x = speed;
+                    else if(player.position.x > 0.5) state.playerVel.x = -speed;
+                    else state.playerVel.x = 0;
+                    if(Math.abs(state.playerVel.x) > 0) isMovingHoriz = true;
+                }
             }
 
-            state.playerVel.y -= 0.035; 
+            state.playerVel.y -= 0.04; 
             player.position.add(state.playerVel);
-
             let isMovingOverall = isMovingHoriz || Math.abs(state.playerVel.y) > 0.1;
 
             if(player.position.y < 0.6) { player.position.y = 0.6; state.playerVel.y = 0; }
@@ -505,7 +557,6 @@
 
             for(let i = projectiles.length - 1; i >= 0; i--) {
                 let p = projectiles[i];
-                
                 if(p.type === 'bone') {
                     p.mesh.position.x += p.vx; p.mesh.position.z += p.vz; p.mesh.position.y += p.vy;
 
@@ -527,16 +578,10 @@
                 }
                 else if(p.type === 'blaster') {
                     p.timer--;
-                    
-                    if (p.timer > 0 && p.timer < 15) {
-                        // Jaws open animation
-                        p.head.children[3].position.y -= 0.1;
-                    }
+                    if (p.timer > 0 && p.timer < 15) p.head.children[3].position.y -= 0.1;
                     else if(p.timer === 0) {
                         p.mesh.scale.set(1.5, 1, 1.5);
-                        p.mesh.material.color.setHex(0x00ffff); 
-                        p.mesh.material.opacity = 0.9;
-                        
+                        p.mesh.material.color.setHex(0x00ffff); p.mesh.material.opacity = 0.9;
                         const dist = new THREE.Vector2(player.position.x - p.px, player.position.z - p.pz).length();
                         if(dist < 3.5) takeDamage(5); 
                     } else if (p.timer < -15) {
@@ -553,7 +598,6 @@
     }
 
     // Start Game
-    updateHUD();
     typeText("* The wind is howling...", navBox);
     animate();
 </script>
