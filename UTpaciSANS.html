@@ -2,134 +2,100 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mice on Venus - True Timing & Tone</title>
+    <title>Mice on Venus - Sheet 1 (M1-11)</title>
     <style>
-        body { background: #1a1a1a; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .player-ui { background: #2b2b2b; padding: 40px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); text-align: center; width: 350px; }
-        h2 { font-weight: 400; letter-spacing: 2px; margin-top: 0; }
-        button { background: #4facfe; color: #111; border: none; padding: 15px 30px; font-weight: bold; font-size: 16px; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-top: 20px; width: 100%; }
-        button:hover { background: #00f2fe; box-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
-        .progress-bar { width: 100%; height: 6px; background: #444; border-radius: 3px; margin-top: 30px; overflow: hidden; position: relative; }
-        .progress-fill { height: 100%; width: 0%; background: #4facfe; transition: width 0.1s linear; }
-        .measure-text { margin-top: 15px; color: #aaa; font-size: 14px; font-family: monospace; }
+        body { background: #0e0e0e; color: #fff; font-family: 'Georgia', serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .sheet-box { background: #1a1a1a; padding: 40px; border-radius: 4px; border: 1px solid #333; text-align: center; width: 500px; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        .note-bubble { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #4facfe; text-shadow: 0 0 10px #4facfe; margin: 20px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; }
+        button { background: transparent; border: 1px solid #4facfe; color: #4facfe; padding: 15px 40px; cursor: pointer; font-size: 14px; letter-spacing: 3px; transition: 0.3s; }
+        button:hover { background: #4facfe; color: #000; }
+        .meta { color: #555; font-size: 11px; margin-top: 20px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<div class="player-ui">
-    <h2>SHEET 1 PLAYER</h2>
-    <p style="font-size: 12px; color: #888;">Focusing strictly on the 11 uploaded measures.</p>
-    <button id="playBtn">PLAY SEQUENCE</button>
-    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-    <div class="measure-text" id="status">Ready.</div>
+<div class="sheet-box">
+    <div class="meta">Tempo: 108 BPM | Key: C Major</div>
+    <div id="notes" class="note-bubble">---</div>
+    <button id="playBtn">START MEASURE 1</button>
+    <div class="meta" id="measureCount">Measure: 0</div>
 </div>
 
 <script>
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-// Frequencies for the exact notes in your image
 const F = {
     'C3': 130.81, 'F#3': 185.00, 'Ab3': 207.65, 
     'C4': 261.63, 'E4': 329.63, 'G4': 392.00, 
     'E5': 659.25, 'G5': 783.99, 'C6': 1046.50
 };
 
-// 1 Beat = 1 Quarter Note.
-// 'start' is which beat the note plays on. 'dur' is how many beats it holds.
-const sheetMusic = [
-    // Measure 1-4 (C Major - Bass holds 4 beats, Treble repeats half notes)
-    { note: 'C3', start: 0, dur: 4 }, { note: 'C4', start: 0, dur: 2 }, { note: 'E4', start: 0, dur: 2 }, { note: 'C4', start: 2, dur: 2 }, { note: 'E4', start: 2, dur: 2 },
-    { note: 'C3', start: 4, dur: 4 }, { note: 'C4', start: 4, dur: 2 }, { note: 'E4', start: 4, dur: 2 }, { note: 'C4', start: 6, dur: 2 }, { note: 'E4', start: 6, dur: 2 },
-    { note: 'C3', start: 8, dur: 4 }, { note: 'C4', start: 8, dur: 2 }, { note: 'E4', start: 8, dur: 2 }, { note: 'C4', start: 10, dur: 2 }, { note: 'E4', start: 10, dur: 2 },
-    { note: 'C3', start: 12, dur: 4 }, { note: 'C4', start: 12, dur: 2 }, { note: 'E4', start: 12, dur: 2 }, { note: 'C4', start: 14, dur: 2 }, { note: 'E4', start: 14, dur: 2 },
+// Precise transcription of the 11 measures you sent
+const measures = [
+    // M1-4: C Major Dyads
+    { m: 1, lh: 'C3', rh: ['C4', 'E4'], dur: 2 }, { m: 1, lh: 'C3', rh: ['C4', 'E4'], dur: 2 },
+    { m: 2, lh: 'C3', rh: ['C4', 'E4'], dur: 2 }, { m: 2, lh: 'C3', rh: ['C4', 'E4'], dur: 2 },
+    { m: 3, lh: 'C3', rh: ['C4', 'E4'], dur: 2 }, { m: 3, lh: 'C3', rh: ['C4', 'E4'], dur: 2 },
+    { m: 4, lh: 'C3', rh: ['C4', 'E4'], dur: 2 }, { m: 4, lh: 'C3', rh: ['C4', 'E4'], dur: 2 },
 
-    // Measure 5-10 (Adding the G, alternating Bass between Ab and C)
-    { note: 'Ab3', start: 16, dur: 4 }, { note: 'C4', start: 16, dur: 2 }, { note: 'E4', start: 16, dur: 2 }, { note: 'G4', start: 16, dur: 2 }, { note: 'C4', start: 18, dur: 2 }, { note: 'E4', start: 18, dur: 2 }, { note: 'G4', start: 18, dur: 2 },
-    { note: 'C3', start: 20, dur: 4 }, { note: 'C4', start: 20, dur: 2 }, { note: 'E4', start: 20, dur: 2 }, { note: 'G4', start: 20, dur: 2 }, { note: 'C4', start: 22, dur: 2 }, { note: 'E4', start: 22, dur: 2 }, { note: 'G4', start: 22, dur: 2 },
-    { note: 'Ab3', start: 24, dur: 4 }, { note: 'C4', start: 24, dur: 2 }, { note: 'E4', start: 24, dur: 2 }, { note: 'G4', start: 24, dur: 2 }, { note: 'C4', start: 26, dur: 2 }, { note: 'E4', start: 26, dur: 2 }, { note: 'G4', start: 26, dur: 2 },
-    { note: 'C3', start: 28, dur: 4 }, { note: 'C4', start: 28, dur: 2 }, { note: 'E4', start: 28, dur: 2 }, { note: 'G4', start: 28, dur: 2 }, { note: 'C4', start: 30, dur: 2 }, { note: 'E4', start: 30, dur: 2 }, { note: 'G4', start: 30, dur: 2 },
-    { note: 'C3', start: 32, dur: 4 }, { note: 'C4', start: 32, dur: 2 }, { note: 'E4', start: 32, dur: 2 }, { note: 'G4', start: 32, dur: 2 }, { note: 'C4', start: 34, dur: 2 }, { note: 'E4', start: 34, dur: 2 }, { note: 'G4', start: 34, dur: 2 },
-    { note: 'C3', start: 36, dur: 4 }, { note: 'C4', start: 36, dur: 2 }, { note: 'E4', start: 36, dur: 2 }, { note: 'G4', start: 36, dur: 2 }, { note: 'C4', start: 38, dur: 2 }, { note: 'E4', start: 38, dur: 2 }, { note: 'G4', start: 38, dur: 2 },
+    // M5-10: The harmonic shift (Adding G)
+    { m: 5, lh: 'Ab3', rh: ['C4', 'E4', 'G4'], dur: 2 }, { m: 5, lh: 'Ab3', rh: ['C4', 'E4', 'G4'], dur: 2 },
+    { m: 6, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 }, { m: 6, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 },
+    { m: 7, lh: 'Ab3', rh: ['C4', 'E4', 'G4'], dur: 2 }, { m: 7, lh: 'Ab3', rh: ['C4', 'E4', 'G4'], dur: 2 },
+    { m: 8, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 }, { m: 8, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 },
+    { m: 9, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 }, { m: 9, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 },
+    { m: 10, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 }, { m: 10, lh: 'C3', rh: ['C4', 'E4', 'G4'], dur: 2 },
 
-    // Measure 11 (The timing shift: Half note, then two quarter notes!)
-    { note: 'F#3', start: 40, dur: 4 }, 
-    { note: 'E5', start: 40, dur: 2 }, 
-    { note: 'G5', start: 42, dur: 1 }, 
-    { note: 'C6', start: 43, dur: 1 } 
+    // M11: Rhythmic change
+    { m: 11, lh: 'F#3', rh: ['E5'], dur: 2 },  // Half note
+    { m: 11, lh: 'F#3', rh: ['G5'], dur: 1 },  // Quarter note
+    { m: 11, lh: 'F#3', rh: ['C6'], dur: 1 }   // Quarter note
 ];
 
-const BPM = 75;
-const beatLength = 60 / BPM; 
-const totalBeats = 44; // 11 measures * 4 beats
+const BPM = 108;
+const beat = 60 / BPM;
 
-function playPianoNote(freq, startTime, durationInSeconds) {
-    // 1. Setup multiple layers for a realistic piano sound
-    const osc1 = audioCtx.createOscillator(); // Triangle for the "hammer" / mid tone
-    const osc2 = audioCtx.createOscillator(); // Sine for the low resonance body
-    const masterGain = audioCtx.createGain();
-    const filter = audioCtx.createBiquadFilter();
+function playPiano(freq, start, duration) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = 'sine'; // Cleanest tone for ambient piano
+    osc.frequency.setValueAtTime(freq, start);
+    
+    // Envelope for soft attack and long "ring"
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.15, start + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration * 2.5);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(start);
+    osc.stop(start + duration * 3);
+}
 
-    osc1.type = 'triangle';
-    osc2.type = 'sine';
-    osc1.frequency.value = freq;
-    osc2.frequency.value = freq;
+let idx = 0;
+function runSequence() {
+    const chord = measures[idx];
+    const now = audioCtx.currentTime;
+    const durInSec = chord.dur * beat;
 
-    // Soften the high frequencies to make it a "felt" piano
-    filter.type = 'lowpass';
-    filter.frequency.value = 1200; 
+    // Display
+    document.getElementById('notes').innerText = chord.rh.join(' + ');
+    document.getElementById('measureCount').innerText = `Measure: ${chord.m}`;
 
-    // 2. The Piano Envelope (ADSR)
-    // Attack (hammer hits), Decay (initial drop), Sustain (ringing), Release (fading out)
-    masterGain.gain.setValueAtTime(0, startTime);
-    masterGain.gain.linearRampToValueAtTime(0.3, startTime + 0.02); // Fast attack
-    masterGain.gain.exponentialRampToValueAtTime(0.05, startTime + 0.3); // Decay
-    masterGain.gain.setValueAtTime(0.05, startTime + durationInSeconds); // Hold sustain
-    masterGain.gain.exponentialRampToValueAtTime(0.0001, startTime + durationInSeconds + 1.5); // Long release/pedal
+    // Play Left and Right hands
+    playPiano(F[chord.lh], now, durInSec);
+    chord.rh.forEach(n => playPiano(F[n], now, durInSec));
 
-    // Route audio: Oscillators -> Filter -> Envelope -> Speakers
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(masterGain);
-    masterGain.connect(audioCtx.destination);
-
-    // Play and stop
-    osc1.start(startTime);
-    osc2.start(startTime);
-    osc1.stop(startTime + durationInSeconds + 2);
-    osc2.stop(startTime + durationInSeconds + 2);
+    idx = (idx + 1) % measures.length;
+    setTimeout(runSequence, durInSec * 1000);
 }
 
 document.getElementById('playBtn').addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    document.getElementById('playBtn').disabled = true;
-    document.getElementById('playBtn').style.opacity = '0.5';
-    
-    const now = audioCtx.currentTime;
-    
-    // Schedule every note exactly where it belongs
-    sheetMusic.forEach(item => {
-        const exactStartTime = now + (item.start * beatLength);
-        const exactDuration = item.dur * beatLength;
-        playPianoNote(F[item.note], exactStartTime, exactDuration);
-    });
-
-    // Simple progress bar animation
-    let currentBeat = 0;
-    const progressInterval = setInterval(() => {
-        currentBeat += 0.1; // Update fast for smooth animation
-        let percent = (currentBeat / totalBeats) * 100;
-        document.getElementById('progress').style.width = percent + '%';
-        document.getElementById('status').innerText = `Measure: ${Math.floor(currentBeat / 4) + 1} / 11`;
-
-        if (currentBeat >= totalBeats) {
-            clearInterval(progressInterval);
-            document.getElementById('playBtn').disabled = false;
-            document.getElementById('playBtn').style.opacity = '1';
-            document.getElementById('status').innerText = "Sequence Finished.";
-        }
-    }, (beatLength * 1000) / 10);
+    runSequence();
+    document.getElementById('playBtn').style.display = 'none';
 });
 </script>
-
 </body>
 </html>
