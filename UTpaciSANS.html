@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UT 3D: PACIFIST SANS ENCOUNTER</title>
+    <title>UT 3D: PACIFIST SANS (ULTIMATE)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
@@ -20,7 +20,7 @@
         #hp-container { display: flex; align-items: center; }
         .hp-box { width: 150px; height: 30px; background: red; margin: 0 15px; border: 2px solid #555; position: relative; }
         #hp-fill { height: 100%; background: #ffff00; width: 100%; transition: width 0.1s; }
-        #controller-badge { color: #888; font-size: 28px; border: 2px solid #888; padding: 5px 15px; border-radius: 5px; }
+        #controller-badge { color: #888; font-size: 28px; border: 2px solid #888; padding: 5px 15px; border-radius: 5px; background: #000;}
 
         #action-buttons { display: flex; justify-content: space-between; width: 800px; }
         .action-btn { background: black; color: #ff8c00; border: 4px solid #ff8c00; width: 170px; height: 60px; font-size: 36px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.1s; position: relative; pointer-events: auto; }
@@ -52,7 +52,7 @@
     </div>
     <div id="dialogue-container"><div id="sans-dialogue">...</div></div>
     <div id="narrative-box"></div>
-    <div id="controls-hint">[WASD] Move Arena<br>[SPACE] Jump<br>[Q] Tag Team Partner</div>
+    <div id="controls-hint">[WASD] Move & Menu<br>[SPACE] Jump & Select<br>[Q] Tag Teammate</div>
 
     <div id="bottom-ui">
         <div id="stats-bar">
@@ -95,7 +95,7 @@
         mode: "TYPING", // TYPING, MENU, DIALOGUE, DODGING, CUTSCENE
         menuIndex: 1, invuln: 0, globalTime: 0,
         playerVel: new THREE.Vector3(0, 0, 0),
-        items: ["Spider Cider", "Spider Donut", "Snowman Piece"],
+        items: ["Spider Cider", "Spider Donut", "Snowman Piece", "Legendary Hero"],
         isSleeping: false,
         teammate: localStorage.getItem('teammate') || 'FRISK',
         controller: 'PLAYER' 
@@ -129,7 +129,7 @@
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000000, 0.03);
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 20, 24); camera.lookAt(0, 0, 0);
+    camera.position.set(0, 20, 26); camera.lookAt(0, 0, 0);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
 
@@ -142,40 +142,38 @@
 
     // Entities
     const playerMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const player = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), playerMat); player.position.y = 0.6; scene.add(player);
+    const player = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), playerMat); player.position.y = 0.5; scene.add(player);
 
     const sansGroup = new THREE.Group();
     const jacket = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 3.5, 16), new THREE.MeshStandardMaterial({ color: 0x0033ff })); jacket.position.y = 2.5; sansGroup.add(jacket);
     const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), new THREE.MeshStandardMaterial({color: 0xffffff})); head.position.y = 5.6; sansGroup.add(head);
     sansGroup.position.set(0, 0, -16); scene.add(sansGroup);
 
-    // --- CUSTOM 3D BONE MESH ---
-    function createBoneMesh(h, w, isBlue) {
+    // --- PROPER BONE MESH ---
+    function createBoneMesh(w, h, d, isBlue) {
         const group = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ color: isBlue ? 0x00ffff : 0xffffff, roughness: 0.4 });
-        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w*0.3, w*0.3, Math.max(0.1, h - w), 12), mat);
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
         group.add(shaft);
-        const r = w * 0.4; const offset = w * 0.35;
-        [[-offset, h/2 - r, 0], [offset, h/2 - r, 0], [-offset, -h/2 + r, 0], [offset, -h/2 + r, 0]].forEach(pos => {
-            const joint = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), mat);
-            joint.position.set(pos[0], pos[1], pos[2]); group.add(joint);
-        });
+        // Add simple sphere caps based on longest dimension to make it look like a bone
+        if (h > w && h > d) {
+            const r = Math.max(w, d) * 0.6;
+            [[-w/3, h/2, 0], [w/3, h/2, 0], [-w/3, -h/2, 0], [w/3, -h/2, 0]].forEach(pos => {
+                const j = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), mat);
+                j.position.set(pos[0], pos[1], pos[2]); group.add(j);
+            });
+        }
         return group;
     }
 
     let projectiles = [];
     let zones = [];
 
-    function spawnBone(x, y, z, h, w, vx, vz, behavior = 'normal', isBlue = false) {
-        const bone = createBoneMesh(h, w, isBlue);
+    // W = width (X axis), H = height (Y axis), D = depth (Z axis)
+    function spawnBone(x, y, z, w, h, d, vx, vz, behavior = 'normal', isBlue = false) {
+        const bone = createBoneMesh(w, h, d, isBlue);
         bone.position.set(x, y, z); scene.add(bone);
-        projectiles.push({ mesh: bone, type: 'bone', vx, vz, vy: 0, isBlue, w, h, behavior, baseY: y });
-    }
-
-    function spawnWarningZone(x, z, w, d, duration) {
-        const zone = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 }));
-        zone.rotation.x = -Math.PI / 2; zone.position.set(x, 0.05, z); scene.add(zone);
-        zones.push({ mesh: zone, timer: duration, w, d });
+        projectiles.push({ mesh: bone, type: 'bone', vx, vz, vy: 0, isBlue, w, h, d, behavior, baseY: y });
     }
 
     // --- TYPEWRITER ---
@@ -197,7 +195,7 @@
         if (state.mode === "CUTSCENE") return;
         if (state.controller === 'PLAYER') {
             state.controller = 'AI';
-            badge.innerText = `CTRL: ${state.teammate}`; badge.style.borderColor = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
+            badge.innerText = `CTRL: ${state.teammate}`; badge.style.borderColor = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000'; badge.style.color = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
             hudName.innerText = `❤️ ${state.teammate}`; hudName.style.color = state.teammate === 'FRISK' ? '#ff00ff' : '#ff0000';
             buttons.forEach(b => b.classList.add('locked'));
             if(state.mode === "MENU" || state.mode === "TYPING") {
@@ -205,7 +203,7 @@
             }
         } else {
             state.controller = 'PLAYER';
-            badge.innerText = `CTRL: PLAYER`; badge.style.borderColor = '#888';
+            badge.innerText = `CTRL: PLAYER`; badge.style.borderColor = '#888'; badge.style.color = '#888';
             hudName.innerText = `❤️ PLAYER`; hudName.style.color = '#ff0000';
             buttons.forEach(b => b.classList.remove('locked'));
             if(state.mode === "MENU" || state.mode === "TYPING") {
@@ -217,8 +215,8 @@
     function handleInput(key) {
         if (key === 'KeyQ') { toggleTeammate(); return; }
         if (state.controller === 'PLAYER' && state.mode === "MENU") {
-            if (key === 'ArrowLeft') updateMenuIndex((state.menuIndex + 3) % 4);
-            if (key === 'ArrowRight') updateMenuIndex((state.menuIndex + 1) % 4);
+            if (key === 'ArrowLeft' || key === 'KeyA') updateMenuIndex((state.menuIndex + 3) % 4);
+            if (key === 'ArrowRight' || key === 'KeyD') updateMenuIndex((state.menuIndex + 1) % 4);
             if (key === 'Enter' || key === 'Space' || key === 'KeyZ') executeMenuAction();
         } 
     }
@@ -236,10 +234,10 @@
         if(state.controller !== 'AI' || state.mode !== "MENU") return;
         setTimeout(() => {
             if(state.teammate === 'FRISK') {
-                if(state.items.length > 0 && state.hp <= 12) updateMenuIndex(2);
-                else if(state.isSleeping) updateMenuIndex(3);
-                else updateMenuIndex(1);
-            } else updateMenuIndex(0); 
+                if(state.items.length > 0 && state.hp <= 12) updateMenuIndex(2); // Heal if low
+                else if(state.isSleeping) updateMenuIndex(3); // Mercy if end
+                else updateMenuIndex(1); // Act otherwise
+            } else updateMenuIndex(0); // Chara fights
             setTimeout(executeMenuAction, 800);
         }, 800);
     }
@@ -293,42 +291,40 @@
             }
 
             if (state.turn === 0) {
-                // 1. 6 Bone Jumps (Full width gaps)
+                // 6 Bone Jumps: Long horizontally, sweeping across Z
                 if(tick % 8 === 0 && tick < 48) {
-                    spawnBone(18, 0.5, player.position.z, 2, 28, -0.4, 0, 'normal'); // Ground sweeper to jump over
+                    spawnBone(18, 0.5, player.position.z, 2, 2, 28, -0.4, 0, 'normal'); 
                 }
             } 
             else if (state.turn === 1) {
-                // 2. Up/Down Oscillating Bones
+                // Up/Down Oscillating Bones
                 if(tick % 5 === 0) {
                     let side = Math.random() > 0.5 ? 18 : -18;
-                    spawnBone(side, 3, player.position.z + (Math.random()*6-3), 3, 1.5, side>0 ? -0.3 : 0.3, 0, 'sine');
+                    spawnBone(side, 3, player.position.z + (Math.random()*6-3), 1.5, 3, 1.5, side>0 ? -0.3 : 0.3, 0, 'sine');
                 }
             }
             else if (state.turn === 2) {
-                // 3. Bone Zones + Blue Bones
-                if(tick % 15 === 0) spawnWarningZone(player.position.x, player.position.z, 8, 8, 20);
-                if(tick % 10 === 0) spawnBone(18, 4, player.position.z, 8, 2, -0.5, 0, 'normal', true); // Blue sweeps
+                // Short sweeps from left and right
+                if(tick % 6 === 0) {
+                    let side = Math.random() > 0.5 ? 18 : -18;
+                    spawnBone(side, 0.5, player.position.z, 2, 1.5, 6, side>0 ? -0.4 : 0.4, 0, 'normal');
+                }
             }
             else if (state.turn === 3) {
-                // 4. Slow Bone Sliders
-                if(tick % 4 === 0) {
-                    spawnBone(18, 1, Math.random()*20-10, 3, 1.5, -0.15, 0);
-                    spawnBone(-18, 1, Math.random()*20-10, 3, 1.5, 0.15, 0);
+                // Slow Bone Sliders
+                if(tick % 5 === 0) {
+                    spawnBone(18, 1, Math.random()*24-12, 1.5, 4, 1.5, -0.15, 0);
+                    spawnBone(-18, 1, Math.random()*24-12, 1.5, 4, 1.5, 0.15, 0);
                 }
             }
             else if (state.turn === 4) {
-                // 5. Special Attack (The Medley)
+                // Special Attack Medley
                 if(tick === 2) {
-                    // Two Bouncing Bones
-                    spawnBone(15, 10, -5, 3, 1.5, -0.3, 0.1, 'bounce');
-                    spawnBone(-15, 10, 5, 3, 1.5, 0.3, -0.1, 'bounce');
+                    spawnBone(15, 10, -5, 2, 2, 2, -0.3, 0.1, 'bounce');
+                    spawnBone(-15, 10, 5, 2, 2, 2, 0.3, -0.1, 'bounce');
                 }
-                if(tick > 15 && tick % 6 === 0) spawnBone(18, 0.5, player.position.z, 2, 28, -0.4, 0); // Jumps
-                if(tick > 30 && tick % 3 === 0) spawnBone(player.position.x, 0.5, -18, 1.5, 1.5, 0, 0.5); // Fast small
-            }
-            else if (state.turn === 5 || state.turn === 6) {
-                // Fabled Blue Attack - Literally nothing happens
+                if(tick > 15 && tick % 6 === 0) spawnBone(18, 0.5, player.position.z, 1.5, 1.5, 15, -0.4, 0); // Sweeps
+                if(tick > 30 && tick % 3 === 0) spawnBone(player.position.x, 0.5, -18, 1.5, 1.5, 1.5, 0, 0.5); // Fast small
             }
             tick++;
         }, 150);
@@ -341,7 +337,6 @@
         typeText("* The battle continues.", navBox, () => { if(state.controller === 'AI') runAIMenu(); });
         player.position.set(0, 0.6, 0); state.playerVel.set(0,0,0);
         projectiles.forEach(p => scene.remove(p.mesh)); projectiles = [];
-        zones.forEach(z => scene.remove(z.mesh)); zones = [];
     }
 
     // --- ENDINGS ---
@@ -383,7 +378,7 @@
         });
     }
 
-    // --- PHYSICS & DODGING ---
+    // --- PHYSICS & AI DODGING ---
     function takeDamage(amt) {
         if(state.invuln > 0 || state.mode !== "DODGING") return;
         state.hp -= amt; state.invuln = 30;
@@ -392,7 +387,6 @@
         if(state.hp <= 0) { state.mode = "GAMEOVER"; document.getElementById('game-over').style.display = 'flex'; }
         document.getElementById('hp-fill').style.width = Math.max(0, (state.hp / state.maxHp * 100)) + '%';
         document.getElementById('hp-text').innerText = `${Math.max(0, state.hp)} / ${state.maxHp}`;
-        if(state.controller === 'AI' && Math.random() > 0.8) toggleTeammate(); // AI panic switch
     }
 
     function animate() {
@@ -401,75 +395,73 @@
         if(state.invuln > 0) state.invuln--;
 
         if (state.mode === "DODGING") {
-            const speed = 0.35; let isMovingHoriz = false;
+            const speed = 0.35; let isMoving = false;
 
             if (state.controller === 'PLAYER') {
-                if(keys['KeyW'] || keys['ArrowUp']) { state.playerVel.z = -speed; isMovingHoriz = true; }
-                else if(keys['KeyS'] || keys['ArrowDown']) { state.playerVel.z = speed; isMovingHoriz = true; }
+                if(keys['KeyW'] || keys['ArrowUp']) { state.playerVel.z = -speed; isMoving = true; }
+                else if(keys['KeyS'] || keys['ArrowDown']) { state.playerVel.z = speed; isMoving = true; }
                 else state.playerVel.z = 0;
 
-                if(keys['KeyA'] || keys['ArrowLeft']) { state.playerVel.x = -speed; isMovingHoriz = true; }
-                else if(keys['KeyD'] || keys['ArrowRight']) { state.playerVel.x = speed; isMovingHoriz = true; }
+                if(keys['KeyA'] || keys['ArrowLeft']) { state.playerVel.x = -speed; isMoving = true; }
+                else if(keys['KeyD'] || keys['ArrowRight']) { state.playerVel.x = speed; isMoving = true; }
                 else state.playerVel.x = 0;
 
-                if((keys['Space'] || keys['KeyZ']) && player.position.y <= 0.61) { state.playerVel.y = 0.6; isMovingHoriz = true; }
+                if((keys['Space'] || keys['KeyZ']) && player.position.y <= 0.61) { state.playerVel.y = 0.6; isMoving = true; }
             } else {
-                // Smart AI Dodging
-                let nearestDist = 999, nearestProj = null;
+                // Smart AI Repel Dodging
+                let dx = 0, dz = 0, doJump = false, freeze = false;
                 projectiles.forEach(p => {
-                    let dist = Math.sqrt(Math.pow(p.mesh.position.x - player.position.x, 2) + Math.pow(p.mesh.position.z - player.position.z, 2));
-                    if(dist < nearestDist) { nearestDist = dist; nearestProj = p; }
+                    let distX = p.mesh.position.x - player.position.x;
+                    let distZ = p.mesh.position.z - player.position.z;
+                    let distSq = distX*distX + distZ*distZ;
+                    
+                    if(distSq < 36) { // React within 6 units
+                        if(p.isBlue) freeze = true;
+                        else {
+                            dx -= distX * 0.1; dz -= distZ * 0.1;
+                            // Jump logic for low wide objects
+                            if (p.mesh.position.y < 2 && Math.abs(distX) < 4 && p.d > 5) doJump = true;
+                        }
+                    }
                 });
 
-                if(nearestProj && nearestDist < 7) {
-                    if(nearestProj.isBlue) {
-                        state.playerVel.x = 0; state.playerVel.z = 0; isMovingHoriz = false;
-                    } else {
-                        state.playerVel.z = (player.position.z < nearestProj.mesh.position.z) ? -speed : speed;
-                        if(nearestProj.mesh.position.y < 2 && player.position.y <= 0.61) state.playerVel.y = 0.6;
-                        isMovingHoriz = true;
-                    }
+                if (freeze) {
+                    state.playerVel.x = 0; state.playerVel.z = 0; isMoving = false;
                 } else {
-                    if(player.position.z < -1) state.playerVel.z = speed; else if(player.position.z > 1) state.playerVel.z = -speed; else state.playerVel.z = 0;
-                    if(Math.abs(state.playerVel.z) > 0) isMovingHoriz = true;
+                    let mag = Math.sqrt(dx*dx + dz*dz);
+                    if (mag > 0) {
+                        state.playerVel.x = (dx / mag) * speed; state.playerVel.z = (dz / mag) * speed;
+                        isMoving = true;
+                    } else {
+                        // Drift back to center if safe
+                        state.playerVel.x = -player.position.x * 0.05; state.playerVel.z = -player.position.z * 0.05;
+                    }
+                    if(doJump && player.position.y <= 0.61) { state.playerVel.y = 0.6; isMoving = true; }
                 }
             }
 
             state.playerVel.y -= 0.04; player.position.add(state.playerVel);
-            let isMovingOverall = isMovingHoriz || Math.abs(state.playerVel.y) > 0.1;
+            let isMovingOverall = isMoving || Math.abs(state.playerVel.y) > 0.1;
 
             if(player.position.y < 0.6) { player.position.y = 0.6; state.playerVel.y = 0; }
             player.position.x = Math.max(-15, Math.min(15, player.position.x));
             player.position.z = Math.max(-15, Math.min(15, player.position.z));
 
-            // Zones
-            for(let i = zones.length - 1; i >= 0; i--) {
-                let z = zones[i]; z.timer--;
-                if(z.timer <= 0) {
-                    // Explode Zone
-                    z.mesh.material.opacity = 1; z.mesh.material.color.setHex(0xffffff);
-                    if(Math.abs(player.position.x - z.mesh.position.x) < z.w/2 && Math.abs(player.position.z - z.mesh.position.z) < z.d/2) takeDamage(2);
-                    setTimeout(() => scene.remove(z.mesh), 200);
-                    zones.splice(i, 1);
-                }
-            }
-
-            // Projectiles
+            // Collision & Projectile Updates
             for(let i = projectiles.length - 1; i >= 0; i--) {
                 let p = projectiles[i];
                 p.mesh.position.x += p.vx; p.mesh.position.z += p.vz;
                 
-                // Behaviors
                 if (p.behavior === 'sine') p.mesh.position.y = p.baseY + Math.sin(state.globalTime * 2) * 2;
                 else if (p.behavior === 'bounce') {
                     p.vy -= 0.02; p.mesh.position.y += p.vy;
                     if(p.mesh.position.y < p.h/2) { p.mesh.position.y = p.h/2; p.vy = Math.abs(p.vy) * 0.9; }
                 }
 
-                let hw = p.w / 2, hh = p.h / 2;
-                if (player.position.x > p.mesh.position.x - hw - 0.6 && player.position.x < p.mesh.position.x + hw + 0.6 &&
-                    player.position.z > p.mesh.position.z - hw - 0.6 && player.position.z < p.mesh.position.z + hw + 0.6 &&
-                    player.position.y < p.mesh.position.y + hh + 0.6 && player.position.y > p.mesh.position.y - hh - 0.6) {
+                let hw = p.w / 2, hh = p.h / 2, hd = p.d / 2;
+                if (Math.abs(player.position.x - p.mesh.position.x) < hw + 0.5 &&
+                    Math.abs(player.position.y - p.mesh.position.y) < hh + 0.5 &&
+                    Math.abs(player.position.z - p.mesh.position.z) < hd + 0.5) {
                     if(p.isBlue) { if(isMovingOverall) takeDamage(1); } else takeDamage(1);
                 }
 
